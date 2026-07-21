@@ -1,12 +1,18 @@
 (() => {
   "use strict";
 
+  // Keep all application code inside this immediately invoked function so that
+  // constants, state, and helper functions do not leak into the global scope.
+
+  // Browser storage and PDF geometry constants. PDF dimensions are measured in
+  // points (72 points per inch), while the interface presents sizes in mm.
   const STORAGE_KEY = "pdf-4up-state-v1";
   const MAX_FILE_SIZE = 200 * 1024 * 1024;
   const SQRT_2 = Math.sqrt(2);
   const COPY_SCALE = 1 / SQRT_2;
   const POINTS_PER_MM = 72 / 25.4;
 
+  // Copy used by the shared page header for each client-side application view.
   const pageTitles = {
     convert: {
       title: "Create a four-up PDF",
@@ -25,6 +31,8 @@
     },
   };
 
+  // Only activeView and history are persisted. File objects, parsed PDF bytes,
+  // output blobs, and processing flags are deliberately session-only values.
   const defaultState = {
     activeView: "convert",
     source: null,
@@ -42,6 +50,8 @@
     ],
   };
 
+  // Clone mutable defaults so clearing or replacing runtime state cannot mutate
+  // defaultState and prevent it from being used for error recovery later.
   const state = {
     ...defaultState,
     source: null,
@@ -50,6 +60,8 @@
     history: [...defaultState.history],
   };
 
+  // Cache frequently used DOM nodes once. The HTML contract requires each of
+  // these IDs to exist before this script runs.
   const elements = {
     sidebar: document.querySelector("#sidebar"),
     sidebarBackdrop: document.querySelector("#sidebarBackdrop"),
@@ -90,6 +102,10 @@
     clearHistoryButton: document.querySelector("#clearHistoryButton"),
   };
 
+  // Treat localStorage as untrusted input: accept only known view names and
+  // history entries with the minimum strings required to render them safely.
+  // The history limit also prevents old or manually edited data from growing
+  // the page and its storage record without bound.
   const sanitisePersistedState = (parsed) => ({
     activeView:
       typeof parsed?.activeView === "string" &&
@@ -109,6 +125,8 @@
       : [...defaultState.history],
   });
 
+  // Restore the small amount of durable UI state. Corrupt JSON, blocked browser
+  // storage, and unexpected values all fall back to a clean initial state.
   const loadPersistedState = () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -126,6 +144,9 @@
     }
   };
 
+  // Persist serialisable metadata only. The source PDF and generated output are
+  // intentionally never written to storage, keeping document contents local to
+  // the current page lifecycle.
   const persistState = () => {
     const persisted = {
       activeView: state.activeView,
@@ -139,6 +160,8 @@
     }
   };
 
+  // Format byte counts with decimal (base-1000) units for display. Precision is
+  // reduced as values grow so labels remain compact and easy to scan.
   const formatBytes = (bytes) => {
     if (!Number.isFinite(bytes) || bytes < 0) {
       return "Unknown";
@@ -159,18 +182,23 @@
 
   const pointsToMillimetres = (points) => points / POINTS_PER_MM;
 
+  // pdf-lib reports page dimensions in points; convert both axes for the UI.
   const formatPageSize = (width, height) => {
     const widthMm = pointsToMillimetres(width);
     const heightMm = pointsToMillimetres(height);
     return `${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm`;
   };
 
+  // History rows are assembled as HTML strings. Passing user-controlled names
+  // through a temporary element converts markup characters into safe entities.
   const escapeHtml = (value) => {
     const div = document.createElement("div");
     div.textContent = String(value);
     return div.innerHTML;
   };
 
+  // Preserve the user's basename, replace a final .pdf suffix when present,
+  // and supply a useful name even if the browser reports a blank filename.
   const makeOutputFilename = (inputName) => {
     const cleanedName = inputName.trim() || "document.pdf";
     const lastDot = cleanedName.lastIndexOf(".");
@@ -184,12 +212,16 @@
     return `${basename}_4up.pdf`;
   };
 
+  // Extension checks improve error messages, but the PDF magic bytes provide a
+  // quick content check before the entire (potentially large) file is loaded.
   const detectPdfSignature = async (file) => {
     const signatureBuffer = await file.slice(0, 5).arrayBuffer();
     const signature = new TextDecoder("ascii").decode(signatureBuffer);
     return signature === "%PDF-";
   };
 
+  // Central status renderer keeps colour, icon, message, spinner, and progress
+  // behaviour consistent across validation, conversion, and download actions.
   const setStatus = ({
     type = "neutral",
     symbol = "i",
@@ -208,6 +240,8 @@
     elements.statusTitle.textContent = title;
     elements.statusMessage.textContent = message;
 
+    // A loading state without a numeric value uses an indeterminate animation;
+    // numeric progress is clamped so malformed values cannot overflow the bar.
     if (loading || Number.isFinite(progress)) {
       elements.progressTrack.classList.remove("hidden");
 
@@ -225,18 +259,23 @@
     }
   };
 
+  // Object URLs retain their backing Blob until explicitly revoked. Release the
+  // previous output whenever it is replaced, cleared, or the page is unloaded.
   const revokeOutputUrl = () => {
     if (state.output?.url) {
       URL.revokeObjectURL(state.output.url);
     }
   };
 
+  // Invalidate both the generated data and its corresponding download control.
   const resetOutput = () => {
     revokeOutputUrl();
     state.output = null;
     elements.downloadButton.disabled = true;
   };
 
+  // Return all source-dependent controls and labels to their initial state.
+  // Callers may override the status copy to explain why the reset occurred.
   const clearSource = ({
     statusTitle = "Ready",
     statusMessage = "Select a single-page PDF to begin.",
@@ -269,6 +308,8 @@
     });
   };
 
+  // Render metadata calculated during validation. Keeping this separate from
+  // loading makes it easy to refresh the detail panel from the current state.
   const updateDocumentDetails = () => {
     if (!state.source) {
       elements.detailsEmpty.classList.remove("hidden");
@@ -289,6 +330,8 @@
       outputWidth,
       outputHeight,
     );
+    // Each copy is scaled by 1/sqrt(2), the linear ratio between adjacent ISO
+    // paper sizes. Four copies therefore fit into a 2-by-2 output arrangement.
     elements.detailScale.textContent = `${(COPY_SCALE * 100).toFixed(4)}%`;
 
     elements.outputFilename.textContent = outputName;
@@ -298,6 +341,8 @@
     );
   };
 
+  // Rebuild the short metadata-only conversion history. All file-derived text
+  // is escaped because this list is inserted through innerHTML.
   const renderHistory = () => {
     const items = state.history;
 
@@ -328,6 +373,8 @@
       .join("");
   };
 
+  // Lock every action that could replace source/output state during conversion,
+  // then restore each control according to whether its required data exists.
   const setProcessingState = (processing) => {
     state.processing = processing;
 
@@ -338,12 +385,17 @@
     elements.fileInput.disabled = processing;
   };
 
+  // Programmatically opening the hidden input gives the drop zone and explicit
+  // select button one shared file-selection path.
   const openFilePicker = () => {
     if (!state.processing) {
       elements.fileInput.click();
     }
   };
 
+  // Validate a candidate file from cheapest checks to most expensive checks,
+  // then retain its bytes and dimensions for conversion. Errors are surfaced by
+  // handleSelectedFiles so this function can use ordinary exceptions throughout.
   const validateAndLoadFile = async (file) => {
     resetOutput();
 
@@ -388,6 +440,8 @@
 
     let pdfDocument;
 
+    // pdf-lib performs the authoritative structural validation. Translate its
+    // implementation-specific failures into concise, user-facing explanations.
     try {
       pdfDocument = await window.PDFLib.PDFDocument.load(bytes, {
         ignoreEncryption: false,
@@ -427,6 +481,8 @@
       throw new Error("The PDF page has invalid dimensions.");
     }
 
+    // Multiplying both axes by sqrt(2) produces the next ISO paper size while
+    // preserving aspect ratio (for example, A4 becomes A3).
     const outputWidth = width * SQRT_2;
     const outputHeight = height * SQRT_2;
     const outputName = makeOutputFilename(file.name);
@@ -459,6 +515,8 @@
     });
   };
 
+  // Normalise FileList objects from both the picker and drag-and-drop paths,
+  // enforce the single-file rule, and restore a coherent empty UI on failure.
   const handleSelectedFiles = async (files) => {
     if (state.processing) {
       return;
@@ -501,6 +559,8 @@
     }
   };
 
+  // Create a new, single-page PDF containing four vector-preserving copies of
+  // the validated source page. The work happens entirely in browser memory.
   const createFourUpPdf = async () => {
     if (!state.source || state.processing) {
       return;
@@ -519,6 +579,8 @@
         progress: 15,
       });
 
+      // Yield before expensive stages so the browser can paint the latest
+      // progress message rather than appearing frozen during synchronous work.
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
       const sourceDocument = await window.PDFLib.PDFDocument.load(bytes, {
@@ -534,6 +596,8 @@
 
       const outputDocument = await window.PDFLib.PDFDocument.create();
 
+      // Set basic document metadata on the newly created output. The source
+      // document's metadata is not copied because it may no longer describe it.
       outputDocument.setTitle(outputName.replace(/\.pdf$/i, ""));
       outputDocument.setSubject("Four-up PDF layout");
       outputDocument.setCreator("PDF 4-Up browser application");
@@ -553,6 +617,9 @@
       const [embeddedPage] = await outputDocument.embedPdf(sourceDocument, [0]);
       const outputPage = outputDocument.addPage([outputWidth, outputHeight]);
 
+      // Divide the output into four equal cells. A 1/sqrt(2)-scale source page
+      // matches each cell for standard ISO geometry; offsets also centre copies
+      // if input dimensions contain minor rounding or non-standard proportions.
       const cellWidth = outputWidth / 2;
       const cellHeight = outputHeight / 2;
 
@@ -576,6 +643,8 @@
         progress: 65,
       });
 
+      // PDF coordinates start at the bottom-left, so row 1 is the upper pair and
+      // row 0 is the lower pair.
       for (const { column, row } of placements) {
         outputPage.drawPage(embeddedPage, {
           x: column * cellWidth + xOffset,
@@ -604,6 +673,8 @@
         type: "application/pdf",
       });
 
+      // A temporary object URL lets a normal anchor download the in-memory Blob
+      // without uploading the generated PDF or writing it to browser storage.
       const url = URL.createObjectURL(blob);
 
       state.output = {
@@ -613,6 +684,8 @@
         size: blob.size,
       };
 
+      // Store metadata for display, never the source bytes or output Blob. UUIDs
+      // are preferred, with a timestamp/random fallback for older browsers.
       const historyEntry = {
         id:
           typeof crypto?.randomUUID === "function"
@@ -629,6 +702,8 @@
         isExample: false,
       };
 
+      // A real conversion replaces the bundled example and newest entries are
+      // kept first. Match the persistence layer's maximum of ten records.
       state.history = [
         historyEntry,
         ...state.history.filter((item) => !item.isExample),
@@ -661,6 +736,8 @@
     }
   };
 
+  // Trigger the browser's native download manager with a short-lived anchor.
+  // The object URL remains valid for repeat downloads until output is cleared.
   const downloadOutput = () => {
     if (!state.output?.url || !state.output?.filename) {
       return;
@@ -682,6 +759,8 @@
     });
   };
 
+  // Switch the visible content panel, synchronise navigation accessibility
+  // state and header copy, and remember the choice for the next visit.
   const setActiveView = (viewName) => {
     if (!Object.hasOwn(pageTitles, viewName)) {
       return;
@@ -712,6 +791,8 @@
     window.scrollTo({ top: 0, behaviour: "smooth" });
   };
 
+  // Mobile navigation helpers update the visual classes and aria-expanded value
+  // together so assistive technology receives the same state as sighted users.
   const openMobileNavigation = () => {
     elements.sidebar.classList.add("open");
     elements.sidebarBackdrop.classList.add("visible");
@@ -730,11 +811,15 @@
     renderHistory();
   };
 
+  // Prevent the browser's default behaviour of navigating to a dropped file.
+  // These handlers are registered on window so drops outside the target are safe.
   const preventBrowserFileOpen = (event) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
+  // Navigation uses event delegation because every view button shares the same
+  // data-view contract, including any buttons added to the markup later.
   document.addEventListener("click", (event) => {
     const navButton = event.target.closest("[data-view]");
 
@@ -779,6 +864,8 @@
     handleSelectedFiles(event.target.files);
   });
 
+  // First suppress browser-wide file navigation, then add drop-zone-only visual
+  // feedback and pass the dropped FileList into the shared selection pipeline.
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     window.addEventListener(eventName, preventBrowserFileOpen);
   });
@@ -814,11 +901,15 @@
     }
   });
 
+  // Initialisation order matters: restore durable metadata, render it, select
+  // the restored view, and finally reset transient document/output controls.
   loadPersistedState();
   renderHistory();
   setActiveView(state.activeView);
   clearSource();
 
+  // The external library is required for both validation and conversion. Disable
+  // file selection up front when it failed to load instead of failing later.
   if (!window.PDFLib?.PDFDocument) {
     setStatus({
       type: "error",
