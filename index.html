@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Create a four-up PDF entirely in your browser. No uploads and no server processing."
+    />
+    <title>PDF 4-Up</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" sizes="64x64" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Application navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div class="brand-copy">
+            <p class="brand-title">PDF 4-Up</p>
+            <p class="brand-subtitle">Local PDF imposition</p>
+          </div>
+        </div>
+
+        <nav class="navigation" aria-label="Primary navigation">
+          <button
+            class="nav-button active"
+            type="button"
+            data-view="convert"
+            aria-current="page"
+          >
+            <span class="nav-icon" aria-hidden="true">01</span>
+            <span>Convert</span>
+          </button>
+
+          <button class="nav-button" type="button" data-view="guide">
+            <span class="nav-icon" aria-hidden="true">02</span>
+            <span>How it works</span>
+          </button>
+
+          <button class="nav-button" type="button" data-view="privacy">
+            <span class="nav-icon" aria-hidden="true">03</span>
+            <span>Privacy</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-status">
+          <div class="privacy-indicator">
+            <span class="privacy-dot" aria-hidden="true"></span>
+            Local processing
+          </div>
+          Files remain on this device.
+        </div>
+      </aside>
+
+      <button
+        class="sidebar-backdrop"
+        id="sidebarBackdrop"
+        type="button"
+        aria-label="Close navigation"
+        tabindex="-1"
+      ></button>
+
+      <div class="app-area">
+        <header class="topbar">
+          <button
+            class="mobile-menu-button"
+            id="mobileMenuButton"
+            type="button"
+            aria-label="Open navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            ☰
+          </button>
+
+          <div class="page-heading">
+            <h1 class="page-title" id="pageTitle">Create a four-up PDF</h1>
+            <p class="page-description" id="pageDescription">
+              Place four copies of one PDF page onto the next ISO paper size.
+            </p>
+          </div>
+
+          <div class="topbar-badge">CLIENT-SIDE ONLY</div>
+        </header>
+
+        <main>
+          <section class="view" id="view-convert" data-view-container="convert">
+            <div class="workspace-grid">
+              <article class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Source PDF</h2>
+                    <p class="panel-subtitle">
+                      Select one PDF containing exactly one page.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="panel-body">
+                  <div
+                    class="drop-zone"
+                    id="dropZone"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Choose or drop a single-page PDF"
+                  >
+                    <input
+                      class="file-input"
+                      id="fileInput"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                    />
+
+                    <div class="drop-content">
+                      <div class="document-icon" aria-hidden="true">
+                        <div class="document-icon-grid">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                      </div>
+
+                      <h2 class="drop-title" id="dropTitle">Drop a PDF here</h2>
+
+                      <p class="drop-description" id="dropDescription">
+                        Or select a file from this device.
+                      </p>
+
+                      <button
+                        class="button drop-button"
+                        id="selectFileButton"
+                        type="button"
+                      >
+                        Select PDF
+                      </button>
+
+                      <p class="drop-restrictions">
+                        PDF · ONE PAGE ONLY · MAXIMUM 200 MB
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    class="status-box"
+                    id="statusBox"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div class="status-content">
+                      <div class="status-symbol" id="statusSymbol">i</div>
+
+                      <div>
+                        <p class="status-title" id="statusTitle">Ready</p>
+                        <p class="status-message" id="statusMessage">
+                          Select a single-page PDF to begin.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="progress-track hidden" id="progressTrack">
+                      <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <div class="details-stack">
+                <article class="panel file-summary">
+                  <div class="panel-header">
+                    <div>
+                      <h2 class="panel-title">Document details</h2>
+                      <p class="panel-subtitle">Validated source information</p>
+                    </div>
+                  </div>
+
+                  <div class="panel-body">
+                    <div class="empty-state" id="detailsEmpty">
+                      No PDF selected.
+                    </div>
+
+                    <dl class="summary-list hidden" id="detailsList">
+                      <div class="summary-row">
+                        <dt>Filename</dt>
+                        <dd id="detailFilename">—</dd>
+                      </div>
+
+                      <div class="summary-row">
+                        <dt>File size</dt>
+                        <dd id="detailFileSize">—</dd>
+                      </div>
+
+                      <div class="summary-row">
+                        <dt>Source page</dt>
+                        <dd id="detailSourceSize">—</dd>
+                      </div>
+
+                      <div class="summary-row">
+                        <dt>Output page</dt>
+                        <dd id="detailOutputSize">—</dd>
+                      </div>
+
+                      <div class="summary-row">
+                        <dt>Copy scale</dt>
+                        <dd id="detailScale">70.7107%</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </article>
+
+                <article class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2 class="panel-title">Output</h2>
+                      <p class="panel-subtitle">Two columns by two rows</p>
+                    </div>
+                  </div>
+
+                  <div class="panel-body">
+                    <div
+                      class="output-preview"
+                      id="outputPreview"
+                      aria-hidden="true"
+                    >
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+
+                    <div class="action-stack">
+                      <button
+                        class="button primary"
+                        id="createButton"
+                        type="button"
+                        disabled
+                      >
+                        Create 4-up PDF
+                      </button>
+
+                      <button
+                        class="button"
+                        id="downloadButton"
+                        type="button"
+                        disabled
+                      >
+                        Download output
+                      </button>
+
+                      <button
+                        class="button danger"
+                        id="clearButton"
+                        type="button"
+                        disabled
+                      >
+                        Clear document
+                      </button>
+                    </div>
+
+                    <p class="technical-note" style="margin-top: 16px">
+                      <strong>Output filename:</strong>
+                      <span id="outputFilename">Not available</span>
+                    </p>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <article class="panel history-panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Recent local activity</h2>
+                  <p class="panel-subtitle">
+                    Metadata only. PDF contents are never stored.
+                  </p>
+                </div>
+
+                <button class="button" id="clearHistoryButton" type="button">
+                  Clear history
+                </button>
+              </div>
+
+              <div class="panel-body">
+                <div class="empty-state hidden" id="historyEmpty">
+                  No completed conversions.
+                </div>
+
+                <ul class="history-list" id="historyList"></ul>
+              </div>
+            </article>
+          </section>
+
+          <section
+            class="view hidden"
+            id="view-guide"
+            data-view-container="guide"
+          >
+            <div class="info-grid">
+              <article class="info-card">
+                <div class="info-number">01</div>
+                <h2>Select one page</h2>
+                <p>
+                  Choose a PDF containing exactly one page. Encrypted,
+                  password-protected, malformed and multi-page files are
+                  rejected.
+                </p>
+              </article>
+
+              <article class="info-card">
+                <div class="info-number">02</div>
+                <h2>Impose four copies</h2>
+                <p>
+                  The page is embedded once and drawn four times in a two-by-two
+                  arrangement. Vector content, text and images remain embedded
+                  as PDF content.
+                </p>
+              </article>
+
+              <article class="info-card">
+                <div class="info-number">03</div>
+                <h2>Download locally</h2>
+                <p>
+                  The completed PDF is generated in browser memory and
+                  downloaded directly. No source or output document is
+                  transmitted.
+                </p>
+              </article>
+            </div>
+
+            <article class="content-section" style="margin-top: 20px">
+              <h2>Page-size calculation</h2>
+              <p>
+                The output page keeps the source orientation and uses the next
+                size in the ISO A-series progression. Each dimension is
+                multiplied by the square root of two. Each source copy is scaled
+                by the reciprocal of the square root of two.
+              </p>
+
+              <span class="formula">
+                output width = source width × √2 &nbsp;&nbsp; output height =
+                source height × √2
+              </span>
+
+              <span class="formula"> copy scale = 1 ÷ √2 = 0.7071067812 </span>
+            </article>
+
+            <article class="content-section">
+              <h2>Examples</h2>
+              <ul>
+                <li>A5 becomes A4 with four reduced A5 copies.</li>
+                <li>A4 becomes A3 with four reduced A4 copies.</li>
+                <li>A3 becomes A2 with four reduced A3 copies.</li>
+                <li>Landscape source pages produce landscape output pages.</li>
+                <li>
+                  Non-standard page dimensions are enlarged proportionally.
+                </li>
+              </ul>
+            </article>
+          </section>
+
+          <section
+            class="view hidden"
+            id="view-privacy"
+            data-view-container="privacy"
+          >
+            <article class="content-section">
+              <h2>Local-only document processing</h2>
+              <p>
+                Selected files are read by JavaScript in this browser tab. PDF
+                parsing, page embedding, output construction and download
+                creation all occur on this device.
+              </p>
+            </article>
+
+            <article class="content-section">
+              <h2>What is persisted</h2>
+              <p>
+                The application stores only interface preferences and recent
+                conversion metadata in <code>localStorage</code>. Stored
+                metadata can include a filename, output filename, file size and
+                completion time. Source and output PDF bytes are not written to
+                <code>localStorage</code>.
+              </p>
+            </article>
+
+            <article class="content-section">
+              <h2>Third-party library</h2>
+              <p>
+                The PDF processing library is loaded from a public CDN. The
+                library code is downloaded by the browser, but your selected PDF
+                is not sent to that CDN. Once loaded, conversion is performed
+                locally.
+              </p>
+            </article>
+
+            <article class="content-section">
+              <h2>Memory lifecycle</h2>
+              <p>
+                PDF bytes remain in browser memory until the document is
+                cleared, replaced, or the page is closed. Generated object URLs
+                are revoked when they are no longer required.
+              </p>
+            </article>
+          </section>
+        </main>
+
+        <footer>
+          PDF 4-Up · Runs entirely in your browser · No document uploads ·
+          <a href="https://github.com/andygock/pdf-4up">View on GitHub</a>
+        </footer>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
