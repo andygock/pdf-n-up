@@ -399,11 +399,26 @@ export const renderOutputPreview = async () => {
 
     const page = await pdfDocument.getPage(1);
     const unscaledViewport = page.getViewport({ scale: 1 });
-    const availableWidth = Math.max(
-      280,
-      Math.min(1000, elements.previewViewport.clientWidth - 48),
+    const viewportStyles = getComputedStyle(elements.previewViewport);
+    const horizontalPadding =
+      parseFloat(viewportStyles.paddingLeft) +
+      parseFloat(viewportStyles.paddingRight);
+    const verticalPadding =
+      parseFloat(viewportStyles.paddingTop) +
+      parseFloat(viewportStyles.paddingBottom);
+    const previewBounds = elements.previewViewport.getBoundingClientRect();
+    const availableWidth = Math.max(1, previewBounds.width - horizontalPadding);
+    const availableHeight = Math.max(
+      1,
+      previewBounds.height - verticalPadding,
     );
-    const cssScale = Math.min(1.5, availableWidth / unscaledViewport.width);
+    // Fit the complete sheet in both dimensions. This works for either
+    // portrait or landscape source/output pages without introducing scrollbars.
+    const cssScale = Math.min(
+      1.5,
+      availableWidth / unscaledViewport.width,
+      availableHeight / unscaledViewport.height,
+    );
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     const renderViewport = page.getViewport({ scale: cssScale * pixelRatio });
     const canvas = elements.pdfPreview;
@@ -411,8 +426,10 @@ export const renderOutputPreview = async () => {
 
     canvas.width = Math.ceil(renderViewport.width);
     canvas.height = Math.ceil(renderViewport.height);
-    canvas.style.width = `${Math.ceil(renderViewport.width / pixelRatio)}px`;
-    canvas.style.height = `${Math.ceil(renderViewport.height / pixelRatio)}px`;
+    // Keep the CSS size at the precise fitted dimensions. Rounding it up can
+    // make a page overflow its viewport by a pixel and create a scrollbar.
+    canvas.style.width = `${renderViewport.width / pixelRatio}px`;
+    canvas.style.height = `${renderViewport.height / pixelRatio}px`;
 
     const renderTask = page.render({
       canvasContext: context,
