@@ -75,6 +75,8 @@ Selected PDF bytes and generated output bytes remain in browser memory until the
 
 The app does not retain conversion history, filenames, file sizes, completion times, source PDFs, or generated PDFs in persistent browser storage.
 
+The browser or operating system may temporarily write source or generated PDF data to disk during processing or downloading, including in a browser cache, a temporary directory such as `%TEMP%` on Windows, or virtual-memory files. Their location and retention are controlled by the browser and operating system. The completed PDF is saved to the configured Downloads folder or another selected download location and remains there until it is moved or deleted.
+
 ## Project structure
 
 - `index.html` — application markup and content
