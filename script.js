@@ -57,6 +57,20 @@
     ...defaultState,
   };
 
+  // Browsers may restore radio selections from the previous page session even
+  // though the JavaScript state starts from its defaults. Read the checked
+  // controls before the first conversion so the visible and applied options
+  // always agree.
+  const syncOptionsFromDom = () => {
+    const selectedLayout = document.querySelector('input[name="layout"]:checked');
+    const selectedPaperMode = document.querySelector(
+      'input[name="paperMode"]:checked',
+    );
+
+    state.layout = LAYOUTS[selectedLayout?.value] || LAYOUTS[4];
+    state.paperMode = selectedPaperMode?.value === "same" ? "same" : "expand";
+  };
+
   // Cache frequently used DOM nodes once. The HTML contract requires each of
   // these IDs to exist before this script runs.
   const elements = {
@@ -466,6 +480,10 @@
     if (state.processing) {
       return;
     }
+
+    // Re-read restored form state at the moment it matters as an additional
+    // safeguard for browsers that restore controls after initial script setup.
+    syncOptionsFromDom();
 
     const selectedFiles = Array.from(files || []);
 
@@ -957,6 +975,7 @@
 
   // Remove data left by older releases, then initialise session-only state.
   removeLegacyPersistedState();
+  syncOptionsFromDom();
   setActiveView(state.activeView);
   clearSource();
 
