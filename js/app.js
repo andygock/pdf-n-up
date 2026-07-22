@@ -18,7 +18,6 @@ import {
   downloadOutput,
   handleSelectedFiles,
   openOutput,
-  renderOutputPreview,
 } from "./pdf.js";
 import {
   closeMobileNavigation,
@@ -75,24 +74,6 @@ elements.fileInput.addEventListener("change", (event) => {
 
 elements.downloadOutputButton.addEventListener("click", downloadOutput);
 elements.openOutputButton.addEventListener("click", openOutput);
-
-// A resized browser window can change the usable preview height as well as its
-// width. Re-render the canvas so the entire generated sheet stays in view.
-let previewResizeTimer;
-const refitPreview = () => {
-  clearTimeout(previewResizeTimer);
-  previewResizeTimer = setTimeout(() => {
-    if (state.output && !state.processing) {
-      renderOutputPreview();
-    }
-  }, 150);
-};
-
-if ("ResizeObserver" in window) {
-  new ResizeObserver(refitPreview).observe(elements.previewViewport);
-} else {
-  window.addEventListener("resize", refitPreview);
-}
 
 document.addEventListener("change", (event) => {
   if (event.target.matches('input[name="layout"]')) {

@@ -93,12 +93,11 @@
         <main>
           <section class="view" id="view-convert" data-view-container="convert">
             <article class="panel conversion-options">
-              <div class="panel-header">
+              <div class="options-heading">
                 <div>
                   <h2 class="panel-title">Conversion options</h2>
                   <p class="panel-subtitle">
-                    Choose the sheet layout before selecting or dropping a PDF.
-                    Rectangular grids rotate automatically for landscape pages.
+                    Choose a layout and output size.
                   </p>
                 </div>
               </div>
@@ -218,7 +217,7 @@
               </div>
             </article>
             <div class="workspace-grid">
-              <article class="panel">
+              <article class="panel source-panel">
                 <div class="panel-header">
                   <div>
                     <h2 class="panel-title">Source PDF</h2>
@@ -272,6 +271,54 @@
                         PDF · ONE PAGE ONLY · MAXIMUM 200 MB
                       </p>
                     </div>
+
+                    <section
+                      class="source-details hidden"
+                      id="sourceDetails"
+                      aria-labelledby="detailsTitle"
+                    >
+                      <div class="source-details-header">
+                        <div>
+                          <h3 id="detailsTitle">Document details</h3>
+                          <span>Click or drop another PDF to replace this file</span>
+                        </div>
+                      </div>
+
+                      <div class="empty-state" id="detailsEmpty">
+                        No PDF selected.
+                      </div>
+
+                      <dl class="summary-list hidden" id="detailsList">
+                        <div class="summary-row">
+                          <dt>Filename</dt>
+                          <dd id="detailFilename">—</dd>
+                        </div>
+
+                        <div class="summary-row">
+                          <dt>File size</dt>
+                          <dd id="detailFileSize">—</dd>
+                        </div>
+
+                        <div class="summary-row">
+                          <dt>Source page</dt>
+                          <dd id="detailSourceSize">—</dd>
+                        </div>
+
+                        <div class="summary-row">
+                          <dt>Output page</dt>
+                          <dd id="detailOutputSize">—</dd>
+                        </div>
+
+                        <div class="summary-row">
+                          <dt>Copy scale</dt>
+                          <dd id="detailScale">100%</dd>
+                        </div>
+                        <div class="summary-row">
+                          <dt>Layout</dt>
+                          <dd id="detailLayout">4-up (2×2)</dd>
+                        </div>
+                      </dl>
+                    </section>
                   </div>
 
                   <div
@@ -295,93 +342,48 @@
                       <div class="progress-bar" id="progressBar"></div>
                     </div>
                   </div>
+
                 </div>
               </article>
 
-              <div class="details-stack">
-                <article class="panel file-summary">
-                  <div class="panel-header">
-                    <div>
-                      <h2 class="panel-title">Document details</h2>
-                      <p class="panel-subtitle">Validated source information</p>
-                    </div>
+              <article class="panel output-panel" id="outputPanel">
+                <div class="panel-header output-header">
+                  <div>
+                    <h2 class="panel-title">Output preview</h2>
+                    <p class="panel-subtitle" id="outputSummary">
+                      Your generated PDF will appear here.
+                    </p>
                   </div>
 
-                  <div class="panel-body">
-                    <div class="empty-state" id="detailsEmpty">
-                      No PDF selected.
-                    </div>
-
-                    <dl class="summary-list hidden" id="detailsList">
-                      <div class="summary-row">
-                        <dt>Filename</dt>
-                        <dd id="detailFilename">—</dd>
-                      </div>
-
-                      <div class="summary-row">
-                        <dt>File size</dt>
-                        <dd id="detailFileSize">—</dd>
-                      </div>
-
-                      <div class="summary-row">
-                        <dt>Source page</dt>
-                        <dd id="detailSourceSize">—</dd>
-                      </div>
-
-                      <div class="summary-row">
-                        <dt>Output page</dt>
-                        <dd id="detailOutputSize">—</dd>
-                      </div>
-
-                      <div class="summary-row">
-                        <dt>Copy scale</dt>
-                        <dd id="detailScale">100%</dd>
-                      </div>
-                      <div class="summary-row">
-                        <dt>Layout</dt>
-                        <dd id="detailLayout">4-up (2×2)</dd>
-                      </div>
-                    </dl>
+                  <div class="output-actions">
+                    <button class="button" id="openOutputButton" type="button" disabled>
+                      Open
+                    </button>
+                    <button
+                      class="button primary"
+                      id="downloadOutputButton"
+                      type="button"
+                      disabled
+                    >
+                      Download
+                    </button>
                   </div>
-                </article>
-              </div>
+                </div>
+
+                <div class="preview-viewport" id="previewViewport">
+                  <div class="preview-loading" id="previewLoading" role="status">
+                    Select a PDF to see the output preview.
+                  </div>
+                  <canvas
+                    class="pdf-preview hidden"
+                    id="pdfPreview"
+                    aria-label="Preview of the generated PDF"
+                  ></canvas>
+                  <p class="preview-error hidden" id="previewError"></p>
+                </div>
+              </article>
             </div>
 
-            <article class="panel output-panel hidden" id="outputPanel">
-              <div class="panel-header output-header">
-                <div>
-                  <h2 class="panel-title">Output preview</h2>
-                  <p class="panel-subtitle" id="outputSummary">
-                    Generated locally in browser memory.
-                  </p>
-                </div>
-
-                <div class="output-actions">
-                  <button class="button" id="openOutputButton" type="button">
-                    Open in new tab
-                  </button>
-                  <button
-                    class="button primary"
-                    id="downloadOutputButton"
-                    type="button"
-                  >
-                    Download PDF
-                  </button>
-                </div>
-              </div>
-
-              <div class="preview-viewport" id="previewViewport">
-                <div class="preview-loading" id="previewLoading" role="status">
-                  Rendering preview locally…
-                </div>
-                <canvas
-                  class="pdf-preview hidden"
-                  id="pdfPreview"
-                  aria-label="Preview of the generated PDF"
-                ></canvas>
-                <p class="preview-error hidden" id="previewError"></p>
-              </div>
-            </article>
           </section>
 
           <section

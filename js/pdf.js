@@ -360,6 +360,7 @@ export const renderOutputPreview = async () => {
   elements.outputPanel.classList.remove("hidden");
   elements.outputSummary.textContent = `${output.filename} · ${formatBytes(output.size)} · held in memory`;
   elements.previewLoading.classList.remove("hidden");
+  elements.previewLoading.textContent = "Rendering preview locally…";
   elements.pdfPreview.classList.add("hidden");
   elements.previewError.classList.add("hidden");
   elements.openOutputButton.disabled = false;

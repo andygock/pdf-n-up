@@ -87,6 +87,7 @@ export const elements = {
   fileInput: document.querySelector("#fileInput"),
   selectFileButton: document.querySelector("#selectFileButton"),
   dropZone: document.querySelector("#dropZone"),
+  sourceDetails: document.querySelector("#sourceDetails"),
   dropTitle: document.querySelector("#dropTitle"),
   dropDescription: document.querySelector("#dropDescription"),
 

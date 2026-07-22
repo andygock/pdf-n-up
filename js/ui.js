@@ -65,9 +65,11 @@ export const resetOutput = () => {
   revokeOutputUrl();
   state.output = null;
 
-  elements.outputPanel.classList.add("hidden");
+  elements.outputPanel.classList.remove("hidden");
+  elements.outputSummary.textContent = "Your generated PDF will appear here.";
   elements.pdfPreview.classList.add("hidden");
   elements.previewLoading.classList.remove("hidden");
+  elements.previewLoading.textContent = "Select a PDF to see the output preview.";
   elements.previewError.classList.add("hidden");
   elements.previewError.textContent = "";
   elements.pdfPreview.width = 0;
@@ -89,6 +91,7 @@ export const clearSource = ({
   elements.fileInput.value = "";
 
   elements.dropZone.classList.remove("has-file");
+  elements.sourceDetails.classList.add("hidden");
   elements.dropTitle.textContent = "Drop a PDF here";
   elements.dropDescription.textContent =
     "Or select a file. Valid PDFs convert into an in-browser preview.";
@@ -108,6 +111,7 @@ export const clearSource = ({
 // loading makes it easy to refresh the detail panel from the current state.
 export const updateDocumentDetails = () => {
   if (!state.source) {
+    elements.sourceDetails.classList.add("hidden");
     elements.detailsEmpty.classList.remove("hidden");
     elements.detailsList.classList.add("hidden");
     return;
@@ -124,6 +128,7 @@ export const updateDocumentDetails = () => {
 
   elements.detailsEmpty.classList.add("hidden");
   elements.detailsList.classList.remove("hidden");
+  elements.sourceDetails.classList.remove("hidden");
 
   elements.detailFilename.textContent = file.name;
   elements.detailFileSize.textContent = formatBytes(file.size);
