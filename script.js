@@ -71,13 +71,6 @@
     detailSourceSize: document.querySelector("#detailSourceSize"),
     detailOutputSize: document.querySelector("#detailOutputSize"),
     detailScale: document.querySelector("#detailScale"),
-
-    outputPreview: document.querySelector("#outputPreview"),
-    outputFilename: document.querySelector("#outputFilename"),
-
-    createButton: document.querySelector("#createButton"),
-    downloadButton: document.querySelector("#downloadButton"),
-    clearButton: document.querySelector("#clearButton"),
   };
 
   // Remove metadata written by versions that kept a recent-conversion history.
@@ -197,11 +190,10 @@
     }
   };
 
-  // Invalidate both the generated data and its corresponding download control.
+  // Invalidate generated data and release its temporary object URL.
   const resetOutput = () => {
     revokeOutputUrl();
     state.output = null;
-    elements.downloadButton.disabled = true;
   };
 
   // Return all source-dependent controls and labels to their initial state.
@@ -218,17 +210,11 @@
 
     elements.dropZone.classList.remove("has-file");
     elements.dropTitle.textContent = "Drop a PDF here";
-    elements.dropDescription.textContent = "Or select a file from this device.";
+    elements.dropDescription.textContent =
+      "Or select a file. Valid PDFs convert and download automatically.";
 
     elements.detailsEmpty.classList.remove("hidden");
     elements.detailsList.classList.add("hidden");
-
-    elements.outputFilename.textContent = "Not available";
-    elements.outputPreview.classList.remove("landscape");
-
-    elements.createButton.disabled = true;
-    elements.downloadButton.disabled = true;
-    elements.clearButton.disabled = true;
 
     setStatus({
       type: "neutral",
@@ -247,8 +233,7 @@
       return;
     }
 
-    const { file, width, height, outputWidth, outputHeight, outputName } =
-      state.source;
+    const { file, width, height, outputWidth, outputHeight } = state.source;
 
     elements.detailsEmpty.classList.add("hidden");
     elements.detailsList.classList.remove("hidden");
@@ -264,21 +249,12 @@
     // paper sizes. Four copies therefore fit into a 2-by-2 output arrangement.
     elements.detailScale.textContent = `${(COPY_SCALE * 100).toFixed(4)}%`;
 
-    elements.outputFilename.textContent = outputName;
-    elements.outputPreview.classList.toggle(
-      "landscape",
-      outputWidth > outputHeight,
-    );
   };
 
-  // Lock every action that could replace source/output state during conversion,
-  // then restore each control according to whether its required data exists.
+  // Lock file selection while conversion is running.
   const setProcessingState = (processing) => {
     state.processing = processing;
 
-    elements.createButton.disabled = processing || !state.source;
-    elements.downloadButton.disabled = processing || !state.output;
-    elements.clearButton.disabled = processing || !state.source;
     elements.selectFileButton.disabled = processing;
     elements.fileInput.disabled = processing;
   };
@@ -399,9 +375,6 @@
     elements.dropTitle.textContent = file.name;
     elements.dropDescription.textContent = `${formatBytes(file.size)} · one page validated`;
 
-    elements.createButton.disabled = false;
-    elements.clearButton.disabled = false;
-
     updateDocumentDetails();
 
     setStatus({
@@ -414,7 +387,7 @@
   };
 
   // Normalise FileList objects from both the picker and drag-and-drop paths,
-  // enforce the single-file rule, and restore a coherent empty UI on failure.
+  // enforce the single-file rule, then convert and download valid input.
   const handleSelectedFiles = async (files) => {
     if (state.processing) {
       return;
@@ -443,6 +416,11 @@
       });
 
       await validateAndLoadFile(selectedFiles[0]);
+      await createFourUpPdf();
+
+      if (state.output) {
+        downloadOutput();
+      }
     } catch (error) {
       clearSource({
         statusTitle: "File rejected",
@@ -751,9 +729,6 @@
     handleSelectedFiles(event.dataTransfer?.files);
   });
 
-  elements.createButton.addEventListener("click", createFourUpPdf);
-  elements.downloadButton.addEventListener("click", downloadOutput);
-  elements.clearButton.addEventListener("click", () => clearSource());
   window.addEventListener("beforeunload", revokeOutputUrl);
 
   window.addEventListener("keydown", (event) => {

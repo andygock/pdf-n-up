@@ -15,6 +15,7 @@ Demo: <https://andygock.github.io/pdf-4up/>
 - Places four copies in a two-column by two-row layout
 - Preserves portrait or landscape orientation
 - Generates and downloads the result entirely in browser memory
+- Automatically converts and downloads a valid selected or dropped PDF
 - Does not retain conversion history or document metadata in browser storage
 - Responsive interface with keyboard-accessible controls
 
@@ -35,8 +36,7 @@ The generated filename is based on the source filename with `_4up` appended. For
 
 1. Open the app in a modern browser.
 2. Select or drop a PDF containing exactly one page.
-3. Select **Create 4-up PDF**.
-4. Select **Download output**.
+3. The app validates, converts, and downloads the result automatically.
 
 The first page load requires an internet connection because [`pdf-lib`](https://pdf-lib.js.org/) is loaded from jsDelivr. PDF conversion itself is performed locally after the library has loaded.
 
