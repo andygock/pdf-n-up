@@ -164,7 +164,7 @@ export const formatPageSize = (width, height) => {
   const widthMm = pointsToMillimetres(width);
   const heightMm = pointsToMillimetres(height);
   const paperName = findPaperName(widthMm, heightMm);
-  return `${widthMm.toFixed(1)} Ã— ${heightMm.toFixed(1)} mm${paperName ? ` (${paperName})` : ""}`;
+  return `${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm${paperName ? ` (${paperName})` : ""}`;
 };
 
 // Layout labels describe portrait input. Transpose rectangular grids for a

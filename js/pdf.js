@@ -120,13 +120,13 @@ export const validateAndLoadFile = async (file) => {
 
   elements.dropZone.classList.add("has-file");
   elements.dropTitle.textContent = file.name;
-  elements.dropDescription.textContent = `${formatBytes(file.size)} Â· one page validated`;
+  elements.dropDescription.textContent = `${formatBytes(file.size)} · one page validated`;
 
   updateDocumentDetails();
 
   setStatus({
     type: "success",
-    symbol: "âœ“",
+    symbol: "✓",
     title: "PDF validated",
     message: `The document contains one page and is ready for ${state.layout.copies}-up conversion.`,
   });
@@ -321,7 +321,7 @@ export const createNUpPdf = async () => {
 
     setStatus({
       type: previewRendered ? "success" : "warning",
-      symbol: previewRendered ? "âœ“" : "!",
+      symbol: previewRendered ? "✓" : "!",
       title: previewRendered
         ? "Output ready"
         : "Output ready without preview",
@@ -358,7 +358,7 @@ export const renderOutputPreview = async () => {
   }
 
   elements.outputPanel.classList.remove("hidden");
-  elements.outputSummary.textContent = `${output.filename} Â· ${formatBytes(output.size)} Â· held in memory`;
+  elements.outputSummary.textContent = `${output.filename} · ${formatBytes(output.size)} · held in memory`;
   elements.previewLoading.classList.remove("hidden");
   elements.pdfPreview.classList.add("hidden");
   elements.previewError.classList.add("hidden");
@@ -473,7 +473,7 @@ export const downloadOutput = () => {
 
   setStatus({
     type: "success",
-    symbol: "â†“",
+    symbol: "↓",
     title: "Download started",
     message: `${state.output.filename} has been passed to the browser download manager.`,
   });

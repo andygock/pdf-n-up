@@ -134,7 +134,7 @@ export const updateDocumentDetails = () => {
   );
   elements.detailScale.textContent = `${Number((scale * 100).toFixed(4))}%`;
   const resolvedLayout = getResolvedLayout(width, height);
-  elements.detailLayout.textContent = `${resolvedLayout.copies}-up (${resolvedLayout.columns}Ã—${resolvedLayout.rows})`;
+  elements.detailLayout.textContent = `${resolvedLayout.copies}-up (${resolvedLayout.columns}×${resolvedLayout.rows})`;
 };
 
 // Lock file selection while conversion is running.
