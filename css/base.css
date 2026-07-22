@@ -109,18 +109,10 @@ code {
 }
 
 .brand-mark {
-  display: grid;
-  grid-template-columns: repeat(2, 8px);
-  grid-template-rows: repeat(2, 8px);
-  gap: 3px;
-  width: 19px;
-  height: 19px;
-  flex: 0 0 auto;
-}
-
-.brand-mark span {
   display: block;
-  background: var(--primary);
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
 }
 
 .brand-copy {
