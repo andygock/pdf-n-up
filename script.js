@@ -963,6 +963,13 @@
 
     resetOutput();
     updateDocumentDetails();
+
+    // The validated source bytes remain in memory, so option changes can
+    // immediately replace the preview without asking the user for the file
+    // again. createNUpPdf manages its own progress and error states.
+    if (state.source) {
+      createNUpPdf();
+    }
   });
 
   // First suppress browser-wide file navigation, then add drop-zone-only visual
