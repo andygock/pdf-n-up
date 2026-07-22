@@ -4,9 +4,9 @@
   // Keep all application code inside this immediately invoked function so that
   // constants, state, and helper functions do not leak into the global scope.
 
-  // Browser storage and PDF geometry constants. PDF dimensions are measured in
-  // points (72 points per inch), while the interface presents sizes in mm.
-  const STORAGE_KEY = "pdf-4up-state-v1";
+  // PDF dimensions are measured in points (72 points per inch), while the
+  // interface presents sizes in mm.
+  const LEGACY_STORAGE_KEY = "pdf-4up-state-v1";
   const MAX_FILE_SIZE = 200 * 1024 * 1024;
   const SQRT_2 = Math.sqrt(2);
   const COPY_SCALE = 1 / SQRT_2;
@@ -27,37 +27,19 @@
     privacy: {
       title: "Privacy",
       description:
-        "How local processing, browser memory and stored metadata are handled.",
+        "How local processing and browser memory are handled.",
     },
   };
 
-  // Only activeView and history are persisted. File objects, parsed PDF bytes,
-  // output blobs, and processing flags are deliberately session-only values.
   const defaultState = {
     activeView: "convert",
     source: null,
     output: null,
     processing: false,
-    history: [
-      {
-        id: "example",
-        inputName: "Example_A4.pdf",
-        outputName: "Example_A4_4up.pdf",
-        inputSize: 248320,
-        completedAt: "Example record",
-        isExample: true,
-      },
-    ],
   };
 
-  // Clone mutable defaults so clearing or replacing runtime state cannot mutate
-  // defaultState and prevent it from being used for error recovery later.
   const state = {
     ...defaultState,
-    source: null,
-    output: null,
-    processing: false,
-    history: [...defaultState.history],
   };
 
   // Cache frequently used DOM nodes once. The HTML contract requires each of
@@ -96,65 +78,13 @@
     createButton: document.querySelector("#createButton"),
     downloadButton: document.querySelector("#downloadButton"),
     clearButton: document.querySelector("#clearButton"),
-
-    historyList: document.querySelector("#historyList"),
-    historyEmpty: document.querySelector("#historyEmpty"),
-    clearHistoryButton: document.querySelector("#clearHistoryButton"),
   };
 
-  // Treat localStorage as untrusted input: accept only known view names and
-  // history entries with the minimum strings required to render them safely.
-  // The history limit also prevents old or manually edited data from growing
-  // the page and its storage record without bound.
-  const sanitisePersistedState = (parsed) => ({
-    activeView:
-      typeof parsed?.activeView === "string" &&
-      Object.hasOwn(pageTitles, parsed.activeView)
-        ? parsed.activeView
-        : defaultState.activeView,
-    history: Array.isArray(parsed?.history)
-      ? parsed.history
-          .filter((item) => {
-            return (
-              item &&
-              typeof item.inputName === "string" &&
-              typeof item.outputName === "string"
-            );
-          })
-          .slice(0, 10)
-      : [...defaultState.history],
-  });
-
-  // Restore the small amount of durable UI state. Corrupt JSON, blocked browser
-  // storage, and unexpected values all fall back to a clean initial state.
-  const loadPersistedState = () => {
+  // Remove metadata written by versions that kept a recent-conversion history.
+  // No new application state is written to persistent browser storage.
+  const removeLegacyPersistedState = () => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (!raw) {
-        return;
-      }
-
-      const persisted = sanitisePersistedState(JSON.parse(raw));
-      state.activeView = persisted.activeView;
-      state.history = persisted.history;
-    } catch {
-      state.activeView = defaultState.activeView;
-      state.history = [...defaultState.history];
-    }
-  };
-
-  // Persist serialisable metadata only. The source PDF and generated output are
-  // intentionally never written to storage, keeping document contents local to
-  // the current page lifecycle.
-  const persistState = () => {
-    const persisted = {
-      activeView: state.activeView,
-      history: state.history.slice(0, 10),
-    };
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch {
       // The application remains functional when browser storage is blocked.
     }
@@ -339,38 +269,6 @@
       "landscape",
       outputWidth > outputHeight,
     );
-  };
-
-  // Rebuild the short metadata-only conversion history. All file-derived text
-  // is escaped because this list is inserted through innerHTML.
-  const renderHistory = () => {
-    const items = state.history;
-
-    elements.historyEmpty.classList.toggle("hidden", items.length > 0);
-    elements.historyList.classList.toggle("hidden", items.length === 0);
-    elements.clearHistoryButton.disabled = items.length === 0;
-
-    elements.historyList.innerHTML = items
-      .map((item) => {
-        const meta = item.isExample
-          ? "Example metadata entry"
-          : `${formatBytes(item.inputSize)} · ${item.completedAt}`;
-
-        return `
-              <li class="history-item">
-                <div>
-                  <p class="history-name">${escapeHtml(item.outputName)}</p>
-                  <p class="history-meta">
-                    From ${escapeHtml(item.inputName)} · ${escapeHtml(meta)}
-                  </p>
-                </div>
-                <span class="history-status">
-                  ${item.isExample ? "EXAMPLE" : "COMPLETE"}
-                </span>
-              </li>
-            `;
-      })
-      .join("");
   };
 
   // Lock every action that could replace source/output state during conversion,
@@ -684,34 +582,6 @@
         size: blob.size,
       };
 
-      // Store metadata for display, never the source bytes or output Blob. UUIDs
-      // are preferred, with a timestamp/random fallback for older browsers.
-      const historyEntry = {
-        id:
-          typeof crypto?.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        inputName: state.source.file.name,
-        outputName,
-        inputSize: state.source.file.size,
-        outputSize: blob.size,
-        completedAt: new Intl.DateTimeFormat("en-AU", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(new Date()),
-        isExample: false,
-      };
-
-      // A real conversion replaces the bundled example and newest entries are
-      // kept first. Match the persistence layer's maximum of ten records.
-      state.history = [
-        historyEntry,
-        ...state.history.filter((item) => !item.isExample),
-      ].slice(0, 10);
-
-      persistState();
-      renderHistory();
-
       setStatus({
         type: "success",
         symbol: "✓",
@@ -759,8 +629,8 @@
     });
   };
 
-  // Switch the visible content panel, synchronise navigation accessibility
-  // state and header copy, and remember the choice for the next visit.
+  // Switch the visible content panel and synchronise navigation accessibility
+  // state and header copy for the current page session.
   const setActiveView = (viewName) => {
     if (!Object.hasOwn(pageTitles, viewName)) {
       return;
@@ -786,7 +656,6 @@
     elements.pageTitle.textContent = pageTitles[viewName].title;
     elements.pageDescription.textContent = pageTitles[viewName].description;
 
-    persistState();
     closeMobileNavigation();
     window.scrollTo({ top: 0, behaviour: "smooth" });
   };
@@ -803,12 +672,6 @@
     elements.sidebar.classList.remove("open");
     elements.sidebarBackdrop.classList.remove("visible");
     elements.mobileMenuButton.setAttribute("aria-expanded", "false");
-  };
-
-  const clearHistory = () => {
-    state.history = [];
-    persistState();
-    renderHistory();
   };
 
   // Prevent the browser's default behaviour of navigating to a dropped file.
@@ -891,8 +754,6 @@
   elements.createButton.addEventListener("click", createFourUpPdf);
   elements.downloadButton.addEventListener("click", downloadOutput);
   elements.clearButton.addEventListener("click", () => clearSource());
-  elements.clearHistoryButton.addEventListener("click", clearHistory);
-
   window.addEventListener("beforeunload", revokeOutputUrl);
 
   window.addEventListener("keydown", (event) => {
@@ -901,10 +762,8 @@
     }
   });
 
-  // Initialisation order matters: restore durable metadata, render it, select
-  // the restored view, and finally reset transient document/output controls.
-  loadPersistedState();
-  renderHistory();
+  // Remove data left by older releases, then initialise session-only state.
+  removeLegacyPersistedState();
   setActiveView(state.activeView);
   clearSource();
 

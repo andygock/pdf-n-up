@@ -766,50 +766,6 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-.history-panel {
-  margin-top: 20px;
-}
-
-.history-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.history-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.history-item:last-child {
-  border-bottom: 0;
-}
-
-.history-name {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--text-strong);
-  font-size: 0.86rem;
-}
-
-.history-meta {
-  margin: 2px 0 0;
-  color: var(--text-muted);
-  font-size: 0.74rem;
-}
-
-.history-status {
-  color: var(--success);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.72rem;
-}
-
 footer {
   margin-top: auto;
   padding: 20px 28px;
@@ -817,6 +773,10 @@ footer {
   color: var(--text-muted);
   font-size: 0.75rem;
   text-align: center;
+}
+
+footer a {
+  color: var(--text-muted);
 }
 
 .sidebar-backdrop {

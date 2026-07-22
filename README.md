@@ -15,7 +15,7 @@ Demo: <https://andygock.github.io/pdf-4up/>
 - Places four copies in a two-column by two-row layout
 - Preserves portrait or landscape orientation
 - Generates and downloads the result entirely in browser memory
-- Stores only interface preferences and recent conversion metadata in `localStorage`
+- Does not retain conversion history or document metadata in browser storage
 - Responsive interface with keyboard-accessible controls
 
 ## How the layout works
@@ -73,7 +73,7 @@ No server-side processing, environment variables, or database are required. The 
 
 Selected PDF bytes and generated output bytes remain in browser memory until the document is cleared, replaced, or the tab is closed. Object URLs used for downloads are revoked when they are no longer needed.
 
-The app stores the active view and up to ten recent conversion metadata entries in `localStorage`. Metadata can include filenames, file sizes, and completion times; PDF contents are never stored there. Use **Clear history** in the app to remove this metadata.
+The app does not retain conversion history, filenames, file sizes, completion times, source PDFs, or generated PDFs in persistent browser storage.
 
 ## Project structure
 
@@ -84,6 +84,6 @@ The app stores the active view and up to ten recent conversion metadata entries 
 
 ## Browser requirements
 
-Use a current version of Chrome, Edge, Firefox, or Safari with JavaScript enabled. The app relies on standard browser APIs including `File`, `Blob`, `URL.createObjectURL`, `localStorage`, and Web Crypto where available.
+Use a current version of Chrome, Edge, Firefox, or Safari with JavaScript enabled. The app relies on standard browser APIs including `File`, `Blob`, and `URL.createObjectURL`.
 
 Very large PDFs may require substantial browser memory because both the source and generated document are held in memory during conversion.

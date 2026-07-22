@@ -53,13 +53,13 @@
           </button>
         </nav>
 
-        <div class="sidebar-status">
+        <!-- <div class="sidebar-status">
           <div class="privacy-indicator">
             <span class="privacy-dot" aria-hidden="true"></span>
             Local processing
           </div>
           Files remain on this device.
-        </div>
+        </div> -->
       </aside>
 
       <button
@@ -90,7 +90,7 @@
             </p>
           </div>
 
-          <div class="topbar-badge">CLIENT-SIDE ONLY</div>
+          <!-- <div class="topbar-badge">CLIENT-SIDE ONLY</div> -->
         </header>
 
         <main>
@@ -276,28 +276,6 @@
               </div>
             </div>
 
-            <article class="panel history-panel">
-              <div class="panel-header">
-                <div>
-                  <h2 class="panel-title">Recent local activity</h2>
-                  <p class="panel-subtitle">
-                    Metadata only. PDF contents are never stored.
-                  </p>
-                </div>
-
-                <button class="button" id="clearHistoryButton" type="button">
-                  Clear history
-                </button>
-              </div>
-
-              <div class="panel-body">
-                <div class="empty-state hidden" id="historyEmpty">
-                  No completed conversions.
-                </div>
-
-                <ul class="history-list" id="historyList"></ul>
-              </div>
-            </article>
           </section>
 
           <section
@@ -383,13 +361,11 @@
             </article>
 
             <article class="content-section">
-              <h2>What is persisted</h2>
+              <h2>No persistent history</h2>
               <p>
-                The application stores only interface preferences and recent
-                conversion metadata in <code>localStorage</code>. Stored
-                metadata can include a filename, output filename, file size and
-                completion time. Source and output PDF bytes are not written to
-                <code>localStorage</code>.
+                The application does not retain conversion history, filenames,
+                file sizes, completion times, source PDFs or generated PDFs in
+                persistent browser storage.
               </p>
             </article>
 
@@ -415,8 +391,13 @@
         </main>
 
         <footer>
-          PDF 4-Up · Runs entirely in your browser · No document uploads ·
-          <a href="https://github.com/andygock/pdf-4up">View on GitHub</a>
+          PDF 4-Up is open source under the MIT License.
+          <a
+            href="https://github.com/andygock/pdf-4up"
+            target="_blank"
+            rel="noopener noreferrer"
+            >View on GitHub</a
+          >
         </footer>
       </div>
     </div>
