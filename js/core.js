@@ -179,13 +179,34 @@ export const getResolvedLayout = (width, height) => {
 
 export const getOutputGeometry = (width, height) => {
   const { columns, rows } = getResolvedLayout(width, height);
-  const scale =
-    state.paperMode === "expand" ? 1 : Math.min(1 / columns, 1 / rows);
-  return {
-    outputWidth: state.paperMode === "expand" ? width * columns : width,
-    outputHeight: state.paperMode === "expand" ? height * rows : height,
-    scale,
-  };
+
+  if (state.paperMode === "expand") {
+    return {
+      outputWidth: width * columns,
+      outputHeight: height * rows,
+      scale: 1,
+    };
+  }
+
+  // Rectangular N-up grids often fit the source paper more efficiently when
+  // the output sheet is rotated. Compare both orientations and use the one
+  // whose cells allow the largest proportional copy, avoiding the unnecessary
+  // whitespace previously seen with 2-up and 8-up layouts.
+  const orientations = [
+    { outputWidth: width, outputHeight: height },
+    { outputWidth: height, outputHeight: width },
+  ];
+  const candidates = orientations.map((orientation) => ({
+    ...orientation,
+    scale: Math.min(
+      orientation.outputWidth / columns / width,
+      orientation.outputHeight / rows / height,
+    ),
+  }));
+
+  return candidates.reduce((best, candidate) =>
+    candidate.scale > best.scale ? candidate : best,
+  );
 };
 
 // History rows are assembled as HTML strings. Passing user-controlled names

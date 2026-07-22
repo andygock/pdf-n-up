@@ -14,7 +14,7 @@ Demo: <https://andygock.github.io/pdf-n-up/>
 - Supports PDF files up to 200 MB
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3), and 16-up (4×4) layouts
 - Automatically transposes rectangular grids for landscape source pages
-- Expands the output sheet at 100% copy scale by default, or scales copies onto the source paper size
+- Expands the output sheet at 100% copy scale by default, or scales copies onto the source paper size in whichever sheet orientation gives the best fit
 - Identifies dimensions matching ISO A-series and common US paper sizes
 - Preserves portrait or landscape orientation
 - Generates the result entirely in browser memory and renders an embedded PDF.js preview
