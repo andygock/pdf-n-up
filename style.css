@@ -591,6 +591,54 @@ input:focus-visible {
   gap: 20px;
 }
 
+.output-panel {
+  margin-top: 20px;
+}
+
+.output-header {
+  align-items: center;
+}
+
+.output-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preview-viewport {
+  display: grid;
+  min-height: 420px;
+  max-height: 75vh;
+  place-items: center;
+  overflow: auto;
+  padding: 24px;
+  background:
+    linear-gradient(45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 0 / 20px 20px,
+    linear-gradient(-45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 10px / 20px 20px,
+    var(--surface-alt);
+}
+
+.pdf-preview {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+  background: white;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 42%);
+}
+
+.preview-loading,
+.preview-error {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.preview-error {
+  color: var(--warning);
+}
+
 .file-summary {
   min-height: 173px;
 }
@@ -911,6 +959,20 @@ footer a {
   .panel-header,
   .panel-body {
     padding: 17px;
+  }
+
+  .output-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .output-actions .button {
+    flex: 1 1 auto;
+  }
+
+  .preview-viewport {
+    min-height: 300px;
+    padding: 14px;
   }
 
   .drop-zone {

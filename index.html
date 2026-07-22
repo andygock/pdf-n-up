@@ -159,8 +159,8 @@
                       <h2 class="drop-title" id="dropTitle">Drop a PDF here</h2>
 
                       <p class="drop-description" id="dropDescription">
-                        Or select a file. Valid PDFs convert and download
-                        automatically.
+                        Or select a file. Valid PDFs convert into an in-browser
+                        preview.
                       </p>
 
                       <button
@@ -251,6 +251,38 @@
               </div>
             </div>
 
+            <article class="panel output-panel hidden" id="outputPanel">
+              <div class="panel-header output-header">
+                <div>
+                  <h2 class="panel-title">Output preview</h2>
+                  <p class="panel-subtitle" id="outputSummary">
+                    Generated locally in browser memory.
+                  </p>
+                </div>
+
+                <div class="output-actions">
+                  <button class="button" id="openOutputButton" type="button">
+                    Open in new tab
+                  </button>
+                  <button class="button primary" id="downloadOutputButton" type="button">
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+
+              <div class="preview-viewport" id="previewViewport">
+                <div class="preview-loading" id="previewLoading" role="status">
+                  Rendering preview locally…
+                </div>
+                <canvas
+                  class="pdf-preview hidden"
+                  id="pdfPreview"
+                  aria-label="Preview of the generated PDF"
+                ></canvas>
+                <p class="preview-error hidden" id="previewError"></p>
+              </div>
+            </article>
+
           </section>
 
           <section
@@ -280,11 +312,11 @@
 
               <article class="info-card">
                 <div class="info-number">03</div>
-                <h2>Download locally</h2>
+                <h2>Preview and download locally</h2>
                 <p>
                   The completed PDF is generated in browser memory and
-                  downloaded directly. No source or output document is
-                  transmitted.
+                  displayed as a local preview. You choose whether to download
+                  or open it. No source or output document is transmitted.
                 </p>
               </article>
             </div>
@@ -328,7 +360,7 @@
               <h2>Local-only document processing</h2>
               <p>
                 Selected files are read by JavaScript in this browser tab. PDF
-                parsing, page embedding, output construction and download
+                parsing, page embedding, output construction, preview and download
                 creation all occur on this device.
               </p>
             </article>
@@ -347,26 +379,26 @@
               <p>
                 Although this application does not save its own copy, your
                 browser or operating system may temporarily write source or
-                generated PDF data to disk while processing or downloading it.
+                generated PDF data to disk while processing or previewing it.
                 This may include a browser cache, a temporary directory such as
                 <code>%TEMP%</code> on Windows, or virtual-memory files. The
                 location and retention period are controlled by your browser
                 and operating system.
               </p>
               <p>
-                The completed PDF is also saved to your configured Downloads
-                folder, or another location selected by you or your browser. It
-                remains there until you move or delete it.
+                The completed PDF is only saved to your configured Downloads
+                folder, or another location selected by you or your browser, if
+                you choose Download.
               </p>
             </article>
 
             <article class="content-section">
               <h2>Third-party library</h2>
               <p>
-                The PDF processing library is loaded from a public CDN. The
-                library code is downloaded by the browser, but your selected PDF
-                is not sent to that CDN. Once loaded, conversion is performed
-                locally.
+                The PDF processing and preview libraries are loaded from a public
+                CDN. Only library files are requested from the CDN; your selected
+                and generated PDF bytes are passed directly to local JavaScript
+                and a local browser worker, never to the CDN.
               </p>
             </article>
 
@@ -394,6 +426,15 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script>
+      window.pdfjsReady = import(
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.mjs"
+      ).then((pdfjs) => {
+        pdfjs.GlobalWorkerOptions.workerSrc =
+          "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.worker.mjs";
+        return pdfjs;
+      });
+    </script>
     <script src="./script.js"></script>
   </body>
 </html>

@@ -87,7 +87,18 @@
     detailOutputSize: document.querySelector("#detailOutputSize"),
     detailScale: document.querySelector("#detailScale"),
     detailLayout: document.querySelector("#detailLayout"),
+
+    outputPanel: document.querySelector("#outputPanel"),
+    outputSummary: document.querySelector("#outputSummary"),
+    previewViewport: document.querySelector("#previewViewport"),
+    previewLoading: document.querySelector("#previewLoading"),
+    pdfPreview: document.querySelector("#pdfPreview"),
+    previewError: document.querySelector("#previewError"),
+    openOutputButton: document.querySelector("#openOutputButton"),
+    downloadOutputButton: document.querySelector("#downloadOutputButton"),
   };
+
+  let previewRenderToken = 0;
 
   // Remove metadata written by versions that kept a recent-conversion history.
   // No new application state is written to persistent browser storage.
@@ -235,10 +246,24 @@
     }
   };
 
-  // Invalidate generated data and release its temporary object URL.
+  // Invalidate generated data, cancel preview work, and release its temporary
+  // object URL. No generated PDF is retained in persistent browser storage.
   const resetOutput = () => {
+    previewRenderToken += 1;
+    state.output?.renderTask?.cancel();
+    state.output?.loadingTask?.destroy();
     revokeOutputUrl();
     state.output = null;
+
+    elements.outputPanel.classList.add("hidden");
+    elements.pdfPreview.classList.add("hidden");
+    elements.previewLoading.classList.remove("hidden");
+    elements.previewError.classList.add("hidden");
+    elements.previewError.textContent = "";
+    elements.pdfPreview.width = 0;
+    elements.pdfPreview.height = 0;
+    elements.openOutputButton.disabled = true;
+    elements.downloadOutputButton.disabled = true;
   };
 
   // Return all source-dependent controls and labels to their initial state.
@@ -256,7 +281,7 @@
     elements.dropZone.classList.remove("has-file");
     elements.dropTitle.textContent = "Drop a PDF here";
     elements.dropDescription.textContent =
-      "Or select a file. Valid PDFs convert and download automatically.";
+      "Or select a file. Valid PDFs convert into an in-browser preview.";
 
     elements.detailsEmpty.classList.remove("hidden");
     elements.detailsList.classList.add("hidden");
@@ -436,7 +461,7 @@
   };
 
   // Normalise FileList objects from both the picker and drag-and-drop paths,
-  // enforce the single-file rule, then convert and download valid input.
+  // enforce the single-file rule, then convert valid input into a local preview.
   const handleSelectedFiles = async (files) => {
     if (state.processing) {
       return;
@@ -466,10 +491,6 @@
 
       await validateAndLoadFile(selectedFiles[0]);
       await createNUpPdf();
-
-      if (state.output) {
-        downloadOutput();
-      }
     } catch (error) {
       clearSource({
         statusTitle: "File rejected",
@@ -611,10 +632,21 @@
       };
 
       setStatus({
-        type: "success",
-        symbol: "✓",
-        title: "Output ready",
-        message: `${outputName} was created successfully (${formatBytes(blob.size)}).`,
+        type: "neutral",
+        title: "Rendering preview",
+        message: "PDF.js is drawing the generated page in this browser.",
+        progress: 95,
+      });
+
+      const previewRendered = await renderOutputPreview();
+
+      setStatus({
+        type: previewRendered ? "success" : "warning",
+        symbol: previewRendered ? "✓" : "!",
+        title: previewRendered ? "Output ready" : "Output ready without preview",
+        message: previewRendered
+          ? `${outputName} is ready to preview or download (${formatBytes(blob.size)}).`
+          : `${outputName} is ready to download, but its preview could not be rendered.`,
         progress: 100,
       });
     } catch (error) {
@@ -634,20 +666,126 @@
     }
   };
 
-  // Trigger the browser's native download manager with a short-lived anchor.
-  // The object URL remains valid for repeat downloads until output is cleared.
+  // Render the generated Blob with PDF.js. Supplying a typed array means the
+  // PDF is handed directly to a browser worker; no PDF URL or bytes are sent to
+  // the CDN that supplied the version-pinned library code.
+  const renderOutputPreview = async () => {
+    const output = state.output;
+
+    if (!output) {
+      return false;
+    }
+
+    elements.outputPanel.classList.remove("hidden");
+    elements.outputSummary.textContent = `${output.filename} · ${formatBytes(output.size)} · held in memory`;
+    elements.previewLoading.classList.remove("hidden");
+    elements.pdfPreview.classList.add("hidden");
+    elements.previewError.classList.add("hidden");
+    elements.openOutputButton.disabled = false;
+    elements.downloadOutputButton.disabled = false;
+
+    const token = ++previewRenderToken;
+    let pdfjs;
+
+    try {
+      pdfjs = await window.pdfjsReady;
+    } catch {
+      pdfjs = null;
+    }
+
+    if (token !== previewRenderToken || state.output !== output) {
+      return false;
+    }
+
+    if (!pdfjs?.getDocument) {
+      elements.previewLoading.classList.add("hidden");
+      elements.previewError.textContent =
+        "PDF.js did not load. The generated file is still available to open or download.";
+      elements.previewError.classList.remove("hidden");
+      return false;
+    }
+
+    try {
+      const data = new Uint8Array(await output.blob.arrayBuffer());
+      const loadingTask = pdfjs.getDocument({ data });
+      output.loadingTask = loadingTask;
+      const pdfDocument = await loadingTask.promise;
+
+      if (token !== previewRenderToken || state.output !== output) {
+        await loadingTask.destroy();
+        return false;
+      }
+
+      const page = await pdfDocument.getPage(1);
+      const unscaledViewport = page.getViewport({ scale: 1 });
+      const availableWidth = Math.max(
+        280,
+        Math.min(1000, elements.previewViewport.clientWidth - 48),
+      );
+      const cssScale = Math.min(1.5, availableWidth / unscaledViewport.width);
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const renderViewport = page.getViewport({ scale: cssScale * pixelRatio });
+      const canvas = elements.pdfPreview;
+      const context = canvas.getContext("2d", { alpha: false });
+
+      canvas.width = Math.ceil(renderViewport.width);
+      canvas.height = Math.ceil(renderViewport.height);
+      canvas.style.width = `${Math.ceil(renderViewport.width / pixelRatio)}px`;
+      canvas.style.height = `${Math.ceil(renderViewport.height / pixelRatio)}px`;
+
+      const renderTask = page.render({ canvasContext: context, viewport: renderViewport });
+      output.renderTask = renderTask;
+      await renderTask.promise;
+
+      if (token !== previewRenderToken || state.output !== output) {
+        return false;
+      }
+
+      elements.previewLoading.classList.add("hidden");
+      canvas.classList.remove("hidden");
+      page.cleanup();
+      await loadingTask.destroy();
+      output.loadingTask = null;
+      output.renderTask = null;
+      return true;
+    } catch (error) {
+      if (token !== previewRenderToken || state.output !== output) {
+        return false;
+      }
+
+      output.loadingTask?.destroy();
+      output.loadingTask = null;
+      output.renderTask = null;
+      elements.previewLoading.classList.add("hidden");
+      elements.previewError.textContent =
+        "The preview could not be rendered. The generated file is still available to open or download.";
+      elements.previewError.classList.remove("hidden");
+      return false;
+    }
+  };
+
+  // Use a download-only MIME type so browsers do not hand the click to their
+  // built-in PDF viewer. The download attribute supplies the .pdf filename.
   const downloadOutput = () => {
-    if (!state.output?.url || !state.output?.filename) {
+    if (!state.output?.blob || !state.output?.filename) {
       return;
     }
 
+    const downloadBlob = new Blob([state.output.blob], {
+      type: "application/octet-stream",
+    });
+    const downloadUrl = URL.createObjectURL(downloadBlob);
     const anchor = document.createElement("a");
-    anchor.href = state.output.url;
+    anchor.href = downloadUrl;
     anchor.download = state.output.filename;
     anchor.rel = "noopener";
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
+
+    // Keep the URL alive until the browser has accepted the click, then release
+    // the download-only Blob. The preview's PDF Blob and URL remain available.
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
 
     setStatus({
       type: "success",
@@ -655,6 +793,20 @@
       title: "Download started",
       message: `${state.output.filename} has been passed to the browser download manager.`,
     });
+  };
+
+  const openOutput = () => {
+    if (!state.output?.url) {
+      return;
+    }
+
+    const anchor = document.createElement("a");
+    anchor.href = state.output.url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
   };
 
   // Switch the visible content panel and synchronise navigation accessibility
@@ -754,6 +906,9 @@
   elements.fileInput.addEventListener("change", (event) => {
     handleSelectedFiles(event.target.files);
   });
+
+  elements.downloadOutputButton.addEventListener("click", downloadOutput);
+  elements.openOutputButton.addEventListener("click", openOutput);
 
   document.addEventListener("change", (event) => {
     if (event.target.matches('input[name="layout"]')) {

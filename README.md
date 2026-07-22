@@ -17,8 +17,8 @@ Demo: <https://andygock.github.io/pdf-4up/>
 - Expands the output sheet at 100% copy scale by default, or scales copies onto the source paper size
 - Identifies dimensions matching ISO A-series and common US paper sizes
 - Preserves portrait or landscape orientation
-- Generates and downloads the result entirely in browser memory
-- Automatically converts and downloads a valid selected or dropped PDF
+- Generates the result entirely in browser memory and renders an embedded PDF.js preview
+- Lets the user explicitly open or download the generated PDF
 - Does not retain conversion history or document metadata in browser storage
 - Responsive interface with keyboard-accessible controls
 
@@ -38,9 +38,10 @@ The generated filename includes the selected layout. For example, `handout.pdf` 
 
 1. Open the app in a modern browser.
 2. Select or drop a PDF containing exactly one page.
-3. The app validates, converts, and downloads the result automatically.
+3. The app validates, converts, and displays the result in an embedded preview.
+4. Open the generated PDF in a new tab or download it when needed.
 
-The first page load requires an internet connection because [`pdf-lib`](https://pdf-lib.js.org/) is loaded from jsDelivr. PDF conversion itself is performed locally after the library has loaded.
+The first page load requires an internet connection because [`pdf-lib`](https://pdf-lib.js.org/) and [PDF.js](https://mozilla.github.io/pdf.js/) are loaded from jsDelivr. Only the version-pinned library files and PDF.js worker are requested from the CDN. Source and generated PDF bytes are provided directly to local JavaScript and the local browser worker; they are not uploaded to jsDelivr or another service.
 
 ## Run locally
 
@@ -69,7 +70,7 @@ favicon.ico
 apple-touch-icon.png
 ```
 
-No server-side processing, environment variables, or database are required. The deployed site must allow the browser to load `pdf-lib` from `cdn.jsdelivr.net`.
+No server-side processing, environment variables, or database are required. The deployed site must allow the browser to load `pdf-lib`, PDF.js, and the PDF.js worker from `cdn.jsdelivr.net`.
 
 ## Privacy
 
@@ -77,13 +78,13 @@ Selected PDF bytes and generated output bytes remain in browser memory until the
 
 The app does not retain conversion history, filenames, file sizes, completion times, source PDFs, or generated PDFs in persistent browser storage.
 
-The browser or operating system may temporarily write source or generated PDF data to disk during processing or downloading, including in a browser cache, a temporary directory such as `%TEMP%` on Windows, or virtual-memory files. Their location and retention are controlled by the browser and operating system. The completed PDF is saved to the configured Downloads folder or another selected download location and remains there until it is moved or deleted.
+The browser or operating system may temporarily write source or generated PDF data to disk during processing or previewing, including in a browser cache, a temporary directory such as `%TEMP%` on Windows, or virtual-memory files. Their location and retention are controlled by the browser and operating system. The completed PDF is only saved to the configured Downloads folder (or another selected location) if the user chooses Download.
 
 ## Project structure
 
 - `index.html` — application markup and content
 - `style.css` — responsive layout and visual styling
-- `script.js` — validation, PDF generation, downloads, and local state
+- `script.js` — validation, PDF generation, preview, downloads, and local state
 - `icon.svg`, `favicon.ico`, `apple-touch-icon.png` — site icons
 
 ## Browser requirements
