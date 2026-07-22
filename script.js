@@ -8,16 +8,29 @@
   // interface presents sizes in mm.
   const LEGACY_STORAGE_KEY = "pdf-4up-state-v1";
   const MAX_FILE_SIZE = 200 * 1024 * 1024;
-  const SQRT_2 = Math.sqrt(2);
-  const COPY_SCALE = 1 / SQRT_2;
   const POINTS_PER_MM = 72 / 25.4;
+  const LAYOUTS = {
+    2: { copies: 2, columns: 2, rows: 1 },
+    4: { copies: 4, columns: 2, rows: 2 },
+    8: { copies: 8, columns: 4, rows: 2 },
+    9: { copies: 9, columns: 3, rows: 3 },
+    16: { copies: 16, columns: 4, rows: 4 },
+  };
+  const STANDARD_PAPER_SIZES = [
+    ["A0", 841, 1189], ["A1", 594, 841], ["A2", 420, 594],
+    ["A3", 297, 420], ["A4", 210, 297], ["A5", 148, 210],
+    ["A6", 105, 148], ["A7", 74, 105], ["A8", 52, 74],
+    ["A9", 37, 52], ["A10", 26, 37], ["Letter", 215.9, 279.4],
+    ["Legal", 215.9, 355.6], ["Tabloid", 279.4, 431.8],
+    ["Executive", 184.2, 266.7],
+  ];
 
   // Copy used by the shared page header for each client-side application view.
   const pageTitles = {
     convert: {
-      title: "Create a four-up PDF",
+      title: "Create an N-up PDF",
       description:
-        "Place four copies of one PDF page onto the next ISO paper size.",
+        "Arrange repeated copies of one PDF page on a single sheet.",
     },
     guide: {
       title: "How it works",
@@ -36,6 +49,8 @@
     source: null,
     output: null,
     processing: false,
+    layout: LAYOUTS[4],
+    paperMode: "expand",
   };
 
   const state = {
@@ -71,6 +86,7 @@
     detailSourceSize: document.querySelector("#detailSourceSize"),
     detailOutputSize: document.querySelector("#detailOutputSize"),
     detailScale: document.querySelector("#detailScale"),
+    detailLayout: document.querySelector("#detailLayout"),
   };
 
   // Remove metadata written by versions that kept a recent-conversion history.
@@ -105,11 +121,40 @@
 
   const pointsToMillimetres = (points) => points / POINTS_PER_MM;
 
+  const findPaperName = (widthMm, heightMm) => {
+    const toleranceMm = 1;
+    return STANDARD_PAPER_SIZES.find(([, standardWidth, standardHeight]) =>
+      (Math.abs(widthMm - standardWidth) <= toleranceMm && Math.abs(heightMm - standardHeight) <= toleranceMm) ||
+      (Math.abs(widthMm - standardHeight) <= toleranceMm && Math.abs(heightMm - standardWidth) <= toleranceMm),
+    )?.[0];
+  };
+
   // pdf-lib reports page dimensions in points; convert both axes for the UI.
   const formatPageSize = (width, height) => {
     const widthMm = pointsToMillimetres(width);
     const heightMm = pointsToMillimetres(height);
-    return `${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm`;
+    const paperName = findPaperName(widthMm, heightMm);
+    return `${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm${paperName ? ` (${paperName})` : ""}`;
+  };
+
+  // Layout labels describe portrait input. Transpose rectangular grids for a
+  // landscape source so sheets grow along the source's shorter axis and no
+  // empty rows or columns are introduced.
+  const getResolvedLayout = (width, height) => {
+    const { copies, columns, rows } = state.layout;
+    return width > height
+      ? { copies, columns: rows, rows: columns }
+      : { copies, columns, rows };
+  };
+
+  const getOutputGeometry = (width, height) => {
+    const { columns, rows } = getResolvedLayout(width, height);
+    const scale = state.paperMode === "expand" ? 1 : Math.min(1 / columns, 1 / rows);
+    return {
+      outputWidth: state.paperMode === "expand" ? width * columns : width,
+      outputHeight: state.paperMode === "expand" ? height * rows : height,
+      scale,
+    };
   };
 
   // History rows are assembled as HTML strings. Passing user-controlled names
@@ -122,7 +167,7 @@
 
   // Preserve the user's basename, replace a final .pdf suffix when present,
   // and supply a useful name even if the browser reports a blank filename.
-  const makeOutputFilename = (inputName) => {
+  const makeOutputFilename = (inputName, copies = state.layout.copies) => {
     const cleanedName = inputName.trim() || "document.pdf";
     const lastDot = cleanedName.lastIndexOf(".");
     const hasPdfExtension =
@@ -132,7 +177,7 @@
       ? cleanedName.slice(0, lastDot)
       : cleanedName;
 
-    return `${basename}_4up.pdf`;
+    return `${basename}_${copies}up.pdf`;
   };
 
   // Extension checks improve error messages, but the PDF magic bytes provide a
@@ -233,7 +278,11 @@
       return;
     }
 
-    const { file, width, height, outputWidth, outputHeight } = state.source;
+    const { file, width, height } = state.source;
+    const { outputWidth, outputHeight, scale } = getOutputGeometry(width, height);
+    state.source.outputWidth = outputWidth;
+    state.source.outputHeight = outputHeight;
+    state.source.outputName = makeOutputFilename(file.name);
 
     elements.detailsEmpty.classList.add("hidden");
     elements.detailsList.classList.remove("hidden");
@@ -245,9 +294,9 @@
       outputWidth,
       outputHeight,
     );
-    // Each copy is scaled by 1/sqrt(2), the linear ratio between adjacent ISO
-    // paper sizes. Four copies therefore fit into a 2-by-2 output arrangement.
-    elements.detailScale.textContent = `${(COPY_SCALE * 100).toFixed(4)}%`;
+    elements.detailScale.textContent = `${Number((scale * 100).toFixed(4))}%`;
+    const resolvedLayout = getResolvedLayout(width, height);
+    elements.detailLayout.textContent = `${resolvedLayout.copies}-up (${resolvedLayout.columns}×${resolvedLayout.rows})`;
 
   };
 
@@ -257,6 +306,9 @@
 
     elements.selectFileButton.disabled = processing;
     elements.fileInput.disabled = processing;
+    document.querySelectorAll('input[name="layout"], input[name="paperMode"]').forEach((input) => {
+      input.disabled = processing;
+    });
   };
 
   // Programmatically opening the hidden input gives the drop zone and explicit
@@ -355,10 +407,7 @@
       throw new Error("The PDF page has invalid dimensions.");
     }
 
-    // Multiplying both axes by sqrt(2) produces the next ISO paper size while
-    // preserving aspect ratio (for example, A4 becomes A3).
-    const outputWidth = width * SQRT_2;
-    const outputHeight = height * SQRT_2;
+    const { outputWidth, outputHeight } = getOutputGeometry(width, height);
     const outputName = makeOutputFilename(file.name);
 
     state.source = {
@@ -382,7 +431,7 @@
       symbol: "✓",
       title: "PDF validated",
       message:
-        "The document contains one page and is ready for four-up conversion.",
+        `The document contains one page and is ready for ${state.layout.copies}-up conversion.`,
     });
   };
 
@@ -416,7 +465,7 @@
       });
 
       await validateAndLoadFile(selectedFiles[0]);
-      await createFourUpPdf();
+      await createNUpPdf();
 
       if (state.output) {
         downloadOutput();
@@ -435,9 +484,9 @@
     }
   };
 
-  // Create a new, single-page PDF containing four vector-preserving copies of
+  // Create a new, single-page PDF containing vector-preserving copies of
   // the validated source page. The work happens entirely in browser memory.
-  const createFourUpPdf = async () => {
+  const createNUpPdf = async () => {
     if (!state.source || state.processing) {
       return;
     }
@@ -446,7 +495,13 @@
     resetOutput();
 
     try {
-      const { bytes, outputWidth, outputHeight, outputName } = state.source;
+      const { bytes } = state.source;
+      const { columns, rows, copies } = getResolvedLayout(
+        state.source.width,
+        state.source.height,
+      );
+      const { outputWidth, outputHeight, scale } = getOutputGeometry(state.source.width, state.source.height);
+      const outputName = makeOutputFilename(state.source.file.name, copies);
 
       setStatus({
         type: "neutral",
@@ -475,7 +530,7 @@
       // Set basic document metadata on the newly created output. The source
       // document's metadata is not copied because it may no longer describe it.
       outputDocument.setTitle(outputName.replace(/\.pdf$/i, ""));
-      outputDocument.setSubject("Four-up PDF layout");
+      outputDocument.setSubject(`${copies}-up PDF layout`);
       outputDocument.setCreator("PDF 4-Up browser application");
       outputDocument.setProducer("pdf-lib");
       outputDocument.setCreationDate(new Date());
@@ -493,29 +548,24 @@
       const [embeddedPage] = await outputDocument.embedPdf(sourceDocument, [0]);
       const outputPage = outputDocument.addPage([outputWidth, outputHeight]);
 
-      // Divide the output into four equal cells. A 1/sqrt(2)-scale source page
-      // matches each cell for standard ISO geometry; offsets also centre copies
-      // if input dimensions contain minor rounding or non-standard proportions.
-      const cellWidth = outputWidth / 2;
-      const cellHeight = outputHeight / 2;
+      const cellWidth = outputWidth / columns;
+      const cellHeight = outputHeight / rows;
 
-      const drawnWidth = embeddedPage.width * COPY_SCALE;
-      const drawnHeight = embeddedPage.height * COPY_SCALE;
+      const drawnWidth = embeddedPage.width * scale;
+      const drawnHeight = embeddedPage.height * scale;
 
       const xOffset = (cellWidth - drawnWidth) / 2;
       const yOffset = (cellHeight - drawnHeight) / 2;
 
-      const placements = [
-        { column: 0, row: 1 },
-        { column: 1, row: 1 },
-        { column: 0, row: 0 },
-        { column: 1, row: 0 },
-      ];
+      const placements = Array.from({ length: copies }, (_, index) => ({
+        column: index % columns,
+        row: rows - 1 - Math.floor(index / columns),
+      }));
 
       setStatus({
         type: "neutral",
         title: "Creating output",
-        message: "Placing four copies in a two-by-two arrangement.",
+        message: `Placing ${copies} copies in a ${columns}-by-${rows} arrangement.`,
         progress: 65,
       });
 
@@ -577,7 +627,7 @@
         message:
           error instanceof Error
             ? error.message
-            : "The four-up PDF could not be created.",
+            : `The ${copies}-up PDF could not be created.`,
       });
     } finally {
       setProcessingState(false);
@@ -703,6 +753,19 @@
 
   elements.fileInput.addEventListener("change", (event) => {
     handleSelectedFiles(event.target.files);
+  });
+
+  document.addEventListener("change", (event) => {
+    if (event.target.matches('input[name="layout"]')) {
+      state.layout = LAYOUTS[event.target.value] || LAYOUTS[4];
+    } else if (event.target.matches('input[name="paperMode"]')) {
+      state.paperMode = event.target.value === "same" ? "same" : "expand";
+    } else {
+      return;
+    }
+
+    resetOutput();
+    updateDocumentDetails();
   });
 
   // First suppress browser-wide file navigation, then add drop-zone-only visual

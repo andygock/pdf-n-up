@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Create a four-up PDF entirely in your browser. No uploads and no server processing."
+      content="Create 2-up, 4-up, 8-up, 9-up or 16-up PDFs entirely in your browser."
     />
     <title>PDF 4-Up</title>
     <link rel="stylesheet" href="./style.css" />
@@ -84,9 +84,9 @@
           </button>
 
           <div class="page-heading">
-            <h1 class="page-title" id="pageTitle">Create a four-up PDF</h1>
+            <h1 class="page-title" id="pageTitle">Create an N-up PDF</h1>
             <p class="page-description" id="pageDescription">
-              Place four copies of one PDF page onto the next ISO paper size.
+              Arrange repeated copies of one PDF page on a single sheet.
             </p>
           </div>
 
@@ -95,6 +95,31 @@
 
         <main>
           <section class="view" id="view-convert" data-view-container="convert">
+            <article class="panel conversion-options">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Conversion options</h2>
+                  <p class="panel-subtitle">Choose the sheet layout before selecting or dropping a PDF. Rectangular grids rotate automatically for landscape pages.</p>
+                </div>
+              </div>
+              <div class="panel-body options-body">
+                <fieldset class="option-group">
+                  <legend>Copies per sheet</legend>
+                  <div class="layout-options" id="layoutOptions">
+                    <label class="layout-option"><input type="radio" name="layout" value="2" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M24 1v34"/></svg><span><strong>2-up</strong><small>2×1</small></span></span></label>
+                    <label class="layout-option"><input type="radio" name="layout" value="4" checked /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M24 1v34M1 18h46"/></svg><span><strong>4-up</strong><small>2×2</small></span></span></label>
+                    <label class="layout-option"><input type="radio" name="layout" value="8" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M12.5 1v34M24 1v34M35.5 1v34M1 18h46"/></svg><span><strong>8-up</strong><small>4×2</small></span></span></label>
+                    <label class="layout-option"><input type="radio" name="layout" value="9" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M16.33 1v34M31.67 1v34M1 12.33h46M1 23.67h46"/></svg><span><strong>9-up</strong><small>3×3</small></span></span></label>
+                    <label class="layout-option"><input type="radio" name="layout" value="16" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M12.5 1v34M24 1v34M35.5 1v34M1 9.5h46M1 18h46M1 26.5h46"/></svg><span><strong>16-up</strong><small>4×4</small></span></span></label>
+                  </div>
+                </fieldset>
+                <fieldset class="option-group size-options">
+                  <legend>Output paper</legend>
+                  <label class="size-option"><input type="radio" name="paperMode" value="expand" checked /><span><strong>Expand paper size</strong><small>Keep every copy at its original size.</small></span></label>
+                  <label class="size-option"><input type="radio" name="paperMode" value="same" /><span><strong>Keep source paper size</strong><small>Scale copies to fit; vector content stays sharp.</small></span></label>
+                </fieldset>
+              </div>
+            </article>
             <div class="workspace-grid">
               <article class="panel">
                 <div class="panel-header">
@@ -213,7 +238,11 @@
 
                       <div class="summary-row">
                         <dt>Copy scale</dt>
-                        <dd id="detailScale">70.7107%</dd>
+                        <dd id="detailScale">100%</dd>
+                      </div>
+                      <div class="summary-row">
+                        <dt>Layout</dt>
+                        <dd id="detailLayout">4-up (2×2)</dd>
                       </div>
                     </dl>
                   </div>
@@ -242,11 +271,10 @@
 
               <article class="info-card">
                 <div class="info-number">02</div>
-                <h2>Impose four copies</h2>
+                <h2>Arrange the copies</h2>
                 <p>
-                  The page is embedded once and drawn four times in a two-by-two
-                  arrangement. Vector content, text and images remain embedded
-                  as PDF content.
+                  The page is embedded once and repeated in your chosen grid.
+                  Vector content, text and images remain embedded as PDF content.
                 </p>
               </article>
 
@@ -264,27 +292,26 @@
             <article class="content-section" style="margin-top: 20px">
               <h2>Page-size calculation</h2>
               <p>
-                The output page keeps the source orientation and uses the next
-                size in the ISO A-series progression. Each dimension is
-                multiplied by the square root of two. Each source copy is scaled
-                by the reciprocal of the square root of two.
+                Expand paper size multiplies the source width by the number of
+                columns and its height by the number of rows, keeping each copy
+                at 100%. Keep source paper size retains the original dimensions
+                and scales each copy uniformly to fit its grid cell.
               </p>
 
               <span class="formula">
-                output width = source width × √2 &nbsp;&nbsp; output height =
-                source height × √2
+                expanded width = source width × columns &nbsp;&nbsp; expanded height =
+                source height × rows
               </span>
 
-              <span class="formula"> copy scale = 1 ÷ √2 = 0.7071067812 </span>
+              <span class="formula"> same-paper scale = min(1 ÷ columns, 1 ÷ rows) </span>
             </article>
 
             <article class="content-section">
               <h2>Examples</h2>
               <ul>
-                <li>A5 becomes A4 with four reduced A5 copies.</li>
-                <li>A4 becomes A3 with four reduced A4 copies.</li>
-                <li>A3 becomes A2 with four reduced A3 copies.</li>
-                <li>Landscape source pages produce landscape output pages.</li>
+                <li>4-up (2×2) on expanded paper doubles both dimensions.</li>
+                <li>4-up on the source paper uses four copies at 50% scale.</li>
+                <li>8-up uses a four-column by two-row arrangement.</li>
                 <li>
                   Non-standard page dimensions are enlarged proportionally.
                 </li>

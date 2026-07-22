@@ -331,6 +331,102 @@ main {
   align-items: start;
 }
 
+.conversion-options {
+  margin-bottom: 20px;
+}
+.options-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 0.8fr);
+  gap: 24px;
+}
+.option-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.option-group legend {
+  margin-bottom: 10px;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+.layout-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  gap: 8px;
+}
+.layout-option,
+.size-option {
+  cursor: pointer;
+}
+.layout-option input,
+.size-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.layout-card {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  transition:
+    border-color var(--transition),
+    background-color var(--transition);
+}
+.layout-option:hover .layout-card,
+.size-option:hover span {
+  border-color: var(--primary);
+}
+.layout-option input:checked + .layout-card,
+.size-option input:checked + span {
+  border-color: var(--primary);
+  background: rgb(97 175 239 / 10%);
+}
+.layout-option input:focus-visible + .layout-card,
+.size-option input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+.layout-diagram {
+  width: 42px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.5;
+  color: var(--primary);
+}
+.layout-card strong,
+.layout-card small,
+.size-option strong,
+.size-option small {
+  display: block;
+}
+.layout-card strong,
+.size-option strong {
+  color: var(--text-strong);
+  font-size: 0.82rem;
+}
+.layout-card small,
+.size-option small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.size-options {
+  display: grid;
+  gap: 8px;
+}
+.size-option span {
+  display: block;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+
 .drop-zone {
   position: relative;
   display: grid;
@@ -786,6 +882,13 @@ footer a {
     grid-template-columns: 1fr;
   }
 
+  .options-body {
+    grid-template-columns: 1fr;
+  }
+  .layout-options {
+    grid-template-columns: repeat(3, minmax(90px, 1fr));
+  }
+
   .info-grid {
     grid-template-columns: 1fr;
   }
@@ -818,6 +921,10 @@ footer a {
   .summary-row {
     grid-template-columns: 1fr;
     gap: 3px;
+  }
+
+  .layout-options {
+    grid-template-columns: repeat(2, minmax(90px, 1fr));
   }
 
   .summary-row dd {

@@ -1,6 +1,6 @@
-# PDF 4-Up
+# PDF N-Up
 
-PDF 4-Up is a small, client-side web app that places four copies of a single PDF page onto one larger page. It is useful for preparing print-ready sheets while keeping the original vector content, text, and images embedded in the PDF.
+PDF N-Up is a small, client-side web app that arranges repeated copies of a single PDF page on one sheet. It is useful for preparing print-ready sheets while keeping the original vector content, text, and images embedded in the PDF.
 
 All document processing happens in the browser. Source and generated PDF files are not uploaded to a server.
 
@@ -12,7 +12,10 @@ Demo: <https://andygock.github.io/pdf-4up/>
 - Validates that the source is a non-empty, single-page PDF
 - Rejects encrypted, password-protected, malformed, and multi-page files
 - Supports PDF files up to 200 MB
-- Places four copies in a two-column by two-row layout
+- Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3), and 16-up (4×4) layouts
+- Automatically transposes rectangular grids for landscape source pages
+- Expands the output sheet at 100% copy scale by default, or scales copies onto the source paper size
+- Identifies dimensions matching ISO A-series and common US paper sizes
 - Preserves portrait or landscape orientation
 - Generates and downloads the result entirely in browser memory
 - Automatically converts and downloads a valid selected or dropped PDF
@@ -21,16 +24,15 @@ Demo: <https://andygock.github.io/pdf-4up/>
 
 ## How the layout works
 
-The output page uses the source page's proportions and increases both dimensions by `sqrt(2)`, corresponding to the next larger size in the ISO A-series. Each copy is scaled by `1 / sqrt(2)` and centred in its quadrant.
+With expanded paper, the output width is the source width multiplied by the grid columns and the output height is multiplied by its rows. Copies remain at 100%. With source-size paper, the output retains the input dimensions and copies are uniformly scaled and centred in each grid cell.
 
 For example:
 
-- A5 becomes A4
-- A4 becomes A3
-- A3 becomes A2
-- Non-standard page sizes are enlarged proportionally
+- 4-up (2×2) expanded paper is twice as wide and twice as high as the source
+- 4-up source-size paper uses 50% copies
+- 8-up uses four columns and two rows
 
-The generated filename is based on the source filename with `_4up` appended. For example, `handout.pdf` becomes `handout_4up.pdf`.
+The generated filename includes the selected layout. For example, `handout.pdf` becomes `handout_8up.pdf` for an 8-up conversion.
 
 ## Use the app
 
