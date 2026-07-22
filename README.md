@@ -4,7 +4,7 @@ PDF N-Up is a small, client-side web app that arranges repeated copies of a sing
 
 All document processing happens in the browser. Source and generated PDF files are not uploaded to a server.
 
-Demo: <https://andygock.github.io/pdf-4up/>
+Demo: <https://andygock.github.io/pdf-n-up/>
 
 ## Features
 

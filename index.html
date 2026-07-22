@@ -7,7 +7,7 @@
       name="description"
       content="Create 2-up, 4-up, 8-up, 9-up or 16-up PDFs entirely in your browser."
     />
-    <title>PDF 4-Up</title>
+    <title>PDF N-up</title>
     <link rel="stylesheet" href="./style.css" />
     <link rel="icon" type="image/x-icon" href="./favicon.ico" sizes="64x64" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
@@ -26,7 +26,7 @@
           </div>
 
           <div class="brand-copy">
-            <p class="brand-title">PDF 4-Up</p>
+            <p class="brand-title">PDF N-up</p>
             <p class="brand-subtitle">Local PDF imposition</p>
           </div>
         </div>
@@ -99,24 +99,124 @@
               <div class="panel-header">
                 <div>
                   <h2 class="panel-title">Conversion options</h2>
-                  <p class="panel-subtitle">Choose the sheet layout before selecting or dropping a PDF. Rectangular grids rotate automatically for landscape pages.</p>
+                  <p class="panel-subtitle">
+                    Choose the sheet layout before selecting or dropping a PDF.
+                    Rectangular grids rotate automatically for landscape pages.
+                  </p>
                 </div>
               </div>
               <div class="panel-body options-body">
                 <fieldset class="option-group">
                   <legend>Copies per sheet</legend>
                   <div class="layout-options" id="layoutOptions">
-                    <label class="layout-option"><input type="radio" name="layout" value="2" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M24 1v34"/></svg><span><strong>2-up</strong><small>2×1</small></span></span></label>
-                    <label class="layout-option"><input type="radio" name="layout" value="4" checked /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M24 1v34M1 18h46"/></svg><span><strong>4-up</strong><small>2×2</small></span></span></label>
-                    <label class="layout-option"><input type="radio" name="layout" value="8" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M12.5 1v34M24 1v34M35.5 1v34M1 18h46"/></svg><span><strong>8-up</strong><small>4×2</small></span></span></label>
-                    <label class="layout-option"><input type="radio" name="layout" value="9" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M16.33 1v34M31.67 1v34M1 12.33h46M1 23.67h46"/></svg><span><strong>9-up</strong><small>3×3</small></span></span></label>
-                    <label class="layout-option"><input type="radio" name="layout" value="16" /><span class="layout-card"><svg class="layout-diagram" viewBox="0 0 48 36" aria-hidden="true"><rect x="1" y="1" width="46" height="34"/><path d="M12.5 1v34M24 1v34M35.5 1v34M1 9.5h46M1 18h46M1 26.5h46"/></svg><span><strong>16-up</strong><small>4×4</small></span></span></label>
+                    <label class="layout-option"
+                      ><input type="radio" name="layout" value="2" /><span
+                        class="layout-card"
+                        ><svg
+                          class="layout-diagram"
+                          viewBox="0 0 48 36"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="1" width="46" height="34" />
+                          <path d="M24 1v34" /></svg
+                        ><span
+                          ><strong>2-up</strong><small>2×1</small></span
+                        ></span
+                      ></label
+                    >
+                    <label class="layout-option"
+                      ><input
+                        type="radio"
+                        name="layout"
+                        value="4"
+                        checked
+                      /><span class="layout-card"
+                        ><svg
+                          class="layout-diagram"
+                          viewBox="0 0 48 36"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="1" width="46" height="34" />
+                          <path d="M24 1v34M1 18h46" /></svg
+                        ><span
+                          ><strong>4-up</strong><small>2×2</small></span
+                        ></span
+                      ></label
+                    >
+                    <label class="layout-option"
+                      ><input type="radio" name="layout" value="8" /><span
+                        class="layout-card"
+                        ><svg
+                          class="layout-diagram"
+                          viewBox="0 0 48 36"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="1" width="46" height="34" />
+                          <path d="M12.5 1v34M24 1v34M35.5 1v34M1 18h46" /></svg
+                        ><span
+                          ><strong>8-up</strong><small>4×2</small></span
+                        ></span
+                      ></label
+                    >
+                    <label class="layout-option"
+                      ><input type="radio" name="layout" value="9" /><span
+                        class="layout-card"
+                        ><svg
+                          class="layout-diagram"
+                          viewBox="0 0 48 36"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="1" width="46" height="34" />
+                          <path
+                            d="M16.33 1v34M31.67 1v34M1 12.33h46M1 23.67h46"
+                          /></svg
+                        ><span
+                          ><strong>9-up</strong><small>3×3</small></span
+                        ></span
+                      ></label
+                    >
+                    <label class="layout-option"
+                      ><input type="radio" name="layout" value="16" /><span
+                        class="layout-card"
+                        ><svg
+                          class="layout-diagram"
+                          viewBox="0 0 48 36"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="1" width="46" height="34" />
+                          <path
+                            d="M12.5 1v34M24 1v34M35.5 1v34M1 9.5h46M1 18h46M1 26.5h46"
+                          /></svg
+                        ><span
+                          ><strong>16-up</strong><small>4×4</small></span
+                        ></span
+                      ></label
+                    >
                   </div>
                 </fieldset>
                 <fieldset class="option-group size-options">
                   <legend>Output paper</legend>
-                  <label class="size-option"><input type="radio" name="paperMode" value="expand" checked /><span><strong>Expand paper size</strong><small>Keep every copy at its original size.</small></span></label>
-                  <label class="size-option"><input type="radio" name="paperMode" value="same" /><span><strong>Keep source paper size</strong><small>Scale copies to fit; vector content stays sharp.</small></span></label>
+                  <label class="size-option"
+                    ><input
+                      type="radio"
+                      name="paperMode"
+                      value="expand"
+                      checked
+                    /><span
+                      ><strong>Expand paper size</strong
+                      ><small
+                        >Keep every copy at its original size.</small
+                      ></span
+                    ></label
+                  >
+                  <label class="size-option"
+                    ><input type="radio" name="paperMode" value="same" /><span
+                      ><strong>Keep source paper size</strong
+                      ><small
+                        >Scale copies to fit; vector content stays sharp.</small
+                      ></span
+                    ></label
+                  >
                 </fieldset>
               </div>
             </article>
@@ -247,7 +347,6 @@
                     </dl>
                   </div>
                 </article>
-
               </div>
             </div>
 
@@ -264,7 +363,11 @@
                   <button class="button" id="openOutputButton" type="button">
                     Open in new tab
                   </button>
-                  <button class="button primary" id="downloadOutputButton" type="button">
+                  <button
+                    class="button primary"
+                    id="downloadOutputButton"
+                    type="button"
+                  >
                     Download PDF
                   </button>
                 </div>
@@ -282,7 +385,6 @@
                 <p class="preview-error hidden" id="previewError"></p>
               </div>
             </article>
-
           </section>
 
           <section
@@ -306,7 +408,8 @@
                 <h2>Arrange the copies</h2>
                 <p>
                   The page is embedded once and repeated in your chosen grid.
-                  Vector content, text and images remain embedded as PDF content.
+                  Vector content, text and images remain embedded as PDF
+                  content.
                 </p>
               </article>
 
@@ -314,9 +417,9 @@
                 <div class="info-number">03</div>
                 <h2>Preview and download locally</h2>
                 <p>
-                  The completed PDF is generated in browser memory and
-                  displayed as a local preview. You choose whether to download
-                  or open it. No source or output document is transmitted.
+                  The completed PDF is generated in browser memory and displayed
+                  as a local preview. You choose whether to download or open it.
+                  No source or output document is transmitted.
                 </p>
               </article>
             </div>
@@ -331,11 +434,13 @@
               </p>
 
               <span class="formula">
-                expanded width = source width × columns &nbsp;&nbsp; expanded height =
-                source height × rows
+                expanded width = source width × columns &nbsp;&nbsp; expanded
+                height = source height × rows
               </span>
 
-              <span class="formula"> same-paper scale = min(1 ÷ columns, 1 ÷ rows) </span>
+              <span class="formula">
+                same-paper scale = min(1 ÷ columns, 1 ÷ rows)
+              </span>
             </article>
 
             <article class="content-section">
@@ -360,8 +465,8 @@
               <h2>Local-only document processing</h2>
               <p>
                 Selected files are read by JavaScript in this browser tab. PDF
-                parsing, page embedding, output construction, preview and download
-                creation all occur on this device.
+                parsing, page embedding, output construction, preview and
+                download creation all occur on this device.
               </p>
             </article>
 
@@ -382,8 +487,8 @@
                 generated PDF data to disk while processing or previewing it.
                 This may include a browser cache, a temporary directory such as
                 <code>%TEMP%</code> on Windows, or virtual-memory files. The
-                location and retention period are controlled by your browser
-                and operating system.
+                location and retention period are controlled by your browser and
+                operating system.
               </p>
               <p>
                 The completed PDF is only saved to your configured Downloads
@@ -395,10 +500,10 @@
             <article class="content-section">
               <h2>Third-party library</h2>
               <p>
-                The PDF processing and preview libraries are loaded from a public
-                CDN. Only library files are requested from the CDN; your selected
-                and generated PDF bytes are passed directly to local JavaScript
-                and a local browser worker, never to the CDN.
+                The PDF processing and preview libraries are loaded from a
+                public CDN. Only library files are requested from the CDN; your
+                selected and generated PDF bytes are passed directly to local
+                JavaScript and a local browser worker, never to the CDN.
               </p>
             </article>
 
@@ -414,9 +519,9 @@
         </main>
 
         <footer>
-          PDF 4-Up is open source under the MIT License.
+          PDF N-up is open source under the MIT License.
           <a
-            href="https://github.com/andygock/pdf-4up"
+            href="https://github.com/andygock/pdf-n-up"
             target="_blank"
             rel="noopener noreferrer"
             >View on GitHub</a
@@ -427,13 +532,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script>
-      window.pdfjsReady = import(
-        "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.mjs"
-      ).then((pdfjs) => {
-        pdfjs.GlobalWorkerOptions.workerSrc =
-          "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.worker.mjs";
-        return pdfjs;
-      });
+      window.pdfjsReady =
+        import("https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.mjs").then(
+          (pdfjs) => {
+            pdfjs.GlobalWorkerOptions.workerSrc =
+              "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.worker.mjs";
+            return pdfjs;
+          },
+        );
     </script>
     <script src="./script.js"></script>
   </body>

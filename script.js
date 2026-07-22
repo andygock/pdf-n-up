@@ -6,7 +6,7 @@
 
   // PDF dimensions are measured in points (72 points per inch), while the
   // interface presents sizes in mm.
-  const LEGACY_STORAGE_KEY = "pdf-4up-state-v1";
+  const LEGACY_STORAGE_KEY = "pdf-n-up-state-v1";
   const MAX_FILE_SIZE = 200 * 1024 * 1024;
   const POINTS_PER_MM = 72 / 25.4;
   const LAYOUTS = {
@@ -17,11 +17,20 @@
     16: { copies: 16, columns: 4, rows: 4 },
   };
   const STANDARD_PAPER_SIZES = [
-    ["A0", 841, 1189], ["A1", 594, 841], ["A2", 420, 594],
-    ["A3", 297, 420], ["A4", 210, 297], ["A5", 148, 210],
-    ["A6", 105, 148], ["A7", 74, 105], ["A8", 52, 74],
-    ["A9", 37, 52], ["A10", 26, 37], ["Letter", 215.9, 279.4],
-    ["Legal", 215.9, 355.6], ["Tabloid", 279.4, 431.8],
+    ["A0", 841, 1189],
+    ["A1", 594, 841],
+    ["A2", 420, 594],
+    ["A3", 297, 420],
+    ["A4", 210, 297],
+    ["A5", 148, 210],
+    ["A6", 105, 148],
+    ["A7", 74, 105],
+    ["A8", 52, 74],
+    ["A9", 37, 52],
+    ["A10", 26, 37],
+    ["Letter", 215.9, 279.4],
+    ["Legal", 215.9, 355.6],
+    ["Tabloid", 279.4, 431.8],
     ["Executive", 184.2, 266.7],
   ];
 
@@ -29,8 +38,7 @@
   const pageTitles = {
     convert: {
       title: "Create an N-up PDF",
-      description:
-        "Arrange repeated copies of one PDF page on a single sheet.",
+      description: "Arrange repeated copies of one PDF page on a single sheet.",
     },
     guide: {
       title: "How it works",
@@ -39,8 +47,7 @@
     },
     privacy: {
       title: "Privacy",
-      description:
-        "How local processing and browser memory are handled.",
+      description: "How local processing and browser memory are handled.",
     },
   };
 
@@ -62,7 +69,9 @@
   // controls before the first conversion so the visible and applied options
   // always agree.
   const syncOptionsFromDom = () => {
-    const selectedLayout = document.querySelector('input[name="layout"]:checked');
+    const selectedLayout = document.querySelector(
+      'input[name="layout"]:checked',
+    );
     const selectedPaperMode = document.querySelector(
       'input[name="paperMode"]:checked',
     );
@@ -148,9 +157,12 @@
 
   const findPaperName = (widthMm, heightMm) => {
     const toleranceMm = 1;
-    return STANDARD_PAPER_SIZES.find(([, standardWidth, standardHeight]) =>
-      (Math.abs(widthMm - standardWidth) <= toleranceMm && Math.abs(heightMm - standardHeight) <= toleranceMm) ||
-      (Math.abs(widthMm - standardHeight) <= toleranceMm && Math.abs(heightMm - standardWidth) <= toleranceMm),
+    return STANDARD_PAPER_SIZES.find(
+      ([, standardWidth, standardHeight]) =>
+        (Math.abs(widthMm - standardWidth) <= toleranceMm &&
+          Math.abs(heightMm - standardHeight) <= toleranceMm) ||
+        (Math.abs(widthMm - standardHeight) <= toleranceMm &&
+          Math.abs(heightMm - standardWidth) <= toleranceMm),
     )?.[0];
   };
 
@@ -174,7 +186,8 @@
 
   const getOutputGeometry = (width, height) => {
     const { columns, rows } = getResolvedLayout(width, height);
-    const scale = state.paperMode === "expand" ? 1 : Math.min(1 / columns, 1 / rows);
+    const scale =
+      state.paperMode === "expand" ? 1 : Math.min(1 / columns, 1 / rows);
     return {
       outputWidth: state.paperMode === "expand" ? width * columns : width,
       outputHeight: state.paperMode === "expand" ? height * rows : height,
@@ -318,7 +331,10 @@
     }
 
     const { file, width, height } = state.source;
-    const { outputWidth, outputHeight, scale } = getOutputGeometry(width, height);
+    const { outputWidth, outputHeight, scale } = getOutputGeometry(
+      width,
+      height,
+    );
     state.source.outputWidth = outputWidth;
     state.source.outputHeight = outputHeight;
     state.source.outputName = makeOutputFilename(file.name);
@@ -336,7 +352,6 @@
     elements.detailScale.textContent = `${Number((scale * 100).toFixed(4))}%`;
     const resolvedLayout = getResolvedLayout(width, height);
     elements.detailLayout.textContent = `${resolvedLayout.copies}-up (${resolvedLayout.columns}×${resolvedLayout.rows})`;
-
   };
 
   // Lock file selection while conversion is running.
@@ -345,9 +360,11 @@
 
     elements.selectFileButton.disabled = processing;
     elements.fileInput.disabled = processing;
-    document.querySelectorAll('input[name="layout"], input[name="paperMode"]').forEach((input) => {
-      input.disabled = processing;
-    });
+    document
+      .querySelectorAll('input[name="layout"], input[name="paperMode"]')
+      .forEach((input) => {
+        input.disabled = processing;
+      });
   };
 
   // Programmatically opening the hidden input gives the drop zone and explicit
@@ -469,8 +486,7 @@
       type: "success",
       symbol: "✓",
       title: "PDF validated",
-      message:
-        `The document contains one page and is ready for ${state.layout.copies}-up conversion.`,
+      message: `The document contains one page and is ready for ${state.layout.copies}-up conversion.`,
     });
   };
 
@@ -539,7 +555,10 @@
         state.source.width,
         state.source.height,
       );
-      const { outputWidth, outputHeight, scale } = getOutputGeometry(state.source.width, state.source.height);
+      const { outputWidth, outputHeight, scale } = getOutputGeometry(
+        state.source.width,
+        state.source.height,
+      );
       const outputName = makeOutputFilename(state.source.file.name, copies);
 
       setStatus({
@@ -570,7 +589,7 @@
       // document's metadata is not copied because it may no longer describe it.
       outputDocument.setTitle(outputName.replace(/\.pdf$/i, ""));
       outputDocument.setSubject(`${copies}-up PDF layout`);
-      outputDocument.setCreator("PDF 4-Up browser application");
+      outputDocument.setCreator("PDF N-up browser application");
       outputDocument.setProducer("pdf-lib");
       outputDocument.setCreationDate(new Date());
       outputDocument.setModificationDate(new Date());
@@ -661,7 +680,9 @@
       setStatus({
         type: previewRendered ? "success" : "warning",
         symbol: previewRendered ? "✓" : "!",
-        title: previewRendered ? "Output ready" : "Output ready without preview",
+        title: previewRendered
+          ? "Output ready"
+          : "Output ready without preview",
         message: previewRendered
           ? `${outputName} is ready to preview or download (${formatBytes(blob.size)}).`
           : `${outputName} is ready to download, but its preview could not be rendered.`,
@@ -751,7 +772,10 @@
       canvas.style.width = `${Math.ceil(renderViewport.width / pixelRatio)}px`;
       canvas.style.height = `${Math.ceil(renderViewport.height / pixelRatio)}px`;
 
-      const renderTask = page.render({ canvasContext: context, viewport: renderViewport });
+      const renderTask = page.render({
+        canvasContext: context,
+        viewport: renderViewport,
+      });
       output.renderTask = renderTask;
       await renderTask.promise;
 
