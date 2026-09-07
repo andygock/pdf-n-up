@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self' data: blob:; img-src 'self' data: blob:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta
       name="description"
       content="Create 2-up, 4-up, 8-up, 9-up or 16-up PDFs entirely in your browser."
     />
@@ -96,9 +100,7 @@
               <div class="options-heading">
                 <div>
                   <h2 class="panel-title">Conversion options</h2>
-                  <p class="panel-subtitle">
-                    Choose a layout and output size.
-                  </p>
+                  <p class="panel-subtitle">Choose a layout and output size.</p>
                 </div>
               </div>
               <div class="panel-body options-body">
@@ -207,12 +209,33 @@
                   >
                   <label class="size-option"
                     ><input type="radio" name="paperMode" value="same" /><span
-                      ><strong>Keep source paper size</strong
+                      ><strong>Keep source page size</strong
                       ><small
                         >Scale copies to fit; vector content stays sharp.</small
                       ></span
                     ></label
                   >
+                </fieldset>
+                <fieldset class="option-group spacing-options">
+                  <legend>Print spacing</legend>
+                  <label
+                    >Outer margin (mm)<input
+                      id="marginMm"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value="0"
+                  /></label>
+                  <label
+                    >Gap between copies (mm)<input
+                      id="gutterMm"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value="0"
+                  /></label>
                 </fieldset>
               </div>
             </article>
@@ -228,18 +251,12 @@
                 </div>
 
                 <div class="panel-body">
-                  <div
-                    class="drop-zone"
-                    id="dropZone"
-                    role="button"
-                    tabindex="0"
-                    aria-label="Choose or drop a single-page PDF"
-                  >
+                  <div class="drop-zone" id="dropZone">
                     <input
-                      class="file-input"
                       id="fileInput"
                       type="file"
                       accept="application/pdf,.pdf"
+                      hidden
                     />
 
                     <div class="drop-content">
@@ -268,7 +285,7 @@
                       </button>
 
                       <p class="drop-restrictions">
-                        PDF · ONE PAGE ONLY · MAXIMUM 200 MB
+                        PDF · ONE PAGE ONLY · MAXIMUM 50 MB
                       </p>
                     </div>
 
@@ -280,8 +297,17 @@
                       <div class="source-details-header">
                         <div>
                           <h3 id="detailsTitle">Document details</h3>
-                          <span>Click or drop another PDF to replace this file</span>
+                          <span
+                            >Drop another PDF here to replace this file</span
+                          >
                         </div>
+                        <button
+                          class="button compact"
+                          id="replaceFileButton"
+                          type="button"
+                        >
+                          Replace PDF
+                        </button>
                       </div>
 
                       <div class="empty-state" id="detailsEmpty">
@@ -318,6 +344,11 @@
                           <dd id="detailLayout">4-up (2×2)</dd>
                         </div>
                       </dl>
+                      <p
+                        class="source-warning hidden"
+                        id="sourceWarning"
+                        role="status"
+                      ></p>
                     </section>
                   </div>
 
@@ -342,7 +373,30 @@
                       <div class="progress-bar" id="progressBar"></div>
                     </div>
                   </div>
-
+                  <div class="document-actions">
+                    <button
+                      class="button compact"
+                      id="clearDocumentButton"
+                      type="button"
+                      disabled
+                    >
+                      Clear document
+                    </button>
+                    <button
+                      class="button compact hidden"
+                      id="cancelButton"
+                      type="button"
+                    >
+                      Cancel processing
+                    </button>
+                    <button
+                      class="button compact hidden"
+                      id="useSourceSizeButton"
+                      type="button"
+                    >
+                      Use source-page size
+                    </button>
+                  </div>
                 </div>
               </article>
 
@@ -356,7 +410,12 @@
                   </div>
 
                   <div class="output-actions">
-                    <button class="button" id="openOutputButton" type="button" disabled>
+                    <button
+                      class="button"
+                      id="openOutputButton"
+                      type="button"
+                      disabled
+                    >
                       Open
                     </button>
                     <button
@@ -371,7 +430,11 @@
                 </div>
 
                 <div class="preview-viewport" id="previewViewport">
-                  <div class="preview-loading" id="previewLoading" role="status">
+                  <div
+                    class="preview-loading"
+                    id="previewLoading"
+                    role="status"
+                  >
                     Select a PDF to see the output preview.
                   </div>
                   <canvas
@@ -380,10 +443,21 @@
                     aria-label="Preview of the generated PDF"
                   ></canvas>
                   <p class="preview-error hidden" id="previewError"></p>
+                  <button
+                    class="button hidden"
+                    id="retryPreviewButton"
+                    type="button"
+                  >
+                    Retry preview
+                  </button>
                 </div>
+                <p class="preview-note">
+                  Preview only: images above 16 megapixels may be omitted. Open
+                  the PDF to check it before printing. Print at actual size to
+                  preserve the chosen dimensions.
+                </p>
               </article>
             </div>
-
           </section>
 
           <section
@@ -423,13 +497,19 @@
               </article>
             </div>
 
-            <article class="content-section" style="margin-top: 20px">
+            <article class="content-section guide-calculation">
               <h2>Page-size calculation</h2>
               <p>
                 Expand paper size multiplies the source width by the number of
                 columns and its height by the number of rows, keeping each copy
-                at 100%. Keep source paper size retains the original dimensions
+                at 100%. Keep source page size retains the visible dimensions
                 and scales each copy uniformly to fit its grid cell.
+              </p>
+              <p>
+                Outer margins and gaps between copies default to zero. Expanded
+                paper adds the selected spacing without shrinking copies.
+                Source-page size reserves that spacing before scaling the
+                copies.
               </p>
 
               <span class="formula">
@@ -447,7 +527,7 @@
               <h2>Examples</h2>
               <ul>
                 <li>4-up (2×2) on expanded paper doubles both dimensions.</li>
-                <li>4-up on the source paper uses four copies at 50% scale.</li>
+                <li>4-up on the source page uses four copies at 50% scale.</li>
                 <li>8-up uses a four-column by two-row arrangement.</li>
                 <li>
                   Rectangular layouts rotate the output sheet when that avoids
@@ -455,6 +535,10 @@
                 </li>
                 <li>
                   Non-standard page dimensions are enlarged proportionally.
+                </li>
+                <li>
+                  Visual page content is preserved, but interactive links,
+                  annotations and form controls are not copied.
                 </li>
               </ul>
             </article>
@@ -502,21 +586,22 @@
             </article>
 
             <article class="content-section">
-              <h2>Third-party library</h2>
+              <h2>PDF libraries</h2>
               <p>
-                The PDF processing and preview libraries are loaded from a
-                public CDN. Only library files are requested from the CDN; your
-                selected and generated PDF bytes are passed directly to local
-                JavaScript and a local browser worker, never to the CDN.
+                PDF processing and preview use bundled, version-pinned copies of
+                pdf-lib and PDF.js. All library files, fonts and image decoders
+                load from this site. No third-party CDN requests are made.
               </p>
             </article>
 
             <article class="content-section">
               <h2>Memory lifecycle</h2>
               <p>
-                PDF bytes remain in browser memory until the document is
-                cleared, replaced, or the page is closed. Generated object URLs
-                are revoked when they are no longer required.
+                Parsed document data remains in browser memory until the PDF is
+                replaced, cleared or the page is closed. Clear document releases
+                the source, output and preview. Cancel processing stops the
+                current conversion and clears its document. Generated object
+                URLs are revoked when they are no longer required.
               </p>
             </article>
           </section>
@@ -534,17 +619,6 @@
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script>
-      window.pdfjsReady =
-        import("https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.mjs").then(
-          (pdfjs) => {
-            pdfjs.GlobalWorkerOptions.workerSrc =
-              "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.1.200/build/pdf.worker.mjs";
-            return pdfjs;
-          },
-        );
-    </script>
     <script type="module" src="./js/app.js"></script>
   </body>
 </html>

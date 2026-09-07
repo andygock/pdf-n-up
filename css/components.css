@@ -2,9 +2,52 @@
   display: grid;
   grid-template-columns: minmax(270px, 0.9fr) minmax(300px, 1.1fr);
   gap: 20px;
-  min-height: 430px;
+  min-height: 560px;
   height: calc(100vh - 258px);
   align-items: stretch;
+}
+
+.spacing-options {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.spacing-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.spacing-options input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-alt);
+  color: var(--text-strong);
+}
+
+.document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.source-warning {
+  color: var(--warning);
+  font-size: 0.85rem;
+}
+
+.preview-note {
+  margin: 0;
+  padding: 10px 16px;
+  color: var(--text);
+  font-size: 0.8rem;
 }
 
 .conversion-options {
@@ -37,42 +80,50 @@
 .source-panel .drop-zone {
   flex: 1 1 auto;
 }
+
 .options-heading {
   min-width: 0;
 }
+
 .options-body {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.75fr);
   gap: 16px;
   padding: 0;
 }
+
 .option-group {
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
+
 .option-group legend {
   margin-bottom: 5px;
   color: var(--text-strong);
   font-size: 0.84rem;
   font-weight: 650;
 }
+
 .layout-options {
   display: grid;
   grid-template-columns: repeat(5, minmax(60px, 1fr));
   gap: 6px;
 }
+
 .layout-option,
 .size-option {
   cursor: pointer;
 }
+
 .layout-option input,
 .size-option input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
+
 .layout-card {
   display: flex;
   min-height: 54px;
@@ -86,19 +137,23 @@
     border-color var(--transition),
     background-color var(--transition);
 }
+
 .layout-option:hover .layout-card,
 .size-option:hover span {
   border-color: var(--primary);
 }
+
 .layout-option input:checked + .layout-card,
 .size-option input:checked + span {
   border-color: var(--primary);
   background: rgb(97 175 239 / 10%);
 }
+
 .layout-option input:focus-visible + .layout-card,
 .size-option input:focus-visible + span {
   box-shadow: var(--focus-ring);
 }
+
 .layout-diagram {
   width: 32px;
   flex: 0 0 auto;
@@ -107,27 +162,32 @@
   stroke-width: 1.5;
   color: var(--primary);
 }
+
 .layout-card strong,
 .layout-card small,
 .size-option strong,
 .size-option small {
   display: block;
 }
+
 .layout-card strong,
 .size-option strong {
   color: var(--text-strong);
   font-size: 0.82rem;
 }
+
 .layout-card small,
 .size-option small {
   color: var(--text-muted);
   font-size: 0.72rem;
 }
+
 .size-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
+
 .size-option span {
   display: block;
   min-height: 54px;
@@ -145,22 +205,17 @@
   border: 2px dashed var(--border-strong);
   background: var(--surface-alt);
   text-align: center;
-  cursor: pointer;
-  outline: none;
   transition:
     border-color var(--transition),
     background-color var(--transition),
     color var(--transition);
 }
 
-.drop-zone:hover,
-.drop-zone:focus-visible,
 .drop-zone.dragging {
   border-color: var(--primary);
   background: var(--surface-hover);
 }
 
-.drop-zone:focus-visible,
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
@@ -234,7 +289,7 @@ input:focus-visible {
 .drop-restrictions {
   margin: 16px 0 0;
   color: var(--warning);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.76rem;
 }
 
@@ -290,17 +345,6 @@ input:focus-visible {
   margin-top: 22px;
 }
 
-.file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  /* A rendering failure must not make part of a generated document unreachable. */
-  overflow: auto;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .output-panel {
   display: flex;
   min-width: 0;
@@ -327,8 +371,10 @@ input:focus-visible {
   overflow: hidden;
   padding: 18px;
   background:
-    linear-gradient(45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 0 / 20px 20px,
-    linear-gradient(-45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 10px / 20px 20px,
+    linear-gradient(45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 0 /
+      20px 20px,
+    linear-gradient(-45deg, rgb(255 255 255 / 3%) 25%, transparent 25%) 0 10px /
+      20px 20px,
     var(--surface-alt);
 }
 
@@ -359,6 +405,10 @@ input:focus-visible {
 }
 
 .source-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 0 10px;
   border-bottom: 1px solid var(--border);
 }
@@ -374,6 +424,12 @@ input:focus-visible {
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 0.7rem;
+}
+
+.button.compact {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
 }
 
 .empty-state {
@@ -410,12 +466,11 @@ input:focus-visible {
 
 .summary-row dd {
   min-width: 0;
-  margin: 0;
+  margin: 3px 0 0;
   overflow-wrap: anywhere;
   color: var(--text-strong);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.78rem;
-  margin-top: 3px;
   text-align: left;
 }
 
@@ -440,7 +495,7 @@ input:focus-visible {
   place-items: center;
   border: 1px solid currentcolor;
   color: var(--text-muted);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.72rem;
 }
 
@@ -546,7 +601,7 @@ input:focus-visible {
   place-items: center;
   border: 1px solid var(--primary);
   color: var(--primary);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.8rem;
 }
 
@@ -574,6 +629,10 @@ input:focus-visible {
   margin-top: 20px;
 }
 
+.guide-calculation {
+  margin-top: 20px;
+}
+
 .content-section ul {
   margin: 14px 0 0;
   padding-left: 20px;
@@ -591,7 +650,7 @@ input:focus-visible {
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text-strong);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.82rem;
   overflow-x: auto;
   white-space: nowrap;

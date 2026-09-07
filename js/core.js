@@ -1,15 +1,10 @@
 // PDF dimensions are measured in points (72 points per inch), while the
 // interface presents sizes in mm.
+import { LAYOUTS } from "./geometry.js";
+
 const LEGACY_STORAGE_KEY = "pdf-n-up-state-v1";
-export const MAX_FILE_SIZE = 200 * 1024 * 1024;
+export const MAX_FILE_SIZE = 50_000_000;
 const POINTS_PER_MM = 72 / 25.4;
-export const LAYOUTS = {
-  2: { copies: 2, columns: 2, rows: 1 },
-  4: { copies: 4, columns: 2, rows: 2 },
-  8: { copies: 8, columns: 4, rows: 2 },
-  9: { copies: 9, columns: 3, rows: 3 },
-  16: { copies: 16, columns: 4, rows: 4 },
-};
 const STANDARD_PAPER_SIZES = [
   ["A0", 841, 1189],
   ["A1", 594, 841],
@@ -52,6 +47,8 @@ export const defaultState = {
   processing: false,
   layout: LAYOUTS[4],
   paperMode: "expand",
+  marginMm: 0,
+  gutterMm: 0,
 };
 
 export const state = {
@@ -64,21 +61,22 @@ export const state = {
 // controls before the first conversion so the visible and applied options
 // always agree.
 export const syncOptionsFromDom = () => {
-  const selectedLayout = document.querySelector(
-    'input[name="layout"]:checked',
-  );
+  const selectedLayout = document.querySelector('input[name="layout"]:checked');
   const selectedPaperMode = document.querySelector(
     'input[name="paperMode"]:checked',
   );
 
   state.layout = LAYOUTS[selectedLayout?.value] || LAYOUTS[4];
   state.paperMode = selectedPaperMode?.value === "same" ? "same" : "expand";
+  state.marginMm = Number(document.querySelector("#marginMm").value);
+  state.gutterMm = Number(document.querySelector("#gutterMm").value);
 };
 
 // Cache frequently used DOM nodes once. The HTML contract requires each of
 // these IDs to exist before this script runs.
 export const elements = {
   sidebar: document.querySelector("#sidebar"),
+  appArea: document.querySelector(".app-area"),
   sidebarBackdrop: document.querySelector("#sidebarBackdrop"),
   mobileMenuButton: document.querySelector("#mobileMenuButton"),
   pageTitle: document.querySelector("#pageTitle"),
@@ -86,6 +84,12 @@ export const elements = {
 
   fileInput: document.querySelector("#fileInput"),
   selectFileButton: document.querySelector("#selectFileButton"),
+  replaceFileButton: document.querySelector("#replaceFileButton"),
+  clearDocumentButton: document.querySelector("#clearDocumentButton"),
+  cancelButton: document.querySelector("#cancelButton"),
+  retryPreviewButton: document.querySelector("#retryPreviewButton"),
+  useSourceSizeButton: document.querySelector("#useSourceSizeButton"),
+  sourceWarning: document.querySelector("#sourceWarning"),
   dropZone: document.querySelector("#dropZone"),
   sourceDetails: document.querySelector("#sourceDetails"),
   dropTitle: document.querySelector("#dropTitle"),
@@ -166,71 +170,6 @@ export const formatPageSize = (width, height) => {
   const heightMm = pointsToMillimetres(height);
   const paperName = findPaperName(widthMm, heightMm);
   return `${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm${paperName ? ` (${paperName})` : ""}`;
-};
-
-// Layout labels describe portrait input. Transpose rectangular grids for a
-// landscape source so sheets grow along the source's shorter axis and no
-// empty rows or columns are introduced.
-export const getResolvedLayout = (width, height) => {
-  const { copies, columns, rows } = state.layout;
-  return width > height
-    ? { copies, columns: rows, rows: columns }
-    : { copies, columns, rows };
-};
-
-export const getOutputGeometry = (width, height) => {
-  const { columns, rows } = getResolvedLayout(width, height);
-
-  if (state.paperMode === "expand") {
-    return {
-      outputWidth: width * columns,
-      outputHeight: height * rows,
-      scale: 1,
-    };
-  }
-
-  // Rectangular N-up grids often fit the source paper more efficiently when
-  // the output sheet is rotated. Compare both orientations and use the one
-  // whose cells allow the largest proportional copy, avoiding the unnecessary
-  // whitespace previously seen with 2-up and 8-up layouts.
-  const orientations = [
-    { outputWidth: width, outputHeight: height },
-    { outputWidth: height, outputHeight: width },
-  ];
-  const candidates = orientations.map((orientation) => ({
-    ...orientation,
-    scale: Math.min(
-      orientation.outputWidth / columns / width,
-      orientation.outputHeight / rows / height,
-    ),
-  }));
-
-  return candidates.reduce((best, candidate) =>
-    candidate.scale > best.scale ? candidate : best,
-  );
-};
-
-// History rows are assembled as HTML strings. Passing user-controlled names
-// through a temporary element converts markup characters into safe entities.
-export const escapeHtml = (value) => {
-  const div = document.createElement("div");
-  div.textContent = String(value);
-  return div.innerHTML;
-};
-
-// Preserve the user's basename, replace a final .pdf suffix when present,
-// and supply a useful name even if the browser reports a blank filename.
-export const makeOutputFilename = (inputName, copies = state.layout.copies) => {
-  const cleanedName = inputName.trim() || "document.pdf";
-  const lastDot = cleanedName.lastIndexOf(".");
-  const hasPdfExtension =
-    lastDot > 0 && cleanedName.slice(lastDot).toLocaleLowerCase() === ".pdf";
-
-  const basename = hasPdfExtension
-    ? cleanedName.slice(0, lastDot)
-    : cleanedName;
-
-  return `${basename}_${copies}up.pdf`;
 };
 
 // Extension checks improve error messages, but the PDF magic bytes provide a

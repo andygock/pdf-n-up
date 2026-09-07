@@ -7,21 +7,17 @@
   --surface-hover: #2c313c;
   --border: #3e4451;
   --border-strong: #4b5263;
-
   --text: #abb2bf;
   --text-strong: #d7dae0;
   --text-muted: #7f848e;
-
   --primary: #61afef;
   --primary-hover: #78b9ed;
   --secondary: #c678dd;
   --success: #98c379;
   --warning: #e5c07b;
   --danger: #e06c75;
-
   --focus-ring: 0 0 0 3px rgb(97 175 239 / 28%);
   --shadow: 0 8px 24px rgb(0 0 0 / 24%);
-
   --sidebar-width: 240px;
   --content-width: 1440px;
   --transition: 160ms ease;
@@ -73,7 +69,7 @@ code {
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text-strong);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 0.9em;
 }
 
@@ -174,7 +170,7 @@ code {
   width: 20px;
   flex: 0 0 auto;
   text-align: center;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.9rem;
 }
 
@@ -257,7 +253,7 @@ code {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-muted);
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.72rem;
   white-space: nowrap;
 }

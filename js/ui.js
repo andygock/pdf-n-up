@@ -1,13 +1,9 @@
+import { elements, formatBytes, formatPageSize, state } from "./core.js";
 import {
-  elements,
-  escapeHtml,
-  formatBytes,
-  formatPageSize,
   getOutputGeometry,
   getResolvedLayout,
   makeOutputFilename,
-  state,
-} from "./core.js";
+} from "./geometry.js";
 
 // Central status renderer keeps colour, icon, message, spinner, and progress
 // behaviour consistent across validation, conversion, and download actions.
@@ -22,9 +18,16 @@ export const setStatus = ({
   elements.statusBox.className = "status-box";
   elements.statusBox.classList.add(type);
 
-  elements.statusSymbol.innerHTML = loading
-    ? '<span class="spinner" aria-hidden="true"></span>'
-    : escapeHtml(symbol);
+  elements.statusSymbol.replaceChildren();
+
+  if (loading) {
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    elements.statusSymbol.append(spinner);
+  } else {
+    elements.statusSymbol.textContent = String(symbol);
+  }
 
   elements.statusTitle.textContent = title;
   elements.statusMessage.textContent = message;
@@ -60,8 +63,7 @@ export const revokeOutputUrl = () => {
 // object URL. No generated PDF is retained in persistent browser storage.
 export const resetOutput = () => {
   state.previewRenderToken += 1;
-  state.output?.renderTask?.cancel();
-  state.output?.loadingTask?.destroy();
+  state.output?.cancelPreview?.();
   revokeOutputUrl();
   state.output = null;
 
@@ -69,9 +71,12 @@ export const resetOutput = () => {
   elements.outputSummary.textContent = "Your generated PDF will appear here.";
   elements.pdfPreview.classList.add("hidden");
   elements.previewLoading.classList.remove("hidden");
-  elements.previewLoading.textContent = "Select a PDF to see the output preview.";
+  elements.previewLoading.textContent =
+    "Select a PDF to see the output preview.";
   elements.previewError.classList.add("hidden");
   elements.previewError.textContent = "";
+  elements.retryPreviewButton.classList.add("hidden");
+  elements.useSourceSizeButton.classList.add("hidden");
   elements.pdfPreview.width = 0;
   elements.pdfPreview.height = 0;
   elements.openOutputButton.disabled = true;
@@ -89,6 +94,9 @@ export const clearSource = ({
   state.source = null;
   state.processing = false;
   elements.fileInput.value = "";
+  elements.clearDocumentButton.disabled = true;
+  elements.sourceWarning.classList.add("hidden");
+  elements.sourceWarning.textContent = "";
 
   elements.dropZone.classList.remove("has-file");
   elements.sourceDetails.classList.add("hidden");
@@ -117,39 +125,63 @@ export const updateDocumentDetails = () => {
     return;
   }
 
-  const { file, width, height } = state.source;
-  const { outputWidth, outputHeight, scale } = getOutputGeometry(
-    width,
-    height,
-  );
+  const { name, size, width, height } = state.source;
+  let geometry;
+  try {
+    geometry = getOutputGeometry({
+      width,
+      height,
+      layout: state.layout,
+      paperMode: state.paperMode,
+      marginMm: state.marginMm,
+      gutterMm: state.gutterMm,
+    });
+  } catch {
+    // Keep source details visible when a spacing choice cannot fit. Conversion
+    // provides the actionable error; do not leave stale output dimensions here.
+    geometry = { outputWidth: NaN, outputHeight: NaN, scale: NaN };
+  }
+  const { outputWidth, outputHeight, scale } = geometry;
   state.source.outputWidth = outputWidth;
   state.source.outputHeight = outputHeight;
-  state.source.outputName = makeOutputFilename(file.name);
+  state.source.outputName = makeOutputFilename(name, state.layout.copies);
 
   elements.detailsEmpty.classList.add("hidden");
   elements.detailsList.classList.remove("hidden");
   elements.sourceDetails.classList.remove("hidden");
-
-  elements.detailFilename.textContent = file.name;
-  elements.detailFileSize.textContent = formatBytes(file.size);
-  elements.detailSourceSize.textContent = formatPageSize(width, height);
-  elements.detailOutputSize.textContent = formatPageSize(
-    outputWidth,
-    outputHeight,
+  elements.clearDocumentButton.disabled = state.processing;
+  elements.sourceWarning.textContent = state.source.warnings.join(" ");
+  elements.sourceWarning.classList.toggle(
+    "hidden",
+    state.source.warnings.length === 0,
   );
-  elements.detailScale.textContent = `${Number((scale * 100).toFixed(4))}%`;
-  const resolvedLayout = getResolvedLayout(width, height);
+
+  elements.detailFilename.textContent = name;
+  elements.detailFileSize.textContent = formatBytes(size);
+  elements.detailSourceSize.textContent = formatPageSize(width, height);
+  elements.detailOutputSize.textContent = Number.isFinite(outputWidth)
+    ? formatPageSize(outputWidth, outputHeight)
+    : "Spacing does not fit";
+  elements.detailScale.textContent = Number.isFinite(scale)
+    ? `${Number((scale * 100).toFixed(4))}%`
+    : "—";
+  const resolvedLayout = getResolvedLayout(state.layout, width, height);
   elements.detailLayout.textContent = `${resolvedLayout.copies}-up (${resolvedLayout.columns}×${resolvedLayout.rows})`;
 };
 
 // Lock file selection while conversion is running.
 export const setProcessingState = (processing) => {
   state.processing = processing;
+  elements.cancelButton.classList.toggle("hidden", !processing);
+  elements.clearDocumentButton.disabled = processing || !state.source;
 
   elements.selectFileButton.disabled = processing;
+  elements.replaceFileButton.disabled = processing;
   elements.fileInput.disabled = processing;
   document
-    .querySelectorAll('input[name="layout"], input[name="paperMode"]')
+    .querySelectorAll(
+      'input[name="layout"], input[name="paperMode"], #marginMm, #gutterMm',
+    )
     .forEach((input) => {
       input.disabled = processing;
     });

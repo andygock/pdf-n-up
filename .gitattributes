@@ -1,0 +1,3 @@
+# Preserve upstream bytes across Windows/Linux checkouts for vendor verification.
+# Whitespace in third-party sources and licence notices is kept verbatim.
+vendor/** -text -whitespace

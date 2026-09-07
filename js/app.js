@@ -1,16 +1,14 @@
 import {
   elements,
-  LAYOUTS,
   removeLegacyPersistedState,
   state,
   syncOptionsFromDom,
 } from "./core.js";
+import { LAYOUTS } from "./geometry.js";
 import {
   clearSource,
   openFilePicker,
   resetOutput,
-  revokeOutputUrl,
-  setStatus,
   updateDocumentDetails,
 } from "./ui.js";
 import {
@@ -18,13 +16,16 @@ import {
   downloadOutput,
   handleSelectedFiles,
   openOutput,
+  clearDocument,
 } from "./pdf.js";
 import {
   closeMobileNavigation,
   openMobileNavigation,
   preventBrowserFileOpen,
   setActiveView,
+  initialiseNavigation,
 } from "./navigation.js";
+import { initialisePreview } from "./preview.js";
 
 // Navigation uses event delegation because every view button shares the same
 // data-view contract, including any buttons added to the markup later.
@@ -53,20 +54,7 @@ elements.selectFileButton.addEventListener("click", (event) => {
   openFilePicker();
 });
 
-elements.dropZone.addEventListener("click", (event) => {
-  if (event.target === elements.selectFileButton) {
-    return;
-  }
-
-  openFilePicker();
-});
-
-elements.dropZone.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    openFilePicker();
-  }
-});
+elements.replaceFileButton.addEventListener("click", openFilePicker);
 
 elements.fileInput.addEventListener("change", (event) => {
   handleSelectedFiles(event.target.files);
@@ -74,12 +62,24 @@ elements.fileInput.addEventListener("change", (event) => {
 
 elements.downloadOutputButton.addEventListener("click", downloadOutput);
 elements.openOutputButton.addEventListener("click", openOutput);
+elements.clearDocumentButton.addEventListener("click", clearDocument);
+elements.cancelButton.addEventListener("click", clearDocument);
+elements.useSourceSizeButton.addEventListener("click", () => {
+  document.querySelector('input[name="paperMode"][value="same"]').checked =
+    true;
+  syncOptionsFromDom();
+  updateDocumentDetails();
+  void createNUpPdf();
+});
 
 document.addEventListener("change", (event) => {
+  if (state.processing) return;
   if (event.target.matches('input[name="layout"]')) {
     state.layout = LAYOUTS[event.target.value] || LAYOUTS[4];
   } else if (event.target.matches('input[name="paperMode"]')) {
     state.paperMode = event.target.value === "same" ? "same" : "expand";
+  } else if (event.target.matches("#marginMm, #gutterMm")) {
+    syncOptionsFromDom();
   } else {
     return;
   }
@@ -87,11 +87,11 @@ document.addEventListener("change", (event) => {
   resetOutput();
   updateDocumentDetails();
 
-  // The validated source bytes remain in memory, so option changes can
+  // The validated source remains in the worker, so option changes can
   // immediately replace the preview without asking the user for the file
   // again. createNUpPdf manages its own progress and error states.
   if (state.source) {
-    createNUpPdf();
+    void createNUpPdf();
   }
 });
 
@@ -119,7 +119,11 @@ elements.dropZone.addEventListener("drop", (event) => {
   handleSelectedFiles(event.dataTransfer?.files);
 });
 
-window.addEventListener("beforeunload", revokeOutputUrl);
+window.addEventListener("pagehide", (event) => {
+  // Preserve live state when entering the back/forward cache. A cancelled
+  // navigation must never revoke URLs still used by the current page.
+  if (!event.persisted) clearDocument();
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -132,18 +136,5 @@ removeLegacyPersistedState();
 syncOptionsFromDom();
 setActiveView(state.activeView);
 clearSource();
-
-// The external library is required for both validation and conversion. Disable
-// file selection up front when it failed to load instead of failing later.
-if (!window.PDFLib?.PDFDocument) {
-  setStatus({
-    type: "error",
-    symbol: "!",
-    title: "PDF library unavailable",
-    message:
-      "The PDF processing library could not be loaded. Reload the page after checking the network connection.",
-  });
-
-  elements.selectFileButton.disabled = true;
-  elements.fileInput.disabled = true;
-}
+initialiseNavigation();
+initialisePreview();

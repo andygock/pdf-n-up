@@ -1,0 +1,31 @@
+{
+  "name": "pdf-n-up",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.1.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint .",
+    "lint:css": "stylelint \"css/**/*.css\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "vendor": "node scripts/vendor-dependencies.mjs",
+    "check": "pnpm test && pnpm lint && pnpm lint:css && pnpm format:check"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.2.108"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.0",
+    "globals": "17.9.0",
+    "prettier": "3.9.6",
+    "stylelint": "17.14.1",
+    "stylelint-config-standard": "40.0.0"
+  }
+}

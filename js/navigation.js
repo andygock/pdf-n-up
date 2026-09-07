@@ -28,7 +28,8 @@ export const setActiveView = (viewName) => {
   elements.pageDescription.textContent = pageTitles[viewName].description;
 
   closeMobileNavigation();
-  window.scrollTo({ top: 0, behaviour: "smooth" });
+  document.dispatchEvent(new Event("viewchange"));
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 // Mobile navigation helpers update the visual classes and aria-expanded value
@@ -37,12 +38,43 @@ export const openMobileNavigation = () => {
   elements.sidebar.classList.add("open");
   elements.sidebarBackdrop.classList.add("visible");
   elements.mobileMenuButton.setAttribute("aria-expanded", "true");
+  elements.sidebar.inert = false;
+  elements.appArea.inert = true;
+  elements.sidebar.querySelector("[data-view]").focus();
 };
 
 export const closeMobileNavigation = () => {
+  const wasOpen = elements.sidebar.classList.contains("open");
   elements.sidebar.classList.remove("open");
   elements.sidebarBackdrop.classList.remove("visible");
   elements.mobileMenuButton.setAttribute("aria-expanded", "false");
+  elements.appArea.inert = false;
+  elements.sidebar.inert = window.matchMedia("(max-width: 900px)").matches;
+  if (wasOpen) elements.mobileMenuButton.focus();
+};
+
+export const initialiseNavigation = () => {
+  const mobile = window.matchMedia("(max-width: 900px)");
+  mobile.addEventListener("change", closeMobileNavigation);
+  closeMobileNavigation();
+  // Keep Tab inside the open drawer; Escape/backdrop closes it and restores
+  // focus to the menu trigger. Closed off-screen links are inert on mobile.
+  elements.sidebar.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || !elements.sidebar.classList.contains("open"))
+      return;
+    const buttons = Array.from(
+      elements.sidebar.querySelectorAll("button:not(:disabled)"),
+    );
+    const first = buttons[0];
+    const last = buttons.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 };
 
 // Prevent the browser's default behaviour of navigating to a dropped file.
