@@ -1,17 +1,17 @@
-.info-grid {
+.infoGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--space-7);
 }
 
-.info-card {
+.infoCard {
   min-height: 210px;
   padding: 22px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 
-.info-number {
+.infoNumber {
   display: grid;
   width: 34px;
   height: 34px;
@@ -23,48 +23,48 @@
   font-size: 0.8rem;
 }
 
-.info-card h2,
-.content-section h2 {
-  margin: 0 0 10px;
+.infoCard h2,
+.contentSection h2 {
+  margin: 0 0 var(--space-3);
   color: var(--text-strong);
   font-size: 1rem;
 }
 
-.info-card p,
-.content-section p {
+.infoCard p,
+.contentSection p {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.88rem;
 }
 
-.content-section {
+.contentSection {
   padding: 22px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 
-.content-section + .content-section {
-  margin-top: 20px;
+.contentSection + .contentSection {
+  margin-top: var(--space-7);
 }
 
-.guide-calculation {
-  margin-top: 20px;
+.guideCalculation {
+  margin-top: var(--space-7);
 }
 
-.content-section ul {
-  margin: 14px 0 0;
-  padding-left: 20px;
+.contentSection ul {
+  margin: var(--space-5) 0 0;
+  padding-left: var(--space-7);
   color: var(--text-muted);
 }
 
-.content-section li + li {
-  margin-top: 8px;
+.contentSection li + li {
+  margin-top: var(--space-2);
 }
 
 .formula {
   display: block;
-  margin-top: 14px;
-  padding: 14px;
+  margin-top: var(--space-5);
+  padding: var(--space-5);
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text-strong);
@@ -74,3 +74,13 @@
   white-space: nowrap;
 }
 
+@media (width <= 640px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .infoCard {
+    min-height: 0;
+  }
+}

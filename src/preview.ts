@@ -83,11 +83,11 @@ export const createPreviewController = (
       controller.abort();
       stopTasks();
     };
-    elements.previewLoading.classList.remove("hidden");
+    elements.previewLoading.hidden = false;
     elements.previewLoading.textContent = "Rendering preview locally…";
-    elements.previewError.classList.add("hidden");
-    elements.retryPreviewButton.classList.add("hidden");
-    elements.pdfPreview.classList.add("hidden");
+    elements.previewError.hidden = true;
+    elements.retryPreviewButton.hidden = true;
+    elements.pdfPreview.hidden = true;
 
     // A detached canvas prevents cancelled work from overwriting a newer render.
     const work = async () => {
@@ -125,7 +125,7 @@ export const createPreviewController = (
       const targetContext = target.getContext("2d", { alpha: false });
       if (!targetContext) throw new Error("Canvas rendering is unavailable.");
       targetContext.drawImage(canvas, 0, 0);
-      target.classList.remove("hidden");
+      target.hidden = false;
       page.cleanup();
     };
     try {
@@ -140,11 +140,11 @@ export const createPreviewController = (
       if (current()) {
         const message = error instanceof Error ? error.message : String(error);
         elements.previewError.textContent = `${message} The PDF is still available to open or download.`;
-        elements.previewError.classList.remove("hidden");
-        elements.retryPreviewButton.classList.remove("hidden");
+        elements.previewError.hidden = false;
+        elements.retryPreviewButton.hidden = false;
       }
     } finally {
-      if (current()) elements.previewLoading.classList.add("hidden");
+      if (current()) elements.previewLoading.hidden = true;
       controller.abort();
       stopTasks();
     }
@@ -167,17 +167,17 @@ export const createPreviewController = (
       cancel();
       elements.pdfPreview.width = 0;
       elements.pdfPreview.height = 0;
-      elements.pdfPreview.classList.add("hidden");
-      elements.previewError.classList.add("hidden");
-      elements.retryPreviewButton.classList.add("hidden");
+      elements.pdfPreview.hidden = true;
+      elements.previewError.hidden = true;
+      elements.retryPreviewButton.hidden = true;
     }
     output = nextOutput;
     active = nextActive;
     if (!output) {
-      elements.pdfPreview.classList.add("hidden");
-      elements.previewError.classList.add("hidden");
-      elements.retryPreviewButton.classList.add("hidden");
-      elements.previewLoading.classList.remove("hidden");
+      elements.pdfPreview.hidden = true;
+      elements.previewError.hidden = true;
+      elements.retryPreviewButton.hidden = true;
+      elements.previewLoading.hidden = false;
       elements.previewLoading.textContent =
         "Select a PDF to see the output preview.";
     } else if (changed) {

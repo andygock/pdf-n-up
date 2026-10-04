@@ -8,9 +8,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --import tsx --test test/*.test.js",
+    "test": "node --import tsx --import ./test/register-css.js --test test/*.test.js",
     "lint": "biome lint .",
-    "lint:css": "stylelint \"css/**/*.css\"",
+    "lint:css": "stylelint \"{css,src}/**/*.css\"",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "check": "pnpm typecheck && pnpm test && pnpm biome:check && pnpm lint:css && pnpm build",

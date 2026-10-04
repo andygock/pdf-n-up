@@ -185,7 +185,10 @@ exhaust memory before a deadline or output-size check takes effect.
 ## Project structure
 
 - `index.html` — Vite entry point, metadata and production security policy
-- `src/App.tsx` — React interface, page content and accessible navigation
+- `src/App.tsx` — composes the interface and connects conversion state to components
+- `src/SourcePicker.tsx`, `src/ConversionOptions.tsx`, `src/ConversionFeedback.tsx`, `src/OutputPanel.tsx` — focused converter components
+- `src/AppHeader.tsx`, `src/AppFooter.tsx`, `src/PageHeading.tsx`, `src/Help.tsx`, `src/DropOverlay.tsx` — navigation, information and file-drop UI
+- `src/useView.ts`, `src/useFileDrop.ts` — hash navigation and viewport file-drop handling
 - `src/useConversion.ts` — conversion state, file validation and document lifecycle
 - `src/format.ts` — display formatting and old-history cleanup
 - `src/geometry.ts` — pure layout, rotation and page-size calculations
@@ -194,11 +197,17 @@ exhaust memory before a deadline or output-size check takes effect.
 - `src/Preview.tsx`, `src/preview.ts` — preview component and render lifecycle
 - `src/dependencies.ts`, `src/async.ts` — lazy PDF.js loading and deadlines
 - `src/types.ts` — shared PDF metadata and worker protocol types
-- `css/` — original base, component and responsive styles
+- `css/base.css` — shared CSS variables, document defaults and accessibility rules
+- `src/*.module.css` — scoped component styles with their responsive rules; `ui.module.css` shares button and panel styles
 - `public/` — site icons
 - `test/` — Node, React and PDF integration tests
 - `build/pdfjs-assets.ts` — development asset serving and production asset emission
 - `vite.config.ts`, `tsconfig.json` — build and strict TypeScript configuration
+
+Keep component styles beside their component and use the shared CSS variables for
+common colours, spacing, typography and radii. Component tests load CSS Modules
+through Vite; visibility assertions use the native `hidden` attribute rather than
+generated class names.
 
 ## Browser requirements
 

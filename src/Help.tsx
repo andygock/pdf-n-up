@@ -1,14 +1,17 @@
-export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
+import styles from "./Help.module.css";
+import type { View } from "./useView.ts";
+
+export function Help({ view }: { view: View }) {
   return (
     <>
       <section
-        className={view === "guide" ? "view" : "view hidden"}
+        hidden={view !== "guide"}
         id="view-guide"
         data-view-container="guide"
       >
-        <div className="info-grid">
-          <article className="info-card">
-            <div className="info-number">01</div>
+        <div className={styles.infoGrid}>
+          <article className={styles.infoCard}>
+            <div className={styles.infoNumber}>01</div>
             <h2>Select one page</h2>
             <p>
               Choose a PDF containing exactly one page. Encrypted,
@@ -16,8 +19,8 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
             </p>
           </article>
 
-          <article className="info-card">
-            <div className="info-number">02</div>
+          <article className={styles.infoCard}>
+            <div className={styles.infoNumber}>02</div>
             <h2>Arrange the copies</h2>
             <p>
               The page is embedded once and repeated in your chosen grid. Vector
@@ -25,8 +28,8 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
             </p>
           </article>
 
-          <article className="info-card">
-            <div className="info-number">03</div>
+          <article className={styles.infoCard}>
+            <div className={styles.infoNumber}>03</div>
             <h2>Preview and download locally</h2>
             <p>
               The completed PDF is generated in browser memory and displayed as
@@ -36,7 +39,9 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
           </article>
         </div>
 
-        <article className="content-section guide-calculation">
+        <article
+          className={`${styles.contentSection} ${styles.guideCalculation}`}
+        >
           <h2>Page-size calculation</h2>
           <p>
             Expand paper size multiplies the source width by the number of
@@ -50,18 +55,18 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
             Source-page size reserves that spacing before scaling the copies.
           </p>
 
-          <span className="formula">
+          <span className={styles.formula}>
             expanded width = source width × columns &nbsp;&nbsp; expanded height
             = source height × rows
           </span>
 
-          <span className="formula">
+          <span className={styles.formula}>
             same-paper scale = best proportional fit in the original or rotated
             sheet orientation
           </span>
         </article>
 
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>Examples</h2>
           <ul>
             <li>4-up (2×2) on expanded paper doubles both dimensions.</li>
@@ -81,11 +86,11 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
       </section>
 
       <section
-        className={view === "privacy" ? "view" : "view hidden"}
+        hidden={view !== "privacy"}
         id="view-privacy"
         data-view-container="privacy"
       >
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>Local-only document processing</h2>
           <p>
             Selected files are read by JavaScript in this browser tab. PDF
@@ -94,7 +99,7 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
           </p>
         </article>
 
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>No persistent history</h2>
           <p>
             The application does not retain conversion history, filenames, file
@@ -103,7 +108,7 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
           </p>
         </article>
 
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>Browser and operating-system storage</h2>
           <p>
             Although this application does not save its own copy, your browser
@@ -121,7 +126,7 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
           </p>
         </article>
 
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>PDF libraries</h2>
           <p>
             PDF processing and preview use bundled, version-pinned copies of
@@ -130,7 +135,7 @@ export function Help({ view }: { view: "convert" | "guide" | "privacy" }) {
           </p>
         </article>
 
-        <article className="content-section">
+        <article className={styles.contentSection}>
           <h2>Memory lifecycle</h2>
           <p>
             Parsed document data remains in browser memory until the PDF is

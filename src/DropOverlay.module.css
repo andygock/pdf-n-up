@@ -1,0 +1,25 @@
+.dropOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius-overlay);
+  background: var(--surface-overlay);
+  text-align: center;
+}
+
+.dropOverlay strong {
+  display: block;
+  color: var(--primary);
+  font-size: clamp(1.3rem, 3vw, 2rem);
+}
+
+.dropOverlay span {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--text);
+  font-size: var(--font-size-body-small);
+}

@@ -399,13 +399,13 @@ test("footer navigation preserves conversion options without a sidebar", async (
       await act(() => listeners.get("hashchange")());
     };
     await follow("privacy");
-    assert.equal(byId("view-privacy").props.className, "view");
-    assert.equal(byId("view-convert").props.className, "view hidden");
+    assert.equal(byId("view-privacy").props.hidden, false);
+    assert.equal(byId("view-convert").props.hidden, true);
     assert.equal(byId("pageTitle").children.join(""), "Privacy");
     await follow("guide");
     assert.equal(byId("pageTitle").children.join(""), "How it works");
     await follow("convert");
-    assert.equal(byId("view-convert").props.className, "view");
+    assert.equal(byId("view-convert").props.hidden, false);
   } finally {
     window.location.hash = "";
     await act(() => root.unmount());
@@ -424,7 +424,7 @@ test("viewport drops validate files and keep the overlay stable across child ele
     },
     stopPropagation() {},
   });
-  const overlay = () => root.root.findAllByProps({ className: "drop-overlay" });
+  const overlay = () => root.root.findAllByProps({ id: "dropOverlay" });
   try {
     await act(() => listeners.get("dragenter")(drag(["text/plain"])));
     assert.equal(overlay().length, 0);
@@ -486,8 +486,8 @@ test("dropping anywhere converts once, replaces the PDF and returns from help", 
   try {
     await act(async () => drop(await file()));
     assert.equal(
-      root.root.findByProps({ id: "view-convert" }).props.className,
-      "view",
+      root.root.findByProps({ id: "view-convert" }).props.hidden,
+      false,
     );
     assert.equal(
       root.root.findByProps({ id: "dropTitle" }).children.join(""),

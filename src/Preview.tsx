@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
+import styles from "./Preview.module.css";
 import { createPreviewController, type PreviewOutput } from "./preview";
+import ui from "./ui.module.css";
 
 export interface PreviewProps {
   output: PreviewOutput | null;
@@ -15,18 +17,18 @@ export function Preview({
   if (!nativeViewer) return <CanvasPreview output={output} active={active} />;
 
   return (
-    <div className="native-preview-viewport" id="previewViewport">
+    <div className={styles.nativePreviewViewport} id="previewViewport">
       {output ? (
         <iframe
           key={output.url}
-          className="pdf-viewer"
+          className={styles.pdfViewer}
           // The fragment lets PDF.js infer a useful save filename from a Blob URL.
           src={`${output.url}#filename=${encodeURIComponent(output.filename)}&zoom=page-fit`}
           title={`PDF viewer: ${output.filename}`}
           loading="lazy"
         />
       ) : (
-        <p className="preview-loading" role="status">
+        <p className={styles.previewLoading} role="status">
           Select a PDF to see the output preview.
         </p>
       )}
@@ -76,12 +78,12 @@ function CanvasPreview({ output, active }: PreviewProps) {
 
   return (
     <div
-      className="preview-viewport"
+      className={styles.previewViewport}
       id="previewViewport"
       ref={previewViewport}
     >
       <div
-        className="preview-loading"
+        className={styles.previewLoading}
         id="previewLoading"
         role="status"
         ref={previewLoading}
@@ -89,18 +91,21 @@ function CanvasPreview({ output, active }: PreviewProps) {
         Select a PDF to see the output preview.
       </div>
       <canvas
-        className="pdf-preview hidden"
+        hidden
+        className={styles.pdfPreview}
         id="pdfPreview"
         aria-label="Preview of the generated PDF"
         ref={pdfPreview}
       />
       <p
-        className="preview-error hidden"
+        hidden
+        className={styles.previewError}
         id="previewError"
         ref={previewError}
       />
       <button
-        className="button hidden"
+        hidden
+        className={ui.button}
         id="retryPreviewButton"
         type="button"
         ref={retryPreviewButton}

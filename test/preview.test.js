@@ -4,19 +4,8 @@ import test from "node:test";
 // Minimal DOM doubles exercise asynchronous preview ownership, not browser
 // layout. No browser automation or smoke tests are used by this suite.
 const makeElement = () => {
-  const classes = new Set();
   return {
-    classList: {
-      add: (...names) =>
-        names.forEach((name) => {
-          classes.add(name);
-        }),
-      remove: (...names) =>
-        names.forEach((name) => {
-          classes.delete(name);
-        }),
-      contains: (name) => classes.has(name),
-    },
+    hidden: false,
     style: {},
     width: 0,
     height: 0,
@@ -131,11 +120,11 @@ test("preview timeout destroys the task and leaves output available for retry", 
   assert.equal(lib.stats.destroyed, 1);
   assert.equal(currentOutput.url, "blob:available");
   assert.match(elements.previewError.textContent, /still available/);
-  assert.equal(elements.retryPreviewButton.classList.contains("hidden"), false);
+  assert.equal(elements.retryPreviewButton.hidden, false);
   lib = library();
   await controller.render();
-  assert.equal(elements.pdfPreview.classList.contains("hidden"), false);
-  assert.equal(elements.retryPreviewButton.classList.contains("hidden"), true);
+  assert.equal(elements.pdfPreview.hidden, false);
+  assert.equal(elements.retryPreviewButton.hidden, true);
   controller.cancel();
 });
 
@@ -215,7 +204,7 @@ test("hiding the view cancels rendering and clearing output resets the preview",
   await rendering;
   assert.equal(elements.pdfPreview.draws, 0);
   controller.update(null, false);
-  assert.equal(elements.pdfPreview.classList.contains("hidden"), true);
+  assert.equal(elements.pdfPreview.hidden, true);
   assert.equal(
     elements.previewLoading.textContent,
     "Select a PDF to see the output preview.",
