@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatBytes } from "./format.ts";
 import styles from "./OutputPanel.module.css";
 import { Preview } from "./Preview.tsx";
+import { PrintSummary } from "./PrintSummary.tsx";
 import type { OutputAction, PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
 
@@ -27,15 +28,28 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
       id="outputPanel"
     >
       <div className={`${styles.panelHeader} ${styles.outputHeader}`}>
-        <div className={styles.outputCopy}>
-          <h2 className={styles.panelTitle}>
-            {output ? "Your PDF" : "Output preview"}
-          </h2>
-          <p className={styles.panelSubtitle} id="outputSummary">
-            {output
-              ? `${output.filename} · ${formatBytes(output.size)}`
-              : "Choose a PDF above to get started."}
-          </p>
+        <div
+          className={styles.outputCopy}
+          title={
+            output
+              ? `${output.filename} / ${formatBytes(output.size)}`
+              : undefined
+          }
+        >
+          {output?.sheets?.length ? (
+            <PrintSummary sheets={output.sheets} />
+          ) : (
+            <>
+              <h2 className={styles.panelTitle}>
+                {output ? "Your PDF" : "Output preview"}
+              </h2>
+              <p className={styles.panelSubtitle} id="outputSummary">
+                {output
+                  ? `${output.filename} / ${formatBytes(output.size)}`
+                  : "Choose a PDF above to get started."}
+              </p>
+            </>
+          )}
         </div>
         <div className={styles.outputActions}>
           {pageCount > 1 && (!nativeViewer || showMeasurements) && (
@@ -108,7 +122,8 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
         {nativeViewer && !showMeasurements
           ? "Save or print using the PDF toolbar. "
           : "Preview only: images above 16 megapixels may be omitted. Open the PDF to check before printing. "}
-        Print at actual size to keep these dimensions.
+        <strong>Print at 100% / actual size.</strong> Match the paper size above
+        and turn off any extra pages-per-sheet setting in your print dialogue.
       </p>
     </article>
   );

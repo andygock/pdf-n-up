@@ -180,3 +180,15 @@
 .advancedFields input[type="number"] {
   width: 100%;
 }
+
+.advancedFields label:has(select),
+.advancedFields label:has(input[type="text"]) {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.5fr) minmax(0, 1fr);
+  align-items: center;
+}
+
+.advancedFields select,
+.advancedFields input[type="text"] {
+  width: 100%;
+}

@@ -67,6 +67,7 @@ export function PageOptions({
                 Page range
                 <input
                   id="pageRange"
+                  type="text"
                   className={ui.control}
                   disabled={processing}
                   value={range}

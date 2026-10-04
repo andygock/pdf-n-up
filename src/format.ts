@@ -28,7 +28,8 @@ const STANDARD_PAPER_SIZES: [string, number, number][] = [
 export const pageTitles = {
   convert: {
     title: "Create an N-up PDF",
-    description: "Arrange repeated copies of one PDF page on a single sheet.",
+    description:
+      "Repeat one page or arrange sequential PDF pages for printing.",
   },
   guide: {
     title: "How it works",

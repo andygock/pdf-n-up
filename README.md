@@ -36,6 +36,7 @@ Demo: <https://pdfnup.gock.net/>
 - Batch-convert up to 20 PDFs with per-file page selection, cancellation, individual downloads and one ZIP
 - Opt in to remember layout settings locally; Reset settings removes saved preferences
 - Toggle measurement overlays on the canvas preview without changing the saved PDF
+- Review sheet size, finished copy sizes, scale, capacity and totals beside Save PDF; varied sizes open in a modal
 - Exact percentage or linked copy dimensions preserve proportions and report when the sheet is too small
 - Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork
 - Offers A4, A3 and custom output paper dimensions with automatic best-fit orientation
