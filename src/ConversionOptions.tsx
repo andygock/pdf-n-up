@@ -29,7 +29,10 @@ export function ConversionOptions({
                 name="layout"
                 value={String(layout.copies)}
                 disabled={processing}
-                checked={options.layout.copies === layout.copies}
+                checked={
+                  !options.layout.custom &&
+                  options.layout.copies === layout.copies
+                }
                 onChange={() => void changeOptions({ layout })}
               />
               <span className={styles.layoutCard}>
@@ -53,6 +56,51 @@ export function ConversionOptions({
             </label>
           ))}
         </div>
+        <label>
+          <input
+            type="checkbox"
+            disabled={processing}
+            checked={options.layout.custom ?? false}
+            onChange={(event) =>
+              void changeOptions({
+                layout: event.target.checked
+                  ? { ...options.layout, custom: true }
+                  : LAYOUTS[4],
+              })
+            }
+          />
+          Custom grid
+        </label>
+        {options.layout.custom && (
+          <div className={styles.spacingOptions}>
+            {(["columns", "rows"] as const).map((axis) => (
+              <label key={axis} htmlFor={axis}>
+                {axis === "columns" ? "Columns" : "Rows"}
+                <SpacingInput
+                  id={axis}
+                  min={1}
+                  max={20}
+                  step={1}
+                  value={options.layout[axis]}
+                  disabled={processing}
+                  onCommit={(value) => {
+                    const layout = { ...options.layout, [axis]: value };
+                    void changeOptions({
+                      layout: {
+                        ...layout,
+                        copies: layout.columns * layout.rows,
+                      },
+                    });
+                  }}
+                />
+              </label>
+            ))}
+            <small>
+              Up to 20 per axis and 100 copies. Custom grids keep your chosen
+              row and column order.
+            </small>
+          </div>
+        )}
       </fieldset>
       <fieldset className={`${styles.optionGroup} ${styles.sizeOptions}`}>
         <legend>Output paper</legend>

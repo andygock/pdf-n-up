@@ -182,3 +182,29 @@ test("crop marks remain inside the sheet and outside every copy", () => {
           );
       }
 });
+
+test("custom grids retain their axes and reject excessive or fractional counts", () => {
+  const layout = { columns: 3, rows: 2, copies: 6, custom: true };
+  assert.deepEqual(getResolvedLayout(layout, 200, 100), layout);
+  assert.deepEqual(
+    getOutputGeometry({ width: 200, height: 100, layout, paperMode: "expand" }),
+    { outputWidth: 600, outputHeight: 200, scale: 1 },
+  );
+  for (const invalid of [
+    { columns: 0, rows: 2, copies: 0 },
+    { columns: 1.5, rows: 2, copies: 3 },
+    { columns: 20, rows: 20, copies: 400 },
+    { columns: 3, rows: 2, copies: 4 },
+  ]) {
+    assert.throws(
+      () =>
+        getOutputGeometry({
+          width: 100,
+          height: 200,
+          layout: invalid,
+          paperMode: "expand",
+        }),
+      /Invalid/,
+    );
+  }
+});

@@ -1,4 +1,5 @@
 export interface Layout {
+  readonly custom?: boolean;
   readonly copies: number;
   readonly columns: number;
   readonly rows: number;

@@ -17,6 +17,7 @@ Demo: <https://pdfnup.gock.net/>
 - Rejects encrypted, password-protected, malformed files
 - Accepts PDF files up to 50 MB, subject to the browser's available memory
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3) and 16-up (4×4)
+- Supports custom grids with up to 20 rows or columns and 100 copies per sheet
 - Handles rotation, physical `/UserUnit` scaling and the CropBox/MediaBox intersection
 - Converts valid blank pages, including pages without a content stream
 - Automatically transposes rectangular grids for landscape source pages

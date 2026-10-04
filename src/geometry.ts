@@ -83,7 +83,7 @@ export const getResolvedLayout = (
   width: number,
   height: number,
 ): Layout =>
-  width > height
+  width > height && !layout.custom
     ? { copies: layout.copies, columns: layout.rows, rows: layout.columns }
     : { ...layout };
 
@@ -100,12 +100,12 @@ export const getOutputGeometry = ({
 }: ConversionOptions & { width: number; height: number }) => {
   if (
     ![width, height].every((value) => Number.isFinite(value) && value > 0) ||
-    !Object.values(LAYOUTS).some(
-      (item) =>
-        item.copies === layout?.copies &&
-        item.columns === layout.columns &&
-        item.rows === layout.rows,
+    !layout ||
+    ![layout.columns, layout.rows].every(
+      (value) => Number.isInteger(value) && value >= 1 && value <= 20,
     ) ||
+    layout.copies !== layout.columns * layout.rows ||
+    layout.copies > 100 ||
     !["expand", "same", "a4", "a3", "custom"].includes(paperMode)
   ) {
     throw new Error("Invalid page dimensions or layout options.");
