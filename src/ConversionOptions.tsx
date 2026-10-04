@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import styles from "./ConversionOptions.module.css";
 import { LAYOUTS } from "./geometry.ts";
 import { SpacingInput } from "./SpacingInput.tsx";
@@ -5,18 +6,21 @@ import type { ConversionOptions as Options } from "./types.ts";
 import ui from "./ui.module.css";
 
 interface ConversionOptionsProps {
+  children?: ReactNode;
   options: Options;
   processing: boolean;
   changeOptions: (patch: Partial<Options>) => Promise<void>;
 }
+
 export function ConversionOptions({
+  children,
   options,
   processing,
   changeOptions,
 }: ConversionOptionsProps) {
   return (
     <section
-      className={`${ui.panel} ${styles.conversionOptions}`}
+      className={styles.conversionOptions}
       aria-label="Conversion options"
     >
       <fieldset className={styles.optionGroup}>
@@ -56,7 +60,191 @@ export function ConversionOptions({
             </label>
           ))}
         </div>
-        <label>
+        {options.layout.custom && (
+          <>
+            <div className={styles.fields}>
+              {(["columns", "rows"] as const).map((axis) => (
+                <label className={ui.field} key={axis} htmlFor={axis}>
+                  {axis === "columns" ? "Columns" : "Rows"}
+                  <SpacingInput
+                    id={axis}
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={options.layout[axis]}
+                    disabled={processing}
+                    onCommit={(value) => {
+                      const layout = { ...options.layout, [axis]: value };
+                      void changeOptions({
+                        layout: {
+                          ...layout,
+                          copies: layout.columns * layout.rows,
+                        },
+                      });
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className={styles.hint}>
+              Up to 20 per axis, 100 copies. Keeps your row and column order.
+            </p>
+          </>
+        )}
+      </fieldset>
+
+      <fieldset className={styles.optionGroup}>
+        <legend>Output paper</legend>
+        <select
+          className={`${ui.control} ${styles.select}`}
+          aria-label="Output paper"
+          title="Expanded paper fits your copies. Fixed paper uses the best-fit orientation."
+          disabled={processing}
+          value={options.paperMode}
+          onChange={(event) =>
+            void changeOptions({
+              paperMode: event.target.value as Options["paperMode"],
+            })
+          }
+        >
+          <option value="expand">Expand paper</option>
+          <option value="same">Same as source</option>
+          <option value="a4">A4 · 210 × 297 mm</option>
+          <option value="a3">A3 · 297 × 420 mm</option>
+          <option value="custom">Custom dimensions</option>
+        </select>
+        {options.paperMode === "custom" ? (
+          <div className={styles.dimensionFields}>
+            <label className={ui.field} htmlFor="paperWidthMm">
+              Width{" "}
+              <SpacingInput
+                id="paperWidthMm"
+                disabled={processing}
+                value={options.paperWidthMm ?? 210}
+                min={0.1}
+                max={5080}
+                onCommit={(paperWidthMm) =>
+                  void changeOptions({ paperWidthMm })
+                }
+              />{" "}
+              mm
+            </label>
+            <label className={ui.field} htmlFor="paperHeightMm">
+              Height{" "}
+              <SpacingInput
+                id="paperHeightMm"
+                disabled={processing}
+                value={options.paperHeightMm ?? 297}
+                min={0.1}
+                max={5080}
+                onCommit={(paperHeightMm) =>
+                  void changeOptions({ paperHeightMm })
+                }
+              />{" "}
+              mm
+            </label>
+          </div>
+        ) : null}
+      </fieldset>
+
+      <fieldset className={styles.optionGroup}>
+        <legend>Copy size</legend>
+        <select
+          className={`${ui.control} ${styles.select}`}
+          id="scaleMode"
+          aria-label="Copy sizing"
+          title="Automatic keeps original size on expanded paper and scales to fit fixed paper."
+          disabled={processing}
+          value={options.scaleMode ?? "fit"}
+          onChange={(event) =>
+            void changeOptions({
+              scaleMode: event.target.value as Options["scaleMode"],
+            })
+          }
+        >
+          <option value="fit">Automatic</option>
+          <option value="percent">Exact percentage</option>
+          <option value="dimensions">Exact dimensions</option>
+        </select>
+        {options.scaleMode === "percent" ? (
+          <div className={styles.secondaryRow}>
+            <label className={ui.field} htmlFor="scalePercent">
+              Scale{" "}
+              <SpacingInput
+                id="scalePercent"
+                disabled={processing}
+                min={0.1}
+                max={10000}
+                value={options.scalePercent ?? 100}
+                onCommit={(scalePercent) =>
+                  void changeOptions({ scalePercent })
+                }
+              />{" "}
+              %
+            </label>
+          </div>
+        ) : options.scaleMode === "dimensions" ? (
+          <>
+            <div className={styles.dimensionFields}>
+              <label className={ui.field} htmlFor="copyWidthMm">
+                Width{" "}
+                <SpacingInput
+                  id="copyWidthMm"
+                  disabled={processing}
+                  min={0.1}
+                  max={5080}
+                  value={options.copyWidthMm ?? 90}
+                  onCommit={(copyWidthMm) =>
+                    void changeOptions({ copyWidthMm })
+                  }
+                />{" "}
+                mm
+              </label>
+              <label className={ui.field} htmlFor="copyHeightMm">
+                Height{" "}
+                <SpacingInput
+                  id="copyHeightMm"
+                  disabled={processing}
+                  min={0.1}
+                  max={5080}
+                  value={options.copyHeightMm ?? 50}
+                  onCommit={(copyHeightMm) =>
+                    void changeOptions({ copyHeightMm })
+                  }
+                />{" "}
+                mm
+              </label>
+            </div>
+            <p className={styles.hint}>Keep the source proportions.</p>
+          </>
+        ) : null}
+      </fieldset>
+
+      <fieldset className={styles.optionGroup}>
+        <legend>Spacing · mm</legend>
+        <div className={styles.fields}>
+          <label className={ui.field} htmlFor="marginMm">
+            Margin{" "}
+            <SpacingInput
+              id="marginMm"
+              disabled={processing}
+              value={options.marginMm ?? 0}
+              onCommit={(value) => void changeOptions({ marginMm: value })}
+            />
+          </label>
+          <label className={ui.field} htmlFor="gutterMm">
+            Gap{" "}
+            <SpacingInput
+              id="gutterMm"
+              disabled={processing}
+              value={options.gutterMm ?? 0}
+              onCommit={(value) => void changeOptions({ gutterMm: value })}
+            />
+          </label>
+        </div>
+      </fieldset>
+      <div className={styles.toolbar}>
+        <label className={ui.checkbox}>
           <input
             type="checkbox"
             disabled={processing}
@@ -71,120 +259,10 @@ export function ConversionOptions({
           />
           Custom grid
         </label>
-        {options.layout.custom && (
-          <div className={styles.spacingOptions}>
-            {(["columns", "rows"] as const).map((axis) => (
-              <label key={axis} htmlFor={axis}>
-                {axis === "columns" ? "Columns" : "Rows"}
-                <SpacingInput
-                  id={axis}
-                  min={1}
-                  max={20}
-                  step={1}
-                  value={options.layout[axis]}
-                  disabled={processing}
-                  onCommit={(value) => {
-                    const layout = { ...options.layout, [axis]: value };
-                    void changeOptions({
-                      layout: {
-                        ...layout,
-                        copies: layout.columns * layout.rows,
-                      },
-                    });
-                  }}
-                />
-              </label>
-            ))}
-            <small>
-              Up to 20 per axis and 100 copies. Custom grids keep your chosen
-              row and column order.
-            </small>
-          </div>
-        )}
-      </fieldset>
-      <fieldset className={`${styles.optionGroup} ${styles.sizeOptions}`}>
-        <legend>Output paper</legend>
-        <label className={styles.sizeOption}>
-          <input
-            type="radio"
-            name="paperMode"
-            value="expand"
-            disabled={processing}
-            checked={options.paperMode === "expand"}
-            onChange={() => void changeOptions({ paperMode: "expand" })}
-          />
-          <span>
-            <strong>Expand paper</strong>
-            <small>Size sheet to copies</small>
-          </span>
-        </label>
-        <label className={styles.sizeOption}>
-          <input
-            type="radio"
-            name="paperMode"
-            value="same"
-            disabled={processing}
-            checked={options.paperMode === "same"}
-            onChange={() => void changeOptions({ paperMode: "same" })}
-          />
-          <span>
-            <strong>Same paper</strong>
-            <small>Source sheet dimensions</small>
-          </span>
-        </label>
-        {(["a4", "a3", "custom"] as const).map((paperMode) => (
-          <label className={styles.sizeOption} key={paperMode}>
-            <input
-              type="radio"
-              name="paperMode"
-              disabled={processing}
-              checked={options.paperMode === paperMode}
-              onChange={() => void changeOptions({ paperMode })}
-            />
-            <span>
-              <strong>
-                {paperMode === "custom"
-                  ? "Custom size"
-                  : paperMode.toUpperCase()}
-              </strong>
-              <small>Best-fit orientation</small>
-            </span>
-          </label>
-        ))}
-        {options.paperMode === "custom" && (
-          <div className={styles.spacingOptions}>
-            <label htmlFor="paperWidthMm">
-              Width (mm)
-              <SpacingInput
-                id="paperWidthMm"
-                disabled={processing}
-                value={options.paperWidthMm ?? 210}
-                min={0.1}
-                max={5080}
-                onCommit={(paperWidthMm) =>
-                  void changeOptions({ paperWidthMm })
-                }
-              />
-            </label>
-            <label htmlFor="paperHeightMm">
-              Height (mm)
-              <SpacingInput
-                id="paperHeightMm"
-                disabled={processing}
-                value={options.paperHeightMm ?? 297}
-                min={0.1}
-                max={5080}
-                onCommit={(paperHeightMm) =>
-                  void changeOptions({ paperHeightMm })
-                }
-              />
-            </label>
-          </div>
-        )}
-      </fieldset>
-      <fieldset className={`${styles.optionGroup} ${styles.spacingOptions}`}>
-        <legend>Spacing (mm)</legend>
-        <label>
+        <label
+          className={ui.checkbox}
+          title="Reserves at least 5 mm margins and 10 mm gaps for cutting guides."
+        >
           <input
             type="checkbox"
             checked={options.cropMarks ?? false}
@@ -195,95 +273,8 @@ export function ConversionOptions({
           />
           Crop marks
         </label>
-        {options.cropMarks && (
-          <small>
-            Reserves at least 5 mm margins and 10 mm gaps for cutting guides.
-          </small>
-        )}
-        <label htmlFor="marginMm">
-          Margin
-          <SpacingInput
-            id="marginMm"
-            disabled={processing}
-            value={options.marginMm ?? 0}
-            onCommit={(value) => void changeOptions({ marginMm: value })}
-          />
-        </label>
-        <label htmlFor="gutterMm">
-          Gap
-          <SpacingInput
-            id="gutterMm"
-            disabled={processing}
-            value={options.gutterMm ?? 0}
-            onCommit={(value) => void changeOptions({ gutterMm: value })}
-          />
-        </label>
-      </fieldset>
-      <fieldset className={styles.spacingOptions}>
-        <legend>Copy size</legend>
-        <label htmlFor="scaleMode">
-          Sizing
-          <select
-            id="scaleMode"
-            disabled={processing}
-            value={options.scaleMode ?? "fit"}
-            onChange={(event) =>
-              void changeOptions({
-                scaleMode: event.target.value as Options["scaleMode"],
-              })
-            }
-          >
-            <option value="fit">Automatic</option>
-            <option value="percent">Exact percentage</option>
-            <option value="dimensions">Exact dimensions</option>
-          </select>
-        </label>
-        {options.scaleMode === "percent" && (
-          <label htmlFor="scalePercent">
-            Scale (%)
-            <SpacingInput
-              id="scalePercent"
-              disabled={processing}
-              min={0.1}
-              max={10000}
-              value={options.scalePercent ?? 100}
-              onCommit={(scalePercent) => void changeOptions({ scalePercent })}
-            />
-          </label>
-        )}
-        {options.scaleMode === "dimensions" && (
-          <>
-            <label htmlFor="copyWidthMm">
-              Width (mm)
-              <SpacingInput
-                id="copyWidthMm"
-                disabled={processing}
-                min={0.1}
-                max={5080}
-                value={options.copyWidthMm ?? 90}
-                onCommit={(copyWidthMm) => void changeOptions({ copyWidthMm })}
-              />
-            </label>
-            <label htmlFor="copyHeightMm">
-              Height (mm)
-              <SpacingInput
-                id="copyHeightMm"
-                disabled={processing}
-                min={0.1}
-                max={5080}
-                value={options.copyHeightMm ?? 50}
-                onCommit={(copyHeightMm) =>
-                  void changeOptions({ copyHeightMm })
-                }
-              />
-            </label>
-            <small>
-              Dimensions must retain the source proportions. Artwork is never
-              stretched.
-            </small>
-          </>
-        )}
-      </fieldset>
+        {children}
+      </div>
     </section>
   );
 }

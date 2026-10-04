@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ui from "./ui.module.css";
 
 interface SpacingInputProps {
   id: string;
@@ -28,6 +29,7 @@ export function SpacingInput({
   // multi-digit margin never starts conversion and disables the field midway.
   return (
     <input
+      className={ui.control}
       id={id}
       type="number"
       min={min}

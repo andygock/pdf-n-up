@@ -1,24 +1,69 @@
 .appShell {
   display: flex;
-  min-height: 100dvh;
+  height: 100dvh;
   flex-direction: column;
 }
 
 .main {
+  display: flex;
+  min-height: 0;
   width: 100%;
   flex: 1;
-  padding: var(--space-6) var(--space-8) var(--space-7);
+  flex-direction: column;
+  padding: var(--space-3) var(--space-6);
+  overflow-y: auto;
 }
 
+.converterView,
 .converter {
   display: flex;
   min-width: 0;
+  min-height: 0;
+  flex: 1;
   flex-direction: column;
-  gap: var(--space-4);
+}
+
+.converter {
+  gap: var(--space-2);
+}
+
+.converter > * {
+  flex-shrink: 0;
+}
+
+.settingsPanel {
+  overflow: hidden;
+}
+
+.preferences {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px var(--space-4);
+}
+
+.preferences p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--warning);
+  font-size: var(--font-size-small);
 }
 
 @media (width <= 640px) {
   .main {
-    padding: var(--space-4) var(--space-3) var(--space-6);
+    padding: var(--space-2) var(--space-3);
   }
+
+  .preferences {
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
+}
+
+.batchMessage {
+  margin: 0;
+  color: var(--warning);
+  font-size: var(--font-size-small);
 }

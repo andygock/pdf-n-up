@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./BatchPanel.module.css";
 import { SpacingInput } from "./SpacingInput.tsx";
 import type { ConversionOptions } from "./types.ts";
@@ -15,78 +15,100 @@ export function BatchPanel({
   disabled: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (batch.entries.length || batch.message) setExpanded(true);
+  }, [batch.entries.length, batch.message]);
   return (
-    <section
+    <details
       className={`${ui.panel} ${styles.panel}`}
       aria-label="Batch conversion"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
     >
-      <h2>Batch conversion</h2>
-      <p>
-        Use the settings above for up to 20 PDFs (100 MB total, 50 MB per file).
-        Page 1 is selected by default. Each result repeats one selected page.
-      </p>
-      <div className={styles.actions}>
-        <input
-          ref={input}
-          type="file"
-          multiple
-          accept="application/pdf,.pdf"
-          hidden
-          disabled={disabled}
-          onChange={(event) => {
-            batch.selectFiles(Array.from(event.target.files ?? []));
-            event.target.value = "";
-          }}
-        />
-        <button
-          type="button"
-          className={ui.button}
-          disabled={disabled}
-          onClick={() => input.current?.click()}
-        >
-          Choose batch PDFs
-        </button>
-        {batch.entries.length > 0 && (
-          <>
-            <button
-              type="button"
-              className={`${ui.button} ${ui.primary}`}
-              disabled={disabled}
-              onClick={() => void batch.run(options)}
-            >
-              Convert batch
-            </button>
-            {batch.processing ? (
+      <summary className={styles.summary}>
+        <span>Batch conversion</span>
+        <span className={styles.summaryMeta}>
+          {batch.entries.length
+            ? `${batch.entries.length} PDFs`
+            : "Multiple PDFs"}
+        </span>
+      </summary>
+      <div className={styles.header}>
+        <div className={styles.heading}>
+          <p>Up to 20 PDFs · 100 MB total · 50 MB per file</p>
+        </div>
+        <div className={styles.actions}>
+          <input
+            ref={input}
+            type="file"
+            multiple
+            accept="application/pdf,.pdf"
+            hidden
+            disabled={disabled}
+            onChange={(event) => {
+              batch.selectFiles(Array.from(event.target.files ?? []));
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            className={`${ui.button} ${ui.compact}`}
+            disabled={disabled}
+            onClick={() => input.current?.click()}
+          >
+            Choose batch PDFs
+          </button>
+          {batch.entries.length > 0 && (
+            <>
               <button
                 type="button"
-                className={ui.button}
-                onClick={batch.cancel}
+                className={`${ui.button} ${ui.compact} ${ui.primary}`}
+                disabled={disabled}
+                onClick={() => void batch.run(options)}
               >
-                Cancel batch
+                Convert batch
               </button>
-            ) : (
-              <button type="button" className={ui.button} onClick={batch.clear}>
-                Clear batch
+              {batch.processing ? (
+                <button
+                  type="button"
+                  className={`${ui.button} ${ui.compact}`}
+                  onClick={batch.cancel}
+                >
+                  Cancel batch
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`${ui.button} ${ui.compact}`}
+                  onClick={batch.clear}
+                >
+                  Clear batch
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${ui.button} ${ui.compact}`}
+                disabled={!batch.archive || disabled}
+                onClick={() => void batch.save()}
+              >
+                Save ZIP
               </button>
-            )}
-            <button
-              type="button"
-              className={ui.button}
-              disabled={!batch.archive || disabled}
-              onClick={() => void batch.save()}
-            >
-              Save ZIP
-            </button>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-      {batch.message && <p role="status">{batch.message}</p>}
+      {batch.message && (
+        <p className={styles.message} role="status">
+          {batch.message}
+        </p>
+      )}
       {batch.entries.length > 0 && (
         <ul className={styles.files}>
           {batch.entries.map((entry) => (
             <li key={entry.id}>
               <strong>{entry.file.name}</strong>
-              <label htmlFor={`batchPage${entry.id}`}>
+              <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
                 Page{" "}
                 <SpacingInput
                   key={`${entry.id}-${entry.file.name}`}
@@ -99,11 +121,13 @@ export function BatchPanel({
                   onCommit={(page) => batch.setPage(entry.id, page)}
                 />
               </label>
-              <span>{entry.status}</span>
+              <span className={styles.status} data-status={entry.status}>
+                {entry.status}
+              </span>
               {entry.output && (
                 <button
                   type="button"
-                  className={ui.button}
+                  className={`${ui.button} ${ui.compact}`}
                   onClick={() => void batch.save(entry.id)}
                 >
                   Save PDF
@@ -117,6 +141,6 @@ export function BatchPanel({
           ))}
         </ul>
       )}
-    </section>
+    </details>
   );
 }

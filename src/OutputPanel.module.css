@@ -2,8 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
-  padding: var(--space-3) var(--space-5);
+  gap: var(--space-3);
+  padding: 6px var(--space-5);
   border-bottom: 1px solid var(--border);
 }
 
@@ -31,16 +31,20 @@
 .outputPanel {
   display: flex;
   min-width: 0;
-  height: 280px;
+  flex: 1 0 240px;
+  min-height: 240px;
   flex-direction: column;
 }
 
 .outputPanel.hasOutput {
-  height: max(480px, calc(100dvh - 345px));
+  flex-basis: 320px;
 }
 
 .outputCopy {
+  display: flex;
   min-width: 0;
+  align-items: baseline;
+  gap: var(--space-3);
 }
 
 .outputCopy .panelSubtitle {
@@ -73,6 +77,11 @@
   }
 
   .outputPanel.hasOutput {
-    height: max(480px, 70dvh);
+    flex-basis: 360px;
+  }
+
+  .outputCopy {
+    flex-wrap: wrap;
+    gap: 2px var(--space-2);
   }
 }

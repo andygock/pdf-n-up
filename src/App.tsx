@@ -10,6 +10,7 @@ import { OutputPanel } from "./OutputPanel.tsx";
 import { PageHeading } from "./PageHeading.tsx";
 import { SourcePicker } from "./SourcePicker.tsx";
 import { SpacingInput } from "./SpacingInput.tsx";
+import ui from "./ui.module.css";
 import { useBatch } from "./useBatch.ts";
 import { useConversion } from "./useConversion.ts";
 import { useFileDrop } from "./useFileDrop.ts";
@@ -35,8 +36,12 @@ export default function App() {
   const selectFiles = async (files: FileList | File[] | null) => {
     if (processing) return;
     const selected = Array.from(files ?? []);
+    if (!selected.length) return;
     if (selected.length > 1) batch.selectFiles(selected);
-    else await selectSingleFile(selected);
+    else {
+      batch.clear();
+      await selectSingleFile(selected);
+    }
   };
   const { view, setView, headingRef } = useView();
   const dragging = useFileDrop(processing, selectFiles, setView);
@@ -59,6 +64,7 @@ export default function App() {
         <PageHeading view={view} headingRef={headingRef} />
         <section
           hidden={view !== "convert"}
+          className={styles.converterView}
           id="view-convert"
           data-view-container="convert"
         >
@@ -72,49 +78,53 @@ export default function App() {
                 onClear={batch.processing ? batch.cancel : clearDocument}
               />
             )}
-            {source && source.pageCount > 1 && (
-              <label htmlFor="sourcePage">
-                Page to repeat (1–{source.pageCount}){" "}
-                <SpacingInput
-                  id="sourcePage"
-                  min={1}
-                  max={source.pageCount}
-                  step={1}
-                  value={source.pageNumber}
-                  disabled={processing}
-                  onCommit={(page) => void conversion.selectPage(page)}
-                />
-              </label>
-            )}
-            <ConversionOptions
-              options={options}
-              processing={processing}
-              changeOptions={changeOptions}
-            />
-            <div>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={conversion.rememberSettings}
-                  disabled={processing}
-                  onChange={(event) =>
-                    conversion.setRememberSettings(event.target.checked)
-                  }
-                />
-                Remember settings on this device
-              </label>{" "}
-              <button
-                type="button"
-                disabled={processing}
-                onClick={() => void conversion.resetSettings()}
+            <div className={`${ui.panel} ${styles.settingsPanel}`}>
+              <ConversionOptions
+                options={options}
+                processing={processing}
+                changeOptions={changeOptions}
               >
-                Reset settings
-              </button>
-              {conversion.preferenceError && (
-                <p role="status">
-                  Could not save preferences: {conversion.preferenceError}
-                </p>
-              )}
+                {source && source.pageCount > 1 && (
+                  <label className={ui.field} htmlFor="sourcePage">
+                    Page to repeat (1–{source.pageCount}){" "}
+                    <SpacingInput
+                      id="sourcePage"
+                      min={1}
+                      max={source.pageCount}
+                      step={1}
+                      value={source.pageNumber}
+                      disabled={processing}
+                      onCommit={(page) => void conversion.selectPage(page)}
+                    />
+                  </label>
+                )}
+                <div className={styles.preferences}>
+                  <label className={ui.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={conversion.rememberSettings}
+                      disabled={processing}
+                      onChange={(event) =>
+                        conversion.setRememberSettings(event.target.checked)
+                      }
+                    />
+                    Remember settings on this device
+                  </label>
+                  <button
+                    type="button"
+                    disabled={processing}
+                    className={`${ui.button} ${ui.compact} ${ui.quiet}`}
+                    onClick={() => void conversion.resetSettings()}
+                  >
+                    Reset settings
+                  </button>
+                  {conversion.preferenceError && (
+                    <p role="status">
+                      Could not save preferences: {conversion.preferenceError}
+                    </p>
+                  )}
+                </div>
+              </ConversionOptions>
             </div>
             <ConversionFeedback
               source={source}
@@ -133,7 +143,13 @@ export default function App() {
                 openOutput={openOutput}
               />
             )}
-            <BatchPanel batch={batch} options={options} disabled={processing} />
+            {batch.entries.length > 0 ? (
+              <BatchPanel batch={batch} options={options} disabled={processing} />
+            ) : batch.message ? (
+              <p className={styles.batchMessage} role="status">
+                {batch.message}
+              </p>
+            ) : null}
           </div>
         </section>
         <Help view={view} />

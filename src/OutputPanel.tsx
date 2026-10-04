@@ -30,6 +30,20 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           </p>
         </div>
         <div className={styles.outputActions}>
+          {output?.measurements && (
+            <label
+              className={ui.checkbox}
+              title="Show measurements on the preview only"
+            >
+              <input
+                type="checkbox"
+                checked={showMeasurements}
+                onChange={(event) => setShowMeasurements(event.target.checked)}
+              />
+              Measurements
+            </label>
+          )}
+
           <button
             className={`${ui.button} ${ui.compact}`}
             id="openOutputButton"
@@ -50,16 +64,6 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           </button>
         </div>
       </div>
-      {output?.measurements && (
-        <label>
-          <input
-            type="checkbox"
-            checked={showMeasurements}
-            onChange={(event) => setShowMeasurements(event.target.checked)}
-          />
-          Show measurements (preview only)
-        </label>
-      )}
       <Preview
         output={output}
         active={active}

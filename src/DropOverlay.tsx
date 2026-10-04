@@ -5,9 +5,11 @@ export function DropOverlay({ hasSource }: { hasSource: boolean }) {
     <div id="dropOverlay" className={styles.dropOverlay} role="status">
       <div>
         <strong>
-          {hasSource ? "Drop to replace your PDF" : "Drop your PDF anywhere"}
+          {hasSource
+            ? "Drop to replace your PDF or start a batch"
+            : "Drop one or more PDFs anywhere"}
         </strong>
-        <span>One page · up to 50 MB</span>
+        <span>Multiple PDFs create a batch · up to 50 MB per file</span>
       </div>
     </div>
   );

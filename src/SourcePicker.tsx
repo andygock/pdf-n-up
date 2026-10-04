@@ -50,12 +50,12 @@ export function SourcePicker({
       </div>
       <div className={styles.sourceCopy}>
         <h2 id="dropTitle" title={source?.name}>
-          {source?.name ?? "Drop a PDF anywhere"}
+          {source?.name ?? "Drop one or more PDFs anywhere"}
         </h2>
         <p id="dropDescription">
           {source
             ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · page ${source.pageNumber} of ${source.pageCount}`
-            : "Up to 50 MB per PDF. Choose one file to convert, or several to prepare a batch."}
+            : "Drop multiple PDFs to batch convert. Up to 20 files, 50 MB per file, 100 MB total."}
         </p>
       </div>
       <div className={styles.documentActions}>
@@ -66,7 +66,7 @@ export function SourcePicker({
           onClick={() => fileInputRef.current?.click()}
           type="button"
         >
-          {source ? "Replace PDF" : "Choose PDF"}
+          {source ? "Replace PDF" : "Choose PDFs"}
         </button>
         {source && !processing && (
           <button
