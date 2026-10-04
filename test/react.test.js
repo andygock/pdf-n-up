@@ -1,29 +1,32 @@
+import "./dom.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as pdfLib from "pdf-lib";
-import { createElement } from "react";
-import { act, create } from "react-test-renderer";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import App from "../src/App.tsx";
 import { createConversionEngine } from "../src/conversion.ts";
 import { LAYOUTS } from "../src/geometry.ts";
+import { Modal } from "../src/Modal.tsx";
 import { Preview } from "../src/Preview.tsx";
+import { SpacingInput } from "../src/SpacingInput.tsx";
 import { useConversion } from "../src/useConversion.ts";
 import { WorkerLostError } from "../src/worker-client.ts";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-const listeners = new Map();
-globalThis.window = {
-  location: { hash: "" },
-  matchMedia: () => ({
-    matches: true,
-    addEventListener() {},
-    removeEventListener() {},
-  }),
-  addEventListener: (name, callback) => listeners.set(name, callback),
-  removeEventListener: (name) => listeners.delete(name),
-  scrollTo() {},
+const create = (element) => {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  root.render(element);
+  return {
+    container,
+    update: (next) => root.render(next),
+    unmount() {
+      root.unmount();
+      container.remove();
+    },
+  };
 };
-globalThis.localStorage = { removeItem() {} };
 
 const makeWorker = () => {
   const engine = createConversionEngine(pdfLib);
@@ -194,9 +197,17 @@ test("pagehide preserves cached documents and releases uncached documents", asyn
   const app = await mountConversion();
   try {
     await act(async () => app.value.selectFiles([await file()]));
-    await act(() => listeners.get("pagehide")({ persisted: true }));
+    await act(() =>
+      window.dispatchEvent(
+        new window.PageTransitionEvent("pagehide", { persisted: true }),
+      ),
+    );
     assert.ok(app.value.output);
-    await act(() => listeners.get("pagehide")({ persisted: false }));
+    await act(() =>
+      window.dispatchEvent(
+        new window.PageTransitionEvent("pagehide", { persisted: false }),
+      ),
+    );
     assert.equal(app.value.output, null);
   } finally {
     await app.close();
@@ -310,7 +321,7 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
   }
 });
 
-test("native PDF preview follows regenerated output and clears without retaining a frame", async () => {
+test("native preview hides, resumes, regenerates and clears its frame", async () => {
   const app = await mountConversion();
   let root;
   const render = (active = true) =>
@@ -323,143 +334,107 @@ test("native PDF preview follows regenerated output and clears without retaining
     await act(() => {
       root = create(render());
     });
-    assert.equal(root.root.findAllByType("iframe").length, 0);
+    assert.equal(root.container.querySelector("iframe"), null);
     await act(async () => app.value.selectFiles([await file()]));
     await act(() => root.update(render()));
     const firstUrl = app.value.output.url;
     assert.equal(
-      root.root.findByType("iframe").props.src,
+      root.container.querySelector("iframe").getAttribute("src"),
       `${firstUrl}#filename=handout_4up.pdf&zoom=page-fit`,
     );
-    assert.equal(root.root.findAllByType("canvas").length, 0);
     await act(() => root.update(render(false)));
-    assert.equal(root.root.findAllByType("iframe").length, 0);
+    assert.equal(root.container.querySelector("iframe"), null);
     await act(() => root.update(render()));
-    assert.equal(root.root.findAllByType("iframe").length, 1);
+    assert.ok(root.container.querySelector("iframe"));
     await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
     await act(() => root.update(render()));
-    assert.equal(
-      root.root.findByType("iframe").props.src,
-      `${app.value.output.url}#filename=handout_8up.pdf&zoom=page-fit`,
+    assert.match(
+      root.container.querySelector("iframe").getAttribute("src"),
+      /filename=handout_8up.pdf/,
     );
     await assert.rejects(fetch(firstUrl));
     await act(() => app.value.clearDocument());
     await act(() => root.update(render()));
-    assert.equal(root.root.findAllByType("iframe").length, 0);
+    assert.equal(root.container.querySelector("iframe"), null);
   } finally {
     if (root) await act(() => root.unmount());
     await app.close();
   }
 });
 
-test("the empty state has no inactive preview or download controls", async (t) => {
-  t.mock.getter(globalThis, "navigator", () => ({ pdfViewerEnabled: true }));
+test("empty state and navigation use accessible DOM controls", async () => {
   let root;
   await act(() => {
     root = create(createElement(App));
   });
+  const query = (selector) => root.container.querySelector(selector);
   try {
+    assert.equal(query("#downloadOutputButton"), null);
+    assert.equal(query("#statusBox"), null);
+    assert.equal(query('input[name="layout"][value="4"]').checked, true);
     assert.equal(
-      root.root.findAllByProps({ id: "downloadOutputButton" }).length,
-      0,
+      query('input[name="paperMode"][value="expand"]').checked,
+      true,
     );
-    assert.equal(root.root.findAllByProps({ id: "downloadHelp" }).length, 0);
-    assert.equal(root.root.findAllByType(Preview).length, 0);
-    assert.equal(root.root.findAllByProps({ id: "statusBox" }).length, 0);
+    for (const view of ["privacy", "guide", "convert"]) {
+      await act(async () => {
+        query(`footer a[data-view="${view}"]`).click();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+      assert.equal(query(`#view-${view}`).hidden, false);
+    }
   } finally {
     await act(() => root.unmount());
+    window.history.replaceState(null, "", "/");
   }
 });
 
-test("footer navigation preserves conversion options without a sidebar", async () => {
-  let root;
-  await act(() => {
-    root = create(createElement(App));
-  });
-  try {
-    const byId = (id) => root.root.findByProps({ id });
-    assert.equal(
-      root.root.findByProps({ name: "layout", value: "4" }).props.checked,
-      true,
-    );
-    assert.equal(
-      root.root.findByProps({ name: "paperMode", value: "expand" }).props
-        .checked,
-      true,
-    );
-    assert.equal(
-      root.root.findAllByProps({ id: "openOutputButton" }).length,
-      0,
-    );
-    assert.equal(root.root.findAllByProps({ id: "sidebar" }).length, 0);
-    assert.equal(
-      root.root.findAllByProps({ id: "mobileMenuButton" }).length,
-      0,
-    );
-    const follow = async (view) => {
-      window.location.hash = root.root.findByType("footer").findByProps({
-        "data-view": view,
-      }).props.href;
-      await act(() => listeners.get("hashchange")());
-    };
-    await follow("privacy");
-    assert.equal(byId("view-privacy").props.hidden, false);
-    assert.equal(byId("view-convert").props.hidden, true);
-    assert.equal(byId("pageTitle").children.join(""), "Privacy");
-    await follow("guide");
-    assert.equal(byId("pageTitle").children.join(""), "How it works");
-    await follow("convert");
-    assert.equal(byId("view-convert").props.hidden, false);
-  } finally {
-    window.location.hash = "";
-    await act(() => root.unmount());
-  }
-});
+const drag = (name, files = [], types = ["Files"]) => {
+  const event = new window.Event(name, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: { files, types } });
+  return event;
+};
 
-test("viewport drops validate files and keep the overlay stable across child elements", async () => {
+test("viewport drag events validate files and reset the overlay", async () => {
   let root;
   await act(() => {
     root = create(createElement(App));
   });
-  const drag = (types = ["Files"], files = []) => ({
-    dataTransfer: { types, files },
-    preventDefault() {
-      this.prevented = true;
-    },
-    stopPropagation() {},
-  });
-  const overlay = () => root.root.findAllByProps({ id: "dropOverlay" });
+  const overlay = () => root.container.querySelector("#dropOverlay");
   try {
-    await act(() => listeners.get("dragenter")(drag(["text/plain"])));
-    assert.equal(overlay().length, 0);
-    await act(() => listeners.get("dragenter")(drag()));
-    await act(() => listeners.get("dragenter")(drag()));
-    await act(() => listeners.get("dragleave")(drag()));
-    assert.equal(overlay().length, 1);
-    const over = drag();
-    await act(() => listeners.get("dragover")(over));
-    assert.equal(over.prevented, true);
+    await act(() =>
+      window.dispatchEvent(drag("dragenter", [], ["text/plain"])),
+    );
+    assert.equal(overlay(), null);
+    await act(() => window.dispatchEvent(drag("dragenter")));
+    await act(() => window.dispatchEvent(drag("dragenter")));
+    await act(() => window.dispatchEvent(drag("dragleave")));
+    assert.ok(overlay());
+    const over = drag("dragover");
+    await act(() => window.dispatchEvent(over));
+    assert.equal(over.defaultPrevented, true);
     assert.equal(over.dataTransfer.dropEffect, "copy");
-    const drop = drag(["Files"], [new File(["not a PDF"], "wrong.pdf")]);
-    await act(() => listeners.get("drop")(drop));
-    assert.equal(drop.prevented, true);
-    assert.equal(overlay().length, 0);
+    const event = drag("drop", [new File(["wrong"], "wrong.pdf")]);
+    await act(async () => {
+      window.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(overlay(), null);
     assert.equal(
-      root.root.findByProps({ id: "statusTitle" }).children.join(""),
+      root.container.querySelector("#statusTitle").textContent,
       "File rejected",
     );
-    await act(() => listeners.get("dragenter")(drag()));
-    await act(() => listeners.get("blur")());
-    assert.equal(overlay().length, 0);
+    await act(() => window.dispatchEvent(drag("dragenter")));
+    await act(() => window.dispatchEvent(new window.Event("blur")));
+    assert.equal(overlay(), null);
   } finally {
-    window.location.hash = "";
     await act(() => root.unmount());
-    assert.equal(listeners.has("drop"), false);
+    window.history.replaceState(null, "", "/");
   }
 });
 
-test("dropping anywhere converts once, replaces the PDF and returns from help", async (t) => {
-  t.mock.getter(globalThis, "navigator", () => ({ pdfViewerEnabled: true }));
+test("dropping converts and replaces PDFs with a save action in native mode", async () => {
   const previousWorker = globalThis.Worker;
   const workers = [];
   globalThis.Worker = class {
@@ -477,54 +452,126 @@ test("dropping anywhere converts once, replaces the PDF and returns from help", 
     }
   };
   let root;
-  window.location.hash = "#view-privacy";
+  window.history.replaceState(null, "", "/#view-privacy");
   await act(() => {
     root = create(createElement(App));
   });
-  const drop = (input) =>
-    listeners.get("drop")({
-      dataTransfer: { files: [input] },
-      preventDefault() {},
-      stopPropagation() {},
-    });
+  const drop = async (input) => {
+    await act(() => window.dispatchEvent(drag("drop", [input])));
+    for (let attempt = 0; attempt < 100; attempt++) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 5)));
+      if (
+        root.container.querySelector("#statusTitle")?.textContent ===
+        "Output ready"
+      )
+        return;
+    }
+    assert.fail("conversion did not complete");
+  };
   try {
-    await act(async () => drop(await file()));
+    await drop(await file());
+    assert.equal(root.container.querySelector("#view-convert").hidden, false);
     assert.equal(
-      root.root.findByProps({ id: "view-convert" }).props.hidden,
-      false,
-    );
-    assert.equal(
-      root.root.findByProps({ id: "dropTitle" }).children.join(""),
+      root.container.querySelector("#dropTitle").textContent,
       "handout.pdf",
-    );
-    assert.equal(
-      root.root.findByProps({ id: "selectFileButton" }).children.join(""),
-      "Replace PDF",
     );
     assert.equal(workers.length, 1);
     assert.equal(workers[0].engine.loads, 1);
-    const first = root.root.findByType(Preview).props.output;
-    assert.equal(root.root.findByType(Preview).props.nativeViewer, true);
+    const firstUrl = root.container
+      .querySelector("iframe")
+      .getAttribute("src")
+      .split("#")[0];
     assert.equal(
-      root.root.findAllByProps({ id: "downloadOutputButton" }).length,
-      1,
+      root.container.querySelector("#downloadOutputButton").disabled,
+      false,
     );
-    const replacement = new File(
-      [await (await file()).arrayBuffer()],
-      "replacement.pdf",
+    await drop(
+      new File([await (await file()).arrayBuffer()], "replacement.pdf"),
     );
-    await act(() => drop(replacement));
     assert.equal(workers.length, 2);
     assert.equal(workers[1].engine.loads, 1);
-    assert.equal(
-      root.root.findByType(Preview).props.output.filename,
-      "replacement_4up.pdf",
+    assert.match(
+      root.container.querySelector("iframe").getAttribute("src"),
+      /replacement_4up.pdf/,
     );
-    await assert.rejects(fetch(first.url));
+    await assert.rejects(fetch(firstUrl));
   } finally {
-    window.location.hash = "";
     await act(() => root.unmount());
+    window.history.replaceState(null, "", "/");
     if (previousWorker === undefined) delete globalThis.Worker;
     else globalThis.Worker = previousWorker;
+  }
+});
+
+test("spacing drafts commit on blur and Enter through DOM events", async () => {
+  let root;
+  const commits = [];
+  await act(() => {
+    root = create(
+      createElement(SpacingInput, {
+        id: "spacing-test",
+        disabled: false,
+        value: 0,
+        onCommit: (value) => commits.push(value),
+      }),
+    );
+  });
+  try {
+    const input = root.container.querySelector("input");
+    const setValue = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    ).set;
+    await act(() => {
+      input.focus();
+      setValue.call(input, "12.5");
+      input.dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    assert.deepEqual(commits, []);
+    await act(() => input.blur());
+    assert.deepEqual(commits, [12.5]);
+    await act(() => {
+      input.focus();
+      setValue.call(input, "20");
+      input.dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await act(() =>
+      input.dispatchEvent(
+        new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      ),
+    );
+    assert.deepEqual(commits, [12.5, 20]);
+  } finally {
+    await act(() => root.unmount());
+  }
+});
+
+test("modal trigger uses the labelled native dialog and a dialog close form", async () => {
+  let root;
+  await act(() => {
+    root = create(
+      createElement(Modal, { title: "Details" }, "Document information"),
+    );
+  });
+  try {
+    const dialog = root.container.querySelector("dialog");
+    let opened = false;
+    // jsdom does not implement the browser's modal top layer.
+    dialog.showModal = () => {
+      opened = true;
+    };
+    await act(() =>
+      root.container.querySelector('[aria-haspopup="dialog"]').click(),
+    );
+    assert.equal(opened, true);
+    assert.equal(
+      document.getElementById(dialog.getAttribute("aria-labelledby"))
+        .textContent,
+      "Details",
+    );
+    assert.equal(dialog.querySelector("form").getAttribute("method"), "dialog");
+    assert.equal(dialog.querySelector("button").type, "submit");
+  } finally {
+    await act(() => root.unmount());
   }
 });

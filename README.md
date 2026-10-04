@@ -131,7 +131,7 @@ locally, or configure them in your hosting/CI service.
 Tests exercise PDF conversion, physical scaling, rotation, blank pages,
 spacing, invalid input, source retention, Japanese CMaps, JPEG 2000 decoding,
 worker termination, React interaction and preview cancellation. They use Node,
-React test rendering and DOM doubles, without browser smoke tests.
+React DOM with jsdom, and focused preview doubles, without browser smoke tests.
 
 ## Deploy
 
