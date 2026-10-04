@@ -37,17 +37,15 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           >
             Open in tab ↗
           </button>
-          {!nativeViewer && (
-            <button
-              className={`${ui.button} ${ui.primary} ${ui.compact}`}
-              id="downloadOutputButton"
-              disabled={!output}
-              onClick={() => void openOutput(true)}
-              type="button"
-            >
-              Save PDF
-            </button>
-          )}
+          <button
+            className={`${ui.button} ${ui.primary} ${ui.compact}`}
+            id="downloadOutputButton"
+            disabled={!output}
+            onClick={() => void openOutput(true)}
+            type="button"
+          >
+            Save PDF
+          </button>
         </div>
       </div>
       <Preview output={output} active={active} nativeViewer={nativeViewer} />

@@ -23,10 +23,11 @@ Demo: <https://andygock.github.io/pdf-n-up/>
 - Expands the output sheet at 100% copy scale by default, or scales copies onto
   the visible source page size in whichever sheet orientation gives the best fit
 - Identifies dimensions matching ISO A-series and common US paper sizes
-- Generates the result entirely in browser memory and renders a PDF.js preview
+- Generates the result entirely in browser memory, using the browser's PDF viewer
+  when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
 - Supports outer margins and gaps between copies, measured in millimetres
-- Offers cancellation, document clearing and preview retry
+- Offers conversion cancellation, document clearing and PDF.js preview retry
 - Warns when annotations or form fields will not be copied
 - Does not retain conversion history or document metadata in browser storage
 - Responsive interface with keyboard-accessible controls
@@ -69,7 +70,8 @@ The generated filename includes the selected layout. For example,
 1. Open the app in a current browser.
 2. Select or drop a PDF containing exactly one page.
 3. The app validates, converts and displays the result in an embedded preview.
-4. Open the generated PDF in a new tab or download it when needed.
+4. Open the generated PDF in a new tab or choose Save PDF when needed.
+   Built-in viewer controls may also offer saving and printing.
 
 The application ships version-pinned copies of `pdf-lib` and PDF.js `6.2.108`,
 including the worker, CMaps, standard fonts, ICC profiles and image decoders.
@@ -172,11 +174,16 @@ in a dedicated worker with a 30-second deadline. Cancel terminates that worker
 and clears the document. A terminated worker's source must be selected again.
 Generated PDFs above 100 MB are rejected after serialisation.
 
-Preview runs independently, with an 8-second library-loading timeout and a
-20-second overall deadline. It retries on request and rerenders when the panel
-becomes visible or changes size. Preview canvases are capped at approximately
-four million pixels; source images above 16 megapixels may be omitted from the
-preview. Open the generated PDF in a PDF reader to check it before printing.
+Browsers supporting inline PDFs use their built-in PDF viewer. Its rendering
+limits and controls are managed by the browser. The viewer is removed while the
+converter is hidden and recreated when it becomes visible again.
+
+Other browsers use the bundled PDF.js canvas preview, with an 8-second
+library-loading timeout and a 20-second overall deadline. It retries on request
+and rerenders when the panel becomes visible or changes size. These preview
+canvases are capped at approximately four million pixels; source images above
+16 megapixels may be omitted. Open the generated PDF in a PDF reader to check it
+before printing. Save PDF is available in both preview modes.
 
 These are recovery measures, not a hard memory sandbox. Browsers do not expose
 a per-worker heap limit, and a highly compressed or pathological PDF can still

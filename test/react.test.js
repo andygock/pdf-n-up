@@ -313,10 +313,10 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
 test("native PDF preview follows regenerated output and clears without retaining a frame", async () => {
   const app = await mountConversion();
   let root;
-  const render = () =>
+  const render = (active = true) =>
     createElement(Preview, {
       output: app.value.output,
-      active: true,
+      active,
       nativeViewer: true,
     });
   try {
@@ -332,6 +332,10 @@ test("native PDF preview follows regenerated output and clears without retaining
       `${firstUrl}#filename=handout_4up.pdf&zoom=page-fit`,
     );
     assert.equal(root.root.findAllByType("canvas").length, 0);
+    await act(() => root.update(render(false)));
+    assert.equal(root.root.findAllByType("iframe").length, 0);
+    await act(() => root.update(render()));
+    assert.equal(root.root.findAllByType("iframe").length, 1);
     await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
     await act(() => root.update(render()));
     assert.equal(
@@ -503,7 +507,7 @@ test("dropping anywhere converts once, replaces the PDF and returns from help", 
     assert.equal(root.root.findByType(Preview).props.nativeViewer, true);
     assert.equal(
       root.root.findAllByProps({ id: "downloadOutputButton" }).length,
-      0,
+      1,
     );
     const replacement = new File(
       [await (await file()).arrayBuffer()],

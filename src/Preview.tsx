@@ -18,7 +18,7 @@ export function Preview({
 
   return (
     <div className={styles.nativePreviewViewport} id="previewViewport">
-      {output ? (
+      {output && active ? (
         <iframe
           key={output.url}
           className={styles.pdfViewer}
@@ -29,7 +29,9 @@ export function Preview({
         />
       ) : (
         <p className={styles.previewLoading} role="status">
-          Select a PDF to see the output preview.
+          {output
+            ? "Preview paused while hidden."
+            : "Select a PDF to see the output preview."}
         </p>
       )}
     </div>
