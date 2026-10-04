@@ -124,8 +124,9 @@ Stylelint checks the original CSS, which is kept unchanged.
 
 The repository enforces a seven-day `minimumReleaseAge` in `pnpm-workspace.yaml`.
 Do not bypass it for dependency updates. Both PDF libraries are represented in
-the lockfile and dependency audits. CI runs checks and audits for pull requests,
-pushes and a weekly schedule; only the master branch can deploy.
+the lockfile and can be checked with `pnpm audit`. This repository does not
+include CI, scheduled audits or deployment workflows. Run checks and audits
+locally, or configure them in your hosting/CI service.
 
 Tests exercise PDF conversion, physical scaling, rotation, blank pages,
 spacing, invalid input, source retention, Japanese CMaps, JPEG 2000 decoding,
@@ -139,8 +140,13 @@ pnpm build
 ```
 
 Publish the contents of `dist/` to a static web host. The relative Vite base
-supports deployment under a subdirectory, including GitHub Pages. The included
-GitHub Actions workflow builds and uploads `dist/`.
+supports deployment under a subdirectory, including GitHub Pages.
+
+`wrangler.jsonc` configures Cloudflare Workers static assets with the worker name
+`pdf-nup` and `dist/` as the asset directory. It is an optional hosting
+configuration, not an automated deployment workflow. Build locally before using
+it, and configure deployment credentials and any branch restrictions separately
+in your hosting service. Wrangler is not installed as a project dependency.
 
 No environment variables or database are required. All runtime resources load
 from the same site. The production security policy remains strict; Vite's
