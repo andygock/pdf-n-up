@@ -229,3 +229,39 @@ test("preview limits pixel density and the canvas area for large pages", async (
   controller.cancel();
   globalThis.window.devicePixelRatio = 1;
 });
+
+test("resizing and hiding reuse the document, while replacement and disposal release it", async () => {
+  let loads = 0;
+  const lib = library();
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => {
+      loads++;
+      return lib;
+    },
+  });
+  let reads = 0;
+  const read = currentOutput.blob.arrayBuffer.bind(currentOutput.blob);
+  currentOutput.blob.arrayBuffer = () => {
+    reads++;
+    return read();
+  };
+  controller.update(currentOutput, true);
+  await controller.render();
+  elements.previewViewport.getBoundingClientRect = () => ({
+    width: 100,
+    height: 100,
+  });
+  controller.schedule();
+  await controller.render();
+  assert.equal(elements.pdfPreview.height, 100);
+  controller.update(currentOutput, false);
+  controller.update(currentOutput, true);
+  await controller.render();
+  assert.equal(loads, 1);
+  assert.equal(reads, 1);
+  assert.equal(lib.stats.destroyed, 0);
+  controller.update(output(), false);
+  assert.equal(lib.stats.destroyed, 1);
+  controller.cancel();
+  assert.equal(lib.stats.destroyed, 1);
+});

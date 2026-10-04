@@ -1,4 +1,8 @@
-import type { PDFDocumentLoadingTask, RenderTask } from "pdfjs-dist";
+import type {
+  PDFDocumentLoadingTask,
+  PDFDocumentProxy,
+  RenderTask,
+} from "pdfjs-dist";
 import { withDeadline } from "./async";
 import {
   loadPdfjs,
@@ -36,6 +40,15 @@ export const createPreviewController = (
   let cancelPreview: (() => void) | undefined;
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   let lastSize = "";
+  let cached: {
+    task: PDFDocumentLoadingTask;
+    document: PDFDocumentProxy;
+  } | null = null;
+
+  const releaseDocument = () => {
+    if (cached) void cached.task.destroy().catch(() => {});
+    cached = null;
+  };
 
   const visibleSize = () => {
     if (!active) return null;
@@ -52,10 +65,15 @@ export const createPreviewController = (
     return width >= 2 && height >= 2 ? { width, height } : null;
   };
 
-  const cancel = () => {
+  const cancelRender = () => {
     clearTimeout(resizeTimer);
     cancelPreview?.();
     cancelPreview = undefined;
+  };
+
+  const cancel = () => {
+    cancelRender();
+    releaseDocument();
   };
 
   const render = async () => {
@@ -91,12 +109,20 @@ export const createPreviewController = (
 
     // A detached canvas prevents cancelled work from overwriting a newer render.
     const work = async () => {
-      const pdfjs = await loadLibrary();
-      if (!current()) return;
-      const data = new Uint8Array(await renderedOutput.blob.arrayBuffer());
-      if (!current()) return;
-      loadingTask = pdfjs.getDocument({ data, ...previewDocumentOptions });
-      const pdfDocument = await loadingTask.promise;
+      let pdfDocument = cached?.document;
+      if (!pdfDocument) {
+        const pdfjs = await loadLibrary();
+        if (!current()) return;
+        const data = new Uint8Array(await renderedOutput.blob.arrayBuffer());
+        if (!current()) return;
+        loadingTask = pdfjs.getDocument({ data, ...previewDocumentOptions });
+        pdfDocument = await loadingTask.promise;
+        if (!current()) return;
+        // A completed document belongs to this output, not to a particular
+        // canvas size. Pending loads still belong to their cancellable render.
+        cached = { task: loadingTask, document: pdfDocument };
+        loadingTask = null;
+      }
       if (!current()) return;
       const page = await pdfDocument.getPage(1);
       if (!current()) return;
@@ -126,7 +152,6 @@ export const createPreviewController = (
       if (!targetContext) throw new Error("Canvas rendering is unavailable.");
       targetContext.drawImage(canvas, 0, 0);
       target.hidden = false;
-      page.cleanup();
     };
     try {
       // One deadline covers module import, worker startup, parsing and drawing.
@@ -138,6 +163,7 @@ export const createPreviewController = (
       );
     } catch (error) {
       if (current()) {
+        releaseDocument();
         const message = error instanceof Error ? error.message : String(error);
         elements.previewError.textContent = `${message} The PDF is still available to open or download.`;
         elements.previewError.hidden = false;
@@ -156,7 +182,7 @@ export const createPreviewController = (
       ? `${Math.round(size.width)}:${Math.round(size.height)}:${window.devicePixelRatio}`
       : "hidden";
     if (key === lastSize) return;
-    cancel();
+    cancelRender();
     lastSize = key;
     if (size) resizeTimer = setTimeout(() => void render(), 150);
   };

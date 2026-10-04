@@ -189,7 +189,9 @@ library-loading timeout and a 20-second overall deadline. It retries on request
 and rerenders when the panel becomes visible or changes size. These preview
 canvases are capped at approximately four million pixels; source images above
 16 megapixels may be omitted. Open the generated PDF in a PDF reader to check it
-before printing. Save PDF is available in both preview modes.
+before printing. Save PDF is available in both preview modes. The PDF.js preview
+retains its parsed document across resizing and temporary hiding to avoid
+repeated parsing; replacement, clearing, disposal or a preview failure releases it.
 
 These are recovery measures, not a hard memory sandbox. Browsers do not expose
 a per-worker heap limit, and a highly compressed or pathological PDF can still
