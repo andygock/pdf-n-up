@@ -13,10 +13,9 @@
     "lint:css": "stylelint \"css/**/*.css\"",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "vendor": "node scripts/vendor-dependencies.mjs",
-    "check": "pnpm vendor && pnpm vendor --check && pnpm typecheck && pnpm test && pnpm biome:check && pnpm lint:css && pnpm build",
-    "dev": "pnpm vendor && vite",
-    "build": "pnpm vendor && tsc --noEmit && vite build",
+    "check": "pnpm typecheck && pnpm test && pnpm biome:check && pnpm lint:css && pnpm build",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "biome:check": "biome check ."

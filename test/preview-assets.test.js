@@ -9,7 +9,7 @@ import { LAYOUTS } from "../src/geometry.ts";
 
 const assetPath = (directory) =>
   fileURLToPath(
-    new URL(`../public/vendor/pdfjs-dist/${directory}/`, import.meta.url),
+    new URL(`../node_modules/pdfjs-dist/${directory}/`, import.meta.url),
   ).replaceAll("\\", "/");
 const loadOutput = async (document) => {
   const engine = createConversionEngine(pdfLib);

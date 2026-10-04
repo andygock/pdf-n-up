@@ -1,10 +1,12 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { pdfjsAssets } from "./build/pdfjs-assets.ts";
 
 export default defineConfig({
   base: "./",
   plugins: [
     react(),
+    pdfjsAssets(),
     {
       name: "development-csp",
       apply: "serve",

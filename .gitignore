@@ -1,7 +1,4 @@
 node_modules/
 .playwright-cli/
 coverage/
-.vendor-staging-*/
-.vendor-backup-*/
 dist/
-public/vendor/

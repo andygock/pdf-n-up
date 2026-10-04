@@ -95,7 +95,7 @@ URL; browsers block module and worker loading in that context.
 pnpm check
 ```
 
-This verifies generated PDF.js assets, TypeScript, tests, Biome linting and formatting, CSS linting
+This verifies PDF.js asset handling, TypeScript, tests, Biome linting and formatting, CSS linting
 and the production build. Useful individual commands are:
 
 ```sh
@@ -107,17 +107,15 @@ pnpm lint:css
 pnpm format:check
 pnpm build
 pnpm preview
-pnpm vendor
-pnpm vendor --check
 pnpm audit
 ```
 
-`pnpm dev` and `pnpm build` generate `public/vendor/` from the exact installed
-PDF library versions. This generated directory is ignored by Git. It contains
-the PDF.js module, worker, CMaps, fonts, ICC profiles, image decoders and library
-licences. Vite bundles pdf-lib into the conversion worker; its old UMD copy is
-no longer needed. Regeneration builds a replacement before swapping it into
-place; `--check` verifies its file inventory and bytes.
+Vite bundles the lazy-loaded PDF.js module and emits its fingerprinted worker.
+A build plugin emits the required CMaps, fonts, ICC profiles, image decoders
+and licence notices from the installed dependencies directly into `dist/assets/`.
+Unused QuickJS scripting files are excluded. During development, the same plugin
+serves these resources directly from `node_modules`; no generated files are
+written into `public/`. Vite also bundles pdf-lib into the conversion worker.
 
 Biome replaces ESLint and Prettier for JavaScript, TypeScript, JSX and JSON.
 Stylelint checks the original CSS, which is kept unchanged.
@@ -197,9 +195,9 @@ exhaust memory before a deadline or output-size check takes effect.
 - `src/dependencies.ts`, `src/async.ts` — lazy PDF.js loading and deadlines
 - `src/types.ts` — shared PDF metadata and worker protocol types
 - `css/` — original base, component and responsive styles
-- `public/` — site icons and generated PDF.js resources
+- `public/` — site icons
 - `test/` — Node, React and PDF integration tests
-- `scripts/` — generated asset preparation and verification
+- `build/pdfjs-assets.ts` — development asset serving and production asset emission
 - `vite.config.ts`, `tsconfig.json` — build and strict TypeScript configuration
 
 ## Browser requirements

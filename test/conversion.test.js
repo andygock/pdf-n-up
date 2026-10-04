@@ -64,7 +64,7 @@ test("CropBox clipping, UserUnit and rotation survive actual PDF serialisation",
       data: result.bytes.slice(),
       stopAtErrors: true,
       standardFontDataUrl: fileURLToPath(
-        new URL("../public/vendor/pdfjs-dist/standard_fonts/", import.meta.url),
+        new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url),
       ).replaceAll("\\", "/"),
     });
     try {
