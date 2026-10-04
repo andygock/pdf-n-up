@@ -118,19 +118,18 @@ test("margins and gutters enlarge expanded sheets without changing copy scale", 
   );
 });
 
-test("invalid geometry, units, rotation and multi-page documents are rejected", async () => {
+test("invalid geometry, units and rotation are rejected", async () => {
   for (const configure of [
     (page) => page.setCropBox(200, 0, 10, 10),
     (page) =>
       page.node.set(pdfLib.PDFName.of("UserUnit"), pdfLib.PDFNumber.of(0)),
     (page) =>
       page.node.set(pdfLib.PDFName.of("Rotate"), pdfLib.PDFNumber.of(45)),
-    (_page, document) => document.addPage(),
   ])
     await assert.rejects(load(await fixture(configure)));
   await assert.rejects(
     load(new TextEncoder().encode("%PDF-1.7\nnot a PDF")),
-    /could not be parsed|exactly one page/,
+    /could not be parsed|no pages/,
   );
 });
 
@@ -220,4 +219,26 @@ test("page transparency groups preserve indirect colour spaces across repeated c
       3,
     );
   }
+});
+
+test("multi-page selection updates dimensions, content and filenames without reloading", async () => {
+  const { engine, metadata } = await load(
+    await fixture((page, doc) => {
+      page.drawText("First");
+      doc.addPage([300, 400]).drawText("Second");
+    }),
+  );
+  assert.equal(metadata.pageCount, 2);
+  assert.equal(metadata.pageNumber, 1);
+  const next = engine.selectPage(2);
+  assert.equal(next.width, 300);
+  const result = await engine.generate(options);
+  assert.equal(result.filename, "fixture_page2_4up.pdf");
+  assert.deepEqual((await outputPage(result)).getSize(), {
+    width: 600,
+    height: 800,
+  });
+  assert.throws(() => engine.selectPage(3), /page number/);
+  assert.throws(() => engine.selectPage(1.5), /page number/);
+  assert.equal(engine.selectPage(1).width, 100);
 });

@@ -14,8 +14,8 @@ export function Help({ view }: { view: View }) {
             <div className={styles.infoNumber}>01</div>
             <h2>Select one page</h2>
             <p>
-              Choose a PDF containing exactly one page. Encrypted,
-              password-protected, malformed and multi-page files are rejected.
+              Choose a PDF, then select the page to repeat. Encrypted,
+              password-protected and malformed files are rejected.
             </p>
           </article>
 

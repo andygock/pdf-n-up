@@ -13,8 +13,8 @@ Demo: <https://pdfnup.gock.net/>
 ## Features
 
 - Drag-and-drop or file-picker input
-- Validates that the source is a non-empty, single-page PDF
-- Rejects encrypted, password-protected, malformed and multi-page files
+- Validates that the source is a non-empty PDF and lets you select a page to repeat
+- Rejects encrypted, password-protected, malformed files
 - Accepts PDF files up to 50 MB, subject to the browser's available memory
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3) and 16-up (4×4)
 - Handles rotation, physical `/UserUnit` scaling and the CropBox/MediaBox intersection
@@ -70,7 +70,7 @@ The generated filename includes the selected layout. For example,
 ## Use the app
 
 1. Open the app in a current browser.
-2. Select or drop a PDF containing exactly one page.
+2. Select or drop a PDF and select the page to repeat.
 3. The app validates, converts and displays the result in an embedded preview.
 4. Open the generated PDF in a new tab or choose Save PDF when needed.
    Built-in viewer controls may also offer saving and printing.

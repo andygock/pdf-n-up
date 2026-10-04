@@ -38,6 +38,7 @@ const makeWorker = () => {
         this.loads++;
         return engine.load(payload.bytes, payload.metadata);
       }
+      if (method === "selectPage") return engine.selectPage(payload);
       return engine.generate(payload);
     },
   };
@@ -577,5 +578,30 @@ test("modal trigger uses the labelled native dialog and a dialog close form", as
     assert.equal(dialog.querySelector("button").type, "submit");
   } finally {
     await act(() => root.unmount());
+  }
+});
+
+test("page selection regenerates output and preserves the loaded document", async () => {
+  const app = await mountConversion();
+  try {
+    const doc = await pdfLib.PDFDocument.create();
+    doc.addPage([100, 200]);
+    doc.addPage([300, 400]);
+    await act(async () =>
+      app.value.selectFiles([new File([await doc.save()], "pages.pdf")]),
+    );
+    await act(() => app.value.selectPage(2));
+    assert.equal(app.value.source.pageNumber, 2);
+    assert.equal(app.value.source.width, 300);
+    assert.equal(app.value.output.filename, "pages_page2_4up.pdf");
+    assert.equal(app.worker.loads, 1);
+    await act(() => app.value.selectPage(3));
+    assert.equal(app.value.status.title, "Page selection failed");
+    assert.equal(app.value.output, null);
+    await act(() => app.value.selectPage(1));
+    assert.equal(app.value.source.pageNumber, 1);
+    assert.equal(app.value.status.title, "Output ready");
+  } finally {
+    await app.close();
   }
 });

@@ -47,6 +47,8 @@ export interface FileMetadata {
 
 export interface SourceMetadata extends VisiblePageGeometry, FileMetadata {
   warnings: string[];
+  pageCount: number;
+  pageNumber: number;
 }
 
 export interface ConversionResult {
@@ -60,6 +62,7 @@ export interface LoadPayload {
 }
 
 export type WorkerRequest =
+  | { id: number; method: "selectPage"; payload: number }
   | { id: number; method: "load"; payload: LoadPayload }
   | { id: number; method: "generate"; payload: ConversionOptions };
 

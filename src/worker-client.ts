@@ -58,6 +58,7 @@ export class ConversionWorkerClient {
     }
   }
 
+  request(method: "selectPage", payload: number): Promise<SourceMetadata>;
   request(
     method: "load",
     payload: LoadPayload,
@@ -69,8 +70,8 @@ export class ConversionWorkerClient {
     transfer?: Transferable[],
   ): Promise<ConversionResult>;
   request(
-    method: "load" | "generate",
-    payload: LoadPayload | ConversionOptions,
+    method: "load" | "generate" | "selectPage",
+    payload: LoadPayload | ConversionOptions | number,
     transfer: Transferable[] = [],
   ): Promise<SourceMetadata | ConversionResult> {
     if (method !== "load" && !this.worker) {
@@ -117,7 +118,9 @@ export class ConversionWorkerClient {
         const message =
           method === "load"
             ? { id, method, payload: payload as LoadPayload }
-            : { id, method, payload: payload as ConversionOptions };
+            : method === "selectPage"
+              ? { id, method, payload: payload as number }
+              : { id, method, payload: payload as ConversionOptions };
         this.worker.postMessage(message, transfer);
       } catch {
         this.dispose(

@@ -19,6 +19,8 @@ worker.onmessage = async ({ data }) => {
         data.payload.metadata,
       );
       worker.postMessage({ id, result });
+    } else if (data.method === "selectPage") {
+      worker.postMessage({ id, result: engine.selectPage(data.payload) });
     } else if (data.method === "generate") {
       const result = await engine.generate(data.payload);
       worker.postMessage({ id, result }, [result.bytes.buffer]);

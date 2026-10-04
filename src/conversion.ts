@@ -24,6 +24,51 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
     | (SourceMetadata & { page: PDFPage; document: PDFDocument })
     | null = null;
 
+  const selectPage = (
+    document: PDFDocument,
+    { name, size }: FileMetadata,
+    pageNumber: number,
+  ): SourceMetadata => {
+    if (
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > document.getPageCount()
+    )
+      throw new Error("Choose a page number within the document.");
+    const page = document.getPage(pageNumber - 1);
+    const unit =
+      page.node
+        .lookupMaybe(pdfLib.PDFName.of("UserUnit"), pdfLib.PDFNumber)
+        ?.asNumber() ?? 1;
+    const geometry = getVisiblePageGeometry(
+      page.getCropBox(),
+      page.getRotation().angle,
+      page.getMediaBox(),
+      unit,
+    );
+    const warnings: string[] = [];
+    if (
+      page.node.Annots()?.size() ||
+      document.catalog.has(pdfLib.PDFName.of("AcroForm"))
+    ) {
+      warnings.push(
+        "This PDF contains annotations or form fields. Their appearances, values and links are not copied; flatten them in a PDF editor first if they must appear in print.",
+      );
+    }
+    const metadata = {
+      name,
+      size,
+      pageCount: document.getPageCount(),
+      pageNumber,
+      ...geometry,
+      warnings,
+    };
+    // Output compatibility belongs to generate(), so changing paper mode can
+    // recover from an oversized layout without selecting the source again.
+    source = { page, document, ...metadata };
+    return metadata;
+  };
+
   return {
     async load(
       bytes: Uint8Array,
@@ -51,36 +96,13 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           { cause: error },
         );
       }
-      if (pageCount !== 1) {
-        throw new Error(
-          `This application accepts exactly one page. The selected PDF contains ${pageCount} pages.`,
-        );
-      }
-      const page = document.getPage(0);
-      const unit =
-        page.node
-          .lookupMaybe(pdfLib.PDFName.of("UserUnit"), pdfLib.PDFNumber)
-          ?.asNumber() ?? 1;
-      const geometry = getVisiblePageGeometry(
-        page.getCropBox(),
-        page.getRotation().angle,
-        page.getMediaBox(),
-        unit,
-      );
-      const warnings: string[] = [];
-      if (
-        page.node.Annots()?.size() ||
-        document.catalog.has(pdfLib.PDFName.of("AcroForm"))
-      ) {
-        warnings.push(
-          "This PDF contains annotations or form fields. Their appearances, values and links are not copied; flatten them in a PDF editor first if they must appear in print.",
-        );
-      }
-      const metadata = { name, size, ...geometry, warnings };
-      // Output compatibility belongs to generate(), so changing paper mode can
-      // recover from an oversized layout without selecting the source again.
-      source = { page, document, ...metadata };
-      return metadata;
+      if (!pageCount) throw new Error("The PDF contains no pages.");
+      return selectPage(document, { name, size }, 1);
+    },
+
+    selectPage(pageNumber: number): SourceMetadata {
+      if (!source) throw new Error("Select a PDF before choosing a page.");
+      return selectPage(source.document, source, pageNumber);
     },
 
     async generate(options: ConversionOptions): Promise<ConversionResult> {
@@ -95,7 +117,12 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         source.width,
         source.height,
       );
-      const filename = makeOutputFilename(source.name, copies);
+      const filename = makeOutputFilename(
+        source.pageCount > 1
+          ? `${source.name.replace(/\.pdf$/i, "")}_page${source.pageNumber}.pdf`
+          : source.name,
+        copies,
+      );
       const output = await pdfLib.PDFDocument.create();
       output.setTitle(filename.replace(/\.pdf$/i, ""));
       output.setSubject(`${copies}-up PDF layout`);

@@ -54,7 +54,7 @@ export function SourcePicker({
         <p id="dropDescription">
           {source
             ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · one page`
-            : "One page, up to 50 MB. Converts as soon as you choose a file."}
+            : "Up to 50 MB. Choose which page to repeat. Converts as soon as you choose a file."}
         </p>
       </div>
       <div className={styles.documentActions}>

@@ -8,6 +8,7 @@ import { Help } from "./Help.tsx";
 import { OutputPanel } from "./OutputPanel.tsx";
 import { PageHeading } from "./PageHeading.tsx";
 import { SourcePicker } from "./SourcePicker.tsx";
+import { SpacingInput } from "./SpacingInput.tsx";
 import { useConversion } from "./useConversion.ts";
 import { useFileDrop } from "./useFileDrop.ts";
 import { useView } from "./useView.ts";
@@ -60,6 +61,20 @@ export default function App() {
                 onSelectFiles={selectFiles}
                 onClear={clearDocument}
               />
+            )}
+            {source && source.pageCount > 1 && (
+              <label htmlFor="sourcePage">
+                Page to repeat (1–{source.pageCount}){" "}
+                <SpacingInput
+                  id="sourcePage"
+                  min={1}
+                  max={source.pageCount}
+                  step={1}
+                  value={source.pageNumber}
+                  disabled={processing}
+                  onCommit={(page) => void conversion.selectPage(page)}
+                />
+              </label>
             )}
             <ConversionOptions
               options={options}

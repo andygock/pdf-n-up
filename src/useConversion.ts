@@ -43,7 +43,7 @@ interface ConversionState {
 
 const ready: Status = {
   title: "Ready",
-  message: "Select a single-page PDF to begin.",
+  message: "Select a PDF to begin.",
 };
 
 export function useConversion(
@@ -238,6 +238,24 @@ export function useConversion(
     }
   };
 
+  const selectPage = async (pageNumber: number) => {
+    if (current.current.processing || !current.current.source) return;
+    const token = ++operation.current;
+    resetOutput();
+    update({ processing: true });
+    try {
+      const source = await worker.request("selectPage", pageNumber);
+      if (token !== operation.current) return;
+      update({ source });
+      await generate(token);
+    } catch (error) {
+      if (token === operation.current)
+        showFailure(error, "Page selection failed");
+    } finally {
+      if (token === operation.current) update({ processing: false });
+    }
+  };
+
   const changeOptions = async (patch: Partial<ConversionOptions>) => {
     if (current.current.processing) return;
     update({ options: { ...current.current.options, ...patch } });
@@ -323,6 +341,7 @@ export function useConversion(
     ...state,
     details,
     selectFiles,
+    selectPage,
     changeOptions,
     clearDocument,
     openOutput,
