@@ -4,9 +4,10 @@ import type { View } from "./useView.ts";
 export function AppFooter({ view }: { view: View }) {
   return (
     <footer className={styles.footer}>
-      <nav aria-label="Help and information">
+      <nav aria-label="Footer navigation">
         {(
           [
+            ["convert", "Convert PDF"],
             ["guide", "How it works"],
             ["privacy", "Privacy"],
           ] as const
