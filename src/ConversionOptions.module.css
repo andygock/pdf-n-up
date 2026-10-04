@@ -165,3 +165,18 @@
     padding-inline: var(--space-3);
   }
 }
+
+.advancedFields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.advancedFields label {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 90px 24px;
+  align-items: center;
+}
+
+.advancedFields input {
+  width: 100%;
+}

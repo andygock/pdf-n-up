@@ -5,6 +5,12 @@ export const PREFERENCES_KEY = "pdf-nup.preferences.v1";
 export const DEFAULT_OPTIONS: ConversionOptions = {
   layout: LAYOUTS[4],
   paperMode: "expand",
+  marginTopMm: undefined,
+  marginRightMm: undefined,
+  marginBottomMm: undefined,
+  marginLeftMm: undefined,
+  gapHorizontalMm: undefined,
+  gapVerticalMm: undefined,
   marginMm: 0,
   gutterMm: 0,
   cropMarks: false,
@@ -56,6 +62,12 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     paperMode: data.paperMode as ConversionOptions["paperMode"],
   };
   const ranges = {
+    marginTopMm: [0, 100],
+    marginRightMm: [0, 100],
+    marginBottomMm: [0, 100],
+    marginLeftMm: [0, 100],
+    gapHorizontalMm: [0, 100],
+    gapVerticalMm: [0, 100],
     marginMm: [0, 100],
     gutterMm: [0, 100],
     paperWidthMm: [0.01, 5080],

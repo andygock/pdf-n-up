@@ -245,3 +245,29 @@ test("exact sizing preserves proportions and refuses to shrink oversized copies"
     /Copy scale/,
   );
 });
+
+test("independent margins and gaps position copies inside the printable area", () => {
+  const mm = 72 / 25.4;
+  const options = {
+    width: 20 * mm,
+    height: 30 * mm,
+    layout: LAYOUTS[4],
+    paperMode: "expand",
+    marginTopMm: 1,
+    marginRightMm: 2,
+    marginBottomMm: 3,
+    marginLeftMm: 4,
+    gapHorizontalMm: 5,
+    gapVerticalMm: 6,
+  };
+  const geometry = getOutputGeometry(options);
+  assert.ok(Math.abs(geometry.outputWidth / mm - 51) < 1e-9);
+  assert.ok(Math.abs(geometry.outputHeight / mm - 70) < 1e-9);
+  const boxes = getCopyBoxes(options);
+  assert.ok(Math.abs(boxes[0].x / mm - 4) < 1e-9);
+  assert.ok(Math.abs(boxes[0].y / mm - 39) < 1e-9);
+  assert.throws(
+    () => getOutputGeometry({ ...options, gapVerticalMm: -1 }),
+    /Margins/,
+  );
+});

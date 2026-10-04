@@ -35,10 +35,19 @@ export function drawMeasurements(
       y + (box.height * sy) / 2,
     );
   }
+  const edges = measurements.edges;
   label(
-    `Min. margin: ${mm(measurements.margin)} · Cell gap: ${mm(measurements.gutter)}`,
+    edges
+      ? `Margins T/R/B/L: ${[edges.top, edges.right, edges.bottom, edges.left].map(mm).join(" / ")}`
+      : `Min. margin: ${mm(measurements.margin)} \u00b7 Cell gap: ${mm(measurements.gutter)}`,
     4,
     4,
   );
+  if (edges)
+    label(
+      `Gaps H/V: ${mm(edges.horizontal)} / ${mm(edges.vertical)}`,
+      4,
+      fontSize + 16,
+    );
   context.restore();
 }

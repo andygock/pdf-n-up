@@ -13,6 +13,14 @@ export interface Measurements {
   outputWidth: number;
   outputHeight: number;
   boxes: PageBox[];
+  edges?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+    horizontal: number;
+    vertical: number;
+  };
   margin: number;
   gutter: number;
 }
@@ -28,6 +36,12 @@ export interface PdfOutput {
 export interface ConversionOptions {
   layout: Layout;
   paperMode: PaperMode;
+  marginTopMm?: number;
+  marginRightMm?: number;
+  marginBottomMm?: number;
+  marginLeftMm?: number;
+  gapHorizontalMm?: number;
+  gapVerticalMm?: number;
   marginMm?: number;
   gutterMm?: number;
   scaleMode?: "fit" | "percent" | "dimensions";

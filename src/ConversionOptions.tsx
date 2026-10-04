@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import styles from "./ConversionOptions.module.css";
 import { CustomGrid } from "./CustomGrid.tsx";
 import { LAYOUTS } from "./geometry.ts";
+import { Modal } from "./Modal.tsx";
 import { SpacingInput } from "./SpacingInput.tsx";
 import type { ConversionOptions as Options } from "./types.ts";
 import ui from "./ui.module.css";
@@ -208,7 +209,15 @@ export function ConversionOptions({
               id="marginMm"
               disabled={processing}
               value={options.marginMm ?? 0}
-              onCommit={(value) => void changeOptions({ marginMm: value })}
+              onCommit={(value) =>
+                void changeOptions({
+                  marginMm: value,
+                  marginTopMm: undefined,
+                  marginRightMm: undefined,
+                  marginBottomMm: undefined,
+                  marginLeftMm: undefined,
+                })
+              }
             />
           </label>
           <label className={ui.field} htmlFor="gutterMm">
@@ -217,12 +226,59 @@ export function ConversionOptions({
               id="gutterMm"
               disabled={processing}
               value={options.gutterMm ?? 0}
-              onCommit={(value) => void changeOptions({ gutterMm: value })}
+              onCommit={(value) =>
+                void changeOptions({
+                  gutterMm: value,
+                  gapHorizontalMm: undefined,
+                  gapVerticalMm: undefined,
+                })
+              }
             />
           </label>
         </div>
       </fieldset>
       <div className={styles.toolbar}>
+        <Modal
+          title="Spacing details"
+          triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+        >
+          <p>
+            Set individual edges and gaps in millimetres. The main Margin and
+            Gap controls reset their individual values.
+          </p>
+          <div className={styles.advancedFields}>
+            {(
+              [
+                ["marginTopMm", "Top margin"],
+                ["marginRightMm", "Right margin"],
+                ["marginBottomMm", "Bottom margin"],
+                ["marginLeftMm", "Left margin"],
+                ["gapHorizontalMm", "Horizontal gap"],
+                ["gapVerticalMm", "Vertical gap"],
+              ] as const
+            ).map(([key, label]) => (
+              <label className={ui.field} key={key} htmlFor={key}>
+                {label}
+                <SpacingInput
+                  id={key}
+                  disabled={processing}
+                  value={
+                    options[key] ??
+                    (key.startsWith("margin")
+                      ? (options.marginMm ?? 0)
+                      : (options.gutterMm ?? 0))
+                  }
+                  onCommit={(value) => void changeOptions({ [key]: value })}
+                />{" "}
+                mm
+              </label>
+            ))}
+          </div>
+          <p className={styles.hint}>
+            Crop marks reserve at least 5 mm at each edge and 10 mm between
+            copies.
+          </p>
+        </Modal>
         <label className={ui.checkbox}>
           <input
             type="checkbox"

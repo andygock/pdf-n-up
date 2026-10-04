@@ -101,6 +101,7 @@ export const getOutputGeometry = ({
   copyHeightMm = 50,
   paperWidthMm = 210,
   paperHeightMm = 297,
+  ...spacingOptions
 }: ConversionOptions & { width: number; height: number }) => {
   if (
     ![width, height].every((value) => Number.isFinite(value) && value > 0) ||
@@ -121,7 +122,12 @@ export const getOutputGeometry = ({
   ) {
     throw new Error("Margins and gutters must be between 0 and 100 mm.");
   }
-  const { margin, gutter } = getSpacing({ marginMm, gutterMm, cropMarks });
+  const { edges } = getSpacing({
+    marginMm,
+    gutterMm,
+    cropMarks,
+    ...spacingOptions,
+  });
   const { columns, rows } = getResolvedLayout(layout, width, height);
 
   if (!["fit", "percent", "dimensions"].includes(scaleMode))
@@ -156,12 +162,14 @@ export const getOutputGeometry = ({
     return {
       outputWidth:
         width * (requestedScale ?? 1) * columns +
-        2 * margin +
-        (columns - 1) * gutter,
+        edges.left +
+        edges.right +
+        (columns - 1) * edges.horizontal,
       outputHeight:
         height * (requestedScale ?? 1) * rows +
-        2 * margin +
-        (rows - 1) * gutter,
+        edges.top +
+        edges.bottom +
+        (rows - 1) * edges.vertical,
       scale: requestedScale ?? 1,
     };
   }
@@ -191,10 +199,16 @@ export const getOutputGeometry = ({
   const candidates = orientations.map((orientation) => ({
     ...orientation,
     scale: Math.min(
-      (orientation.outputWidth - 2 * margin - (columns - 1) * gutter) /
+      (orientation.outputWidth -
+        edges.left -
+        edges.right -
+        (columns - 1) * edges.horizontal) /
         columns /
         width,
-      (orientation.outputHeight - 2 * margin - (rows - 1) * gutter) /
+      (orientation.outputHeight -
+        edges.top -
+        edges.bottom -
+        (rows - 1) * edges.vertical) /
         rows /
         height,
     ),
@@ -299,14 +313,32 @@ export const makeOutputFilename = (inputName: string, copies: number) => {
 };
 
 // Reserve 1 mm clearance plus 3 mm marks, with spare room at sheet edges.
-export const getSpacing = (
-  options: Pick<ConversionOptions, "marginMm" | "gutterMm" | "cropMarks">,
-) => ({
-  margin:
-    (Math.max(options.marginMm ?? 0, options.cropMarks ? 5 : 0) * 72) / 25.4,
-  gutter:
-    (Math.max(options.gutterMm ?? 0, options.cropMarks ? 10 : 0) * 72) / 25.4,
-});
+export const getSpacing = (options: Partial<ConversionOptions>) => {
+  const edgeValues = [
+    options.marginTopMm ?? options.marginMm ?? 0,
+    options.marginRightMm ?? options.marginMm ?? 0,
+    options.marginBottomMm ?? options.marginMm ?? 0,
+    options.marginLeftMm ?? options.marginMm ?? 0,
+    options.gapHorizontalMm ?? options.gutterMm ?? 0,
+    options.gapVerticalMm ?? options.gutterMm ?? 0,
+  ];
+  if (
+    !edgeValues.every(
+      (value) => Number.isFinite(value) && value >= 0 && value <= 100,
+    )
+  )
+    throw new Error("Margins and gutters must be between 0 and 100 mm.");
+  const [top, right, bottom, left, horizontal, vertical] = edgeValues.map(
+    (value, index) =>
+      (Math.max(value, options.cropMarks ? (index < 4 ? 5 : 10) : 0) * 72) /
+      25.4,
+  );
+  return {
+    margin: Math.min(top, right, bottom, left),
+    gutter: Math.min(horizontal, vertical),
+    edges: { top, right, bottom, left, horizontal, vertical },
+  };
+};
 
 export const getCopyBoxes = (
   options: ConversionOptions & { width: number; height: number },
@@ -317,21 +349,29 @@ export const getCopyBoxes = (
     options.width,
     options.height,
   );
-  const { margin, gutter } = getSpacing(options);
+  const { edges } = getSpacing(options);
   const cellWidth =
-    (geometry.outputWidth - 2 * margin - (columns - 1) * gutter) / columns;
+    (geometry.outputWidth -
+      edges.left -
+      edges.right -
+      (columns - 1) * edges.horizontal) /
+    columns;
   const cellHeight =
-    (geometry.outputHeight - 2 * margin - (rows - 1) * gutter) / rows;
+    (geometry.outputHeight -
+      edges.top -
+      edges.bottom -
+      (rows - 1) * edges.vertical) /
+    rows;
   const width = options.width * geometry.scale;
   const height = options.height * geometry.scale;
   return Array.from({ length: copies }, (_, index) => ({
     x:
-      margin +
-      (index % columns) * (cellWidth + gutter) +
+      edges.left +
+      (index % columns) * (cellWidth + edges.horizontal) +
       (cellWidth - width) / 2,
     y:
-      margin +
-      (rows - 1 - Math.floor(index / columns)) * (cellHeight + gutter) +
+      edges.bottom +
+      (rows - 1 - Math.floor(index / columns)) * (cellHeight + edges.vertical) +
       (cellHeight - height) / 2,
     width,
     height,

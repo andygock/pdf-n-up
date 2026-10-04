@@ -34,6 +34,7 @@ Demo: <https://pdfnup.gock.net/>
 - Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork
 - Offers A4, A3 and custom output paper dimensions with automatic best-fit orientation
 - Supports outer margins and gaps between copies, measured in millimetres
+- Spacing details offers individual edge margins and horizontal/vertical gaps
 - Offers conversion cancellation, document clearing and PDF.js preview retry
 - Warns when annotations or form fields will not be copied
 - Does not retain conversion history or document metadata in browser storage
