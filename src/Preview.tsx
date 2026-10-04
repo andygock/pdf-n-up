@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import styles from "./Preview.module.css";
-import { createPreviewController, type PreviewOutput } from "./preview";
+import { createPreviewController } from "./preview";
+import type { PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
 
 export interface PreviewProps {
-  output: PreviewOutput | null;
+  output: PdfOutput | null;
   active: boolean;
   nativeViewer?: boolean;
 }

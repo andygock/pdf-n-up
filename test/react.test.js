@@ -235,7 +235,7 @@ test("Download saves the PDF bytes under the chosen filename", async () => {
   try {
     await act(async () => app.value.selectFiles([await file()]));
     const expected = await app.value.output.blob.arrayBuffer();
-    await act(() => app.value.openOutput(true));
+    await act(() => app.value.openOutput("save"));
     assert.deepEqual(written, expected);
     assert.equal(closed, true);
     assert.equal(app.value.status.title, "PDF saved");
@@ -254,7 +254,7 @@ test("Download cancellation and write failure preserve the generated PDF", async
     window.showSaveFilePicker = async () => {
       throw new DOMException("Cancelled", "AbortError");
     };
-    await act(() => app.value.openOutput(true));
+    await act(() => app.value.openOutput("save"));
     assert.equal(app.value.status.title, "Output ready");
     let aborted = false;
     window.showSaveFilePicker = async () => ({
@@ -268,7 +268,7 @@ test("Download cancellation and write failure preserve the generated PDF", async
         },
       }),
     });
-    await act(() => app.value.openOutput(true));
+    await act(() => app.value.openOutput("save"));
     assert.equal(aborted, true);
     assert.equal(app.value.status.title, "Download failed");
     assert.equal(app.value.status.message, "Disk full");
@@ -299,7 +299,7 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
   });
   try {
     await act(async () => app.value.selectFiles([await file()]));
-    await act(() => app.value.openOutput(true));
+    await act(() => app.value.openOutput("save"));
     assert.equal(anchors[0].download, "handout_4up.pdf");
     assert.equal(anchors[0].target, undefined);
     const downloaded = await (await fetch(anchors[0].href)).blob();
@@ -310,7 +310,7 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
     );
     revoke();
     await assert.rejects(fetch(anchors[0].href));
-    await act(() => app.value.openOutput(false));
+    await act(() => app.value.openOutput("open"));
     assert.equal(anchors[1].href, app.value.output.url);
     assert.equal(app.value.output.blob.type, "application/pdf");
     assert.equal(anchors[1].target, "_blank");

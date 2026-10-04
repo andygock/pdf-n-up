@@ -10,12 +10,7 @@ import {
   previewDocumentOptions,
 } from "./dependencies";
 
-export interface PreviewOutput {
-  blob: Blob;
-  url: string;
-  filename: string;
-  size: number;
-}
+import type { PdfOutput } from "./types.ts";
 
 export interface PreviewElements {
   previewViewport: HTMLDivElement;
@@ -34,7 +29,7 @@ export const createPreviewController = (
     timeoutMs = 20_000,
   }: { loadLibrary?: () => Promise<PdfjsLibrary>; timeoutMs?: number } = {},
 ) => {
-  let output: PreviewOutput | null = null;
+  let output: PdfOutput | null = null;
   let active = false;
   let token = 0;
   let cancelPreview: (() => void) | undefined;
@@ -187,7 +182,7 @@ export const createPreviewController = (
     if (size) resizeTimer = setTimeout(() => void render(), 150);
   };
 
-  const update = (nextOutput: PreviewOutput | null, nextActive: boolean) => {
+  const update = (nextOutput: PdfOutput | null, nextActive: boolean) => {
     const changed = output !== nextOutput;
     if (changed) {
       cancel();

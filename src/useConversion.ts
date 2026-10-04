@@ -15,15 +15,13 @@ import {
   LAYOUTS,
 } from "./geometry.ts";
 import { readBlob } from "./read-blob.ts";
-import type { ConversionOptions, SourceMetadata } from "./types.ts";
+import type {
+  ConversionOptions,
+  OutputAction,
+  PdfOutput,
+  SourceMetadata,
+} from "./types.ts";
 import { ConversionWorkerClient, WorkerLostError } from "./worker-client.ts";
-
-export interface Output {
-  blob: Blob;
-  url: string;
-  filename: string;
-  size: number;
-}
 
 interface Status {
   title: string;
@@ -36,7 +34,7 @@ interface Status {
 
 interface ConversionState {
   source: SourceMetadata | null;
-  output: Output | null;
+  output: PdfOutput | null;
   options: ConversionOptions;
   processing: boolean;
   failed: boolean;
@@ -258,10 +256,10 @@ export function useConversion(
     }
   };
 
-  const openOutput = async (download: boolean) => {
+  const openOutput = async (action: OutputAction) => {
     const output = current.current.output;
     if (!output) return;
-    if (download) {
+    if (action === "save") {
       try {
         const result = await downloadPdf(output.blob, output.filename);
         if (!result || current.current.output !== output) return;

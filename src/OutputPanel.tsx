@@ -1,13 +1,13 @@
 import { formatBytes } from "./format.ts";
 import styles from "./OutputPanel.module.css";
 import { Preview } from "./Preview.tsx";
+import type { OutputAction, PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
-import type { Output } from "./useConversion.ts";
 
 interface OutputPanelProps {
-  output: Output | null;
+  output: PdfOutput | null;
   active: boolean;
-  openOutput: (download: boolean) => Promise<void>;
+  openOutput: (action: OutputAction) => Promise<void>;
 }
 export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
   const nativeViewer = navigator.pdfViewerEnabled === true;
@@ -33,7 +33,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
             id="openOutputButton"
             type="button"
             disabled={!output}
-            onClick={() => void openOutput(false)}
+            onClick={() => void openOutput("open")}
           >
             Open in tab ↗
           </button>
@@ -41,7 +41,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
             className={`${ui.button} ${ui.primary} ${ui.compact}`}
             id="downloadOutputButton"
             disabled={!output}
-            onClick={() => void openOutput(true)}
+            onClick={() => void openOutput("save")}
             type="button"
           >
             Save PDF

@@ -6,6 +6,15 @@ export interface Layout {
 
 export type PaperMode = "expand" | "same";
 
+export type OutputAction = "open" | "save";
+
+export interface PdfOutput {
+  blob: Blob;
+  url: string;
+  filename: string;
+  size: number;
+}
+
 export interface ConversionOptions {
   layout: Layout;
   paperMode: PaperMode;
