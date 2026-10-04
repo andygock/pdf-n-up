@@ -1,4 +1,4 @@
 # Keep the same seven-day supply-chain cooling-off period locally and in CI.
 minimumReleaseAge: 10080
 overrides:
-  fast-uri: 3.1.6
+  fast-uri: 3.1.8
