@@ -10,6 +10,7 @@ import {
   previewDocumentOptions,
 } from "./dependencies";
 
+import { drawMeasurements } from "./measurements.ts";
 import type { PdfOutput } from "./types.ts";
 
 export interface PreviewElements {
@@ -146,6 +147,13 @@ export const createPreviewController = (
       const targetContext = target.getContext("2d", { alpha: false });
       if (!targetContext) throw new Error("Canvas rendering is unavailable.");
       targetContext.drawImage(canvas, 0, 0);
+      if (renderedOutput.measurements)
+        drawMeasurements(
+          targetContext,
+          canvas.width,
+          canvas.height,
+          renderedOutput.measurements,
+        );
       target.hidden = false;
     };
     try {

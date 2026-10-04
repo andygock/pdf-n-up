@@ -9,7 +9,16 @@ export type PaperMode = "expand" | "same" | "a4" | "a3" | "custom";
 
 export type OutputAction = "open" | "save";
 
+export interface Measurements {
+  outputWidth: number;
+  outputHeight: number;
+  boxes: PageBox[];
+  margin: number;
+  gutter: number;
+}
+
 export interface PdfOutput {
+  measurements?: Measurements;
   blob: Blob;
   url: string;
   filename: string;

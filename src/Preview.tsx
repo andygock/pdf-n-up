@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import styles from "./Preview.module.css";
 import { createPreviewController } from "./preview";
 import type { PdfOutput } from "./types.ts";
@@ -8,14 +8,27 @@ export interface PreviewProps {
   output: PdfOutput | null;
   active: boolean;
   nativeViewer?: boolean;
+  showMeasurements?: boolean;
 }
 
 export function Preview({
   output,
   active,
   nativeViewer = false,
+  showMeasurements = false,
 }: PreviewProps) {
-  if (!nativeViewer) return <CanvasPreview output={output} active={active} />;
+  const canvasOutput = useMemo(
+    () =>
+      output
+        ? {
+            ...output,
+            measurements: showMeasurements ? output.measurements : undefined,
+          }
+        : null,
+    [output, showMeasurements],
+  );
+  if (!nativeViewer || showMeasurements)
+    return <CanvasPreview output={canvasOutput} active={active} />;
 
   return (
     <div className={styles.nativePreviewViewport} id="previewViewport">

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatBytes } from "./format.ts";
 import styles from "./OutputPanel.module.css";
 import { Preview } from "./Preview.tsx";
@@ -10,6 +11,7 @@ interface OutputPanelProps {
   openOutput: (action: OutputAction) => Promise<void>;
 }
 export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
+  const [showMeasurements, setShowMeasurements] = useState(false);
   const nativeViewer = navigator.pdfViewerEnabled === true;
   return (
     <article
@@ -48,9 +50,24 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           </button>
         </div>
       </div>
-      <Preview output={output} active={active} nativeViewer={nativeViewer} />
+      {output?.measurements && (
+        <label>
+          <input
+            type="checkbox"
+            checked={showMeasurements}
+            onChange={(event) => setShowMeasurements(event.target.checked)}
+          />
+          Show measurements (preview only)
+        </label>
+      )}
+      <Preview
+        output={output}
+        active={active}
+        nativeViewer={nativeViewer}
+        showMeasurements={showMeasurements}
+      />
       <p className={styles.previewNote}>
-        {nativeViewer
+        {nativeViewer && !showMeasurements
           ? "Save or print using the PDF toolbar. "
           : "Preview only: images above 16 megapixels may be omitted. Open the PDF to check before printing. "}
         Print at actual size to keep these dimensions.

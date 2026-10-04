@@ -10,8 +10,10 @@ import {
 } from "./format.ts";
 import {
   assertCompatibleOutputSize,
+  getCopyBoxes,
   getOutputGeometry,
   getResolvedLayout,
+  getSpacing,
   LAYOUTS,
 } from "./geometry.ts";
 import { readBlob } from "./read-blob.ts";
@@ -147,6 +149,11 @@ export function useConversion(
     update({
       output: {
         blob,
+        measurements: {
+          ...getOutputGeometry({ ...source, ...options }),
+          ...getSpacing(options),
+          boxes: getCopyBoxes({ ...source, ...options }),
+        },
         url: URL.createObjectURL(blob),
         filename: result.filename,
         size: blob.size,
