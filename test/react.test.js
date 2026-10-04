@@ -393,7 +393,7 @@ test("footer navigation preserves conversion options without a sidebar", async (
       0,
     );
     const follow = async (view) => {
-      window.location.hash = root.root.findByProps({
+      window.location.hash = root.root.findByType("footer").findByProps({
         "data-view": view,
       }).props.href;
       await act(() => listeners.get("hashchange")());
