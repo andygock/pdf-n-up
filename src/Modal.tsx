@@ -24,6 +24,7 @@ export function Modal({ title, triggerClassName, children }: ModalProps) {
       </button>
       <dialog
         ref={dialogRef}
+        closedby="any"
         className={styles.modal}
         aria-labelledby={titleId}
       >
