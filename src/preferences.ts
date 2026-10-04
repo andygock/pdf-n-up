@@ -6,6 +6,8 @@ export const DEFAULT_OPTIONS: ConversionOptions = {
   layout: LAYOUTS[4],
   mode: "repeat",
   pageRange: "",
+  quantity: undefined,
+  fillLastSheet: false,
   pageOrder: "rows",
   autoLayout: false,
   rotateCopies: false,

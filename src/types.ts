@@ -45,6 +45,8 @@ export interface ConversionOptions {
   layout: Layout;
   mode?: "repeat" | "sequence";
   pageRange?: string;
+  quantity?: number;
+  fillLastSheet?: boolean;
   pageOrder?: "rows" | "columns";
   autoLayout?: boolean;
   rotateCopies?: boolean;

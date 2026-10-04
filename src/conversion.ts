@@ -14,6 +14,7 @@ import {
 import {
   fitPageToCell,
   getCellBoxes,
+  getRepeatCount,
   MAX_OUTPUT_SHEETS,
   parsePageRange,
 } from "./imposition.ts";
@@ -149,12 +150,21 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       const { copies } = layout;
       const pageNumbers = sequence
         ? selectedPages
-        : Array.from({ length: copies }, () => original.pageNumber);
+        : Array.from(
+            {
+              length: getRepeatCount(
+                options.quantity,
+                copies,
+                options.fillLastSheet,
+              ),
+            },
+            () => original.pageNumber,
+          );
       if (Math.ceil(pageNumbers.length / copies) > MAX_OUTPUT_SHEETS)
         throw new Error(
           "Output is limited to 1,000 sheets. Select fewer pages or more copies per sheet.",
         );
-      const filename = makeOutputFilename(
+      const baseFilename = makeOutputFilename(
         sequence
           ? `${original.name.replace(/\.pdf$/i, "")}_pages.pdf`
           : original.pageCount > 1
@@ -162,6 +172,10 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
             : original.name,
         copies,
       );
+      const filename =
+        !sequence && options.quantity !== undefined
+          ? baseFilename.replace(/\.pdf$/i, `_qty${pageNumbers.length}.pdf`)
+          : baseFilename;
       const output = await pdfLib.PDFDocument.create();
       output.setTitle(filename.replace(/\.pdf$/i, ""));
       output.setSubject(`${copies}-up PDF layout`);

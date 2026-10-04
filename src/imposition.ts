@@ -119,3 +119,18 @@ export function fitPageToCell(
     },
   };
 }
+
+export function getRepeatCount(
+  quantity: number | undefined,
+  capacity: number,
+  fillLastSheet = false,
+) {
+  if (quantity === undefined) return capacity;
+  if (
+    !Number.isInteger(quantity) ||
+    quantity < 1 ||
+    quantity > MAX_SELECTED_PAGES
+  )
+    throw new Error("Quantity must be a whole number from 1 to 10,000.");
+  return fillLastSheet ? Math.ceil(quantity / capacity) * capacity : quantity;
+}

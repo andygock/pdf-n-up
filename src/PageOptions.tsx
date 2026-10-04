@@ -124,6 +124,56 @@ export function PageOptions({
         ) : (
           <p>Repeats the selected source page in every cell.</p>
         )}
+        {options.mode !== "sequence" && (
+          <>
+            <label className={ui.checkbox}>
+              <input
+                type="checkbox"
+                disabled={processing}
+                checked={options.quantity !== undefined}
+                onChange={(event) =>
+                  void changeOptions({
+                    quantity: event.target.checked ? 50 : undefined,
+                  })
+                }
+              />
+              Specify total quantity
+            </label>
+            {options.quantity !== undefined && (
+              <>
+                <label className={ui.field} htmlFor="quantity">
+                  Copies required
+                  <SpacingInput
+                    id="quantity"
+                    min={1}
+                    max={10000}
+                    step={1}
+                    disabled={processing}
+                    value={options.quantity}
+                    onCommit={(quantity) => void changeOptions({ quantity })}
+                  />
+                </label>
+                <label className={ui.checkbox}>
+                  <input
+                    type="checkbox"
+                    disabled={processing}
+                    checked={options.fillLastSheet ?? false}
+                    onChange={(event) =>
+                      void changeOptions({
+                        fillLastSheet: event.target.checked,
+                      })
+                    }
+                  />
+                  Fill the last sheet with extra copies
+                </label>
+                <p>
+                  Creates enough sheets for your quantity. Unused cells stay
+                  blank unless you choose to fill the last sheet.
+                </p>
+              </>
+            )}
+          </>
+        )}
         <p className={styles.hint}>
           Batch conversion applies these settings to each PDF separately. Up to
           10,000 selected pages and 1,000 output sheets per PDF.

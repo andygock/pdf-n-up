@@ -100,3 +100,42 @@ test("output sheet limit rejects excessive jobs before generation", async () => 
     /1,000 sheets/,
   );
 });
+
+test("quantity creates partial or filled final sheets and embeds repeated content once", async () => {
+  const engine = await makeEngine([[100, 200]]);
+  const settings = {
+    layout: LAYOUTS[4],
+    paperMode: "a4",
+    quantity: 5,
+    cropMarks: true,
+  };
+  const exact = await engine.generate(settings);
+  assert.deepEqual(
+    exact.sheets.map((sheet) => sheet.boxes.length),
+    [4, 1],
+  );
+  assert.match(exact.filename, /qty5/);
+  const pdf = await pdfLib.PDFDocument.load(exact.bytes);
+  const formRefs = pdf.getPages().map((page) =>
+    page.node
+      .Resources()
+      .lookup(pdfLib.PDFName.of("XObject"), pdfLib.PDFDict)
+      .values()
+      .map((ref) => ref.toString()),
+  );
+  assert.equal(new Set(formRefs.flat()).size, 1);
+  const filled = await engine.generate({ ...settings, fillLastSheet: true });
+  assert.deepEqual(
+    filled.sheets.map((sheet) => sheet.boxes.length),
+    [4, 4],
+  );
+  assert.match(filled.filename, /qty8/);
+  for (const quantity of [0, -1, 1.5, 10001, NaN])
+    await assert.rejects(
+      engine.generate({ ...settings, quantity }),
+      /Quantity/,
+    );
+  const single = await engine.generate({ ...settings, quantity: undefined });
+  assert.equal(single.sheets.length, 1);
+  assert.equal(single.sheets[0].boxes.length, 4);
+});

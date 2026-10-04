@@ -15,6 +15,7 @@ Demo: <https://pdfnup.gock.net/>
 - Drag-and-drop or file-picker input
 - Validates that the source is a non-empty PDF and lets you select a page to repeat
 - Pages offers sequential N-up, page ranges and row/column reading order
+- Repeat mode accepts a total quantity, leaving unused final cells blank or filling them with extra copies
 - Multi-sheet canvas previews include sheet navigation and per-sheet measurements
 - Rejects encrypted, password-protected, malformed files
 - Accepts PDF files up to 50 MB, subject to the browser's available memory
@@ -52,7 +53,7 @@ Sequential mode preserves the order of entered ranges (for example `3-6, 1`).
 The first selected page determines source-sized or expanded output paper. Mixed
 page sizes fit proportionally in the same cells; exact sizing reports pages that
 cannot fit. Unused cells on the final sheet remain blank. Selection is limited
-to 10,000 pages and output to 1,000 sheets per PDF. Page ranges are never stored
+to 10,000 pages and output to 1,000 sheets per PDF. Page ranges and quantities are never stored
 in remembered settings. Batch mode applies the range to each document.
 
 ## How the layout works
