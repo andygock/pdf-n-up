@@ -86,6 +86,7 @@ export default function App() {
               >
                 <PageOptions
                   source={source}
+                  sourceFile={conversion.sourceFile}
                   options={options}
                   processing={processing}
                   changeOptions={changeOptions}

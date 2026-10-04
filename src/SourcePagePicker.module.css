@@ -1,0 +1,69 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.page {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-alt);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.page[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--surface-selected);
+}
+
+.page:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.page:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.canvasFrame {
+  display: grid;
+  width: 100%;
+  height: 116px;
+  place-items: center;
+}
+
+.canvasFrame canvas {
+  max-width: 100%;
+  max-height: 116px;
+  width: auto;
+  height: auto;
+  background: white;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.status {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+@media (width <= 480px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

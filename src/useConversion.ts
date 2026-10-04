@@ -36,6 +36,7 @@ interface Status {
 }
 
 interface ConversionState {
+  sourceFile: File | null;
   source: SourceMetadata | null;
   output: PdfOutput | null;
   options: ConversionOptions;
@@ -57,6 +58,7 @@ export function useConversion(
   const [preferenceError, setPreferenceError] = useState("");
   const [state, setState] = useState<ConversionState>({
     source: null,
+    sourceFile: null,
     output: null,
     options: savedPreferences ?? DEFAULT_OPTIONS,
     processing: false,
@@ -104,6 +106,7 @@ export function useConversion(
     release();
     update({
       source: null,
+      sourceFile: null,
       output: null,
       processing: false,
       failed: false,
@@ -222,6 +225,7 @@ export function useConversion(
       if (token !== operation.current) return;
       update({
         source,
+        sourceFile: file,
         options:
           current.current.options.scaleMode === "dimensions"
             ? {

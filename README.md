@@ -15,6 +15,7 @@ Demo: <https://pdfnup.gock.net/>
 - Drag-and-drop or file-picker input
 - Validates that the source is a non-empty PDF and lets you select a page to repeat
 - Pages offers sequential N-up, page ranges and row/column reading order
+- Choose a repeat page visually with eight thumbnails at a time, loaded only while Pages is open
 - Repeat mode accepts a total quantity, leaving unused final cells blank or filling them with extra copies
 - Multi-sheet canvas previews include sheet navigation and per-sheet measurements
 - Rejects encrypted, password-protected, malformed files

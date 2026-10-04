@@ -2,7 +2,7 @@ import "./dom.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as pdfLib from "pdf-lib";
-import { act, createElement } from "react";
+import { act, createElement, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import App from "../src/App.tsx";
 import { createArchive } from "../src/archive.ts";
@@ -769,6 +769,58 @@ test("exact dimensions stay linked across edits and source changes", async () =>
     assert.equal(app.value.options.copyWidthMm, 40);
     assert.equal(app.value.options.copyHeightMm, 20);
     assert.equal(app.value.failed, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("lazy modal content mounts only while open and releases on close", async () => {
+  let root,
+    mounts = 0,
+    releases = 0;
+  function Content() {
+    useEffect(() => {
+      mounts++;
+      return () => {
+        releases++;
+      };
+    }, []);
+    return createElement("p", null, "Lazy content");
+  }
+  await act(() => {
+    root = create(
+      createElement(Modal, { title: "Lazy" }, () => createElement(Content)),
+    );
+  });
+  try {
+    assert.equal(mounts, 0);
+    const dialog = root.container.querySelector("dialog");
+    dialog.showModal = () => {
+      dialog.open = true;
+    };
+    await act(() =>
+      root.container.querySelector('[aria-haspopup="dialog"]').click(),
+    );
+    assert.equal(mounts, 1);
+    await act(() => {
+      dialog.open = false;
+      dialog.dispatchEvent(new window.Event("close"));
+    });
+    assert.equal(releases, 1);
+    assert.equal(root.container.textContent.includes("Lazy content"), false);
+  } finally {
+    await act(() => root.unmount());
+  }
+});
+
+test("source thumbnail files are retained only for the active document", async () => {
+  const app = await mountConversion();
+  try {
+    const input = await file();
+    await act(() => app.value.selectFiles([input]));
+    assert.equal(app.value.sourceFile, input);
+    await act(() => app.value.clearDocument());
+    assert.equal(app.value.sourceFile, null);
   } finally {
     await app.close();
   }
