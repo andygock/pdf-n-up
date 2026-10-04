@@ -14,6 +14,7 @@ import {
   getResolvedLayout,
   LAYOUTS,
 } from "./geometry.ts";
+import { readBlob } from "./read-blob.ts";
 import type { ConversionOptions, SourceMetadata } from "./types.ts";
 import { ConversionWorkerClient, WorkerLostError } from "./worker-client.ts";
 
@@ -199,20 +200,26 @@ export function useConversion(
         );
       if (!file.name.toLowerCase().endsWith(".pdf"))
         throw new Error("The selected file does not have a .pdf extension.");
-      readingController.current = new AbortController();
+      const controller = new AbortController();
+      readingController.current = controller;
       const read = async () => {
-        if (!(await detectPdfSignature(file)))
+        if (!(await detectPdfSignature(file, controller.signal)))
           throw new Error(
             "The selected file does not contain a valid PDF header.",
           );
-        return new Uint8Array(await file.arrayBuffer());
+        controller.signal.throwIfAborted();
+        return readBlob(file, controller.signal);
       };
       const bytes = await withDeadline(
         read(),
-        readingController.current.signal,
+        controller.signal,
         15_000,
         "Reading the file timed out. Try selecting it again.",
-      );
+      ).finally(() => {
+        controller.abort();
+        if (readingController.current === controller)
+          readingController.current = null;
+      });
       if (token !== operation.current) return;
       const source = await worker.request(
         "load",

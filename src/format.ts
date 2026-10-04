@@ -1,3 +1,5 @@
+import { readBlob } from "./read-blob.ts";
+
 // PDF dimensions are measured in points (72 points per inch), while the
 // interface presents sizes in mm.
 
@@ -92,8 +94,8 @@ export const formatPageSize = (width: number, height: number) => {
 
 // Extension checks improve error messages, but the PDF magic bytes provide a
 // quick content check before the entire (potentially large) file is loaded.
-export const detectPdfSignature = async (file: File) => {
-  const signatureBuffer = await file.slice(0, 5).arrayBuffer();
+export const detectPdfSignature = async (file: File, signal: AbortSignal) => {
+  const signatureBuffer = await readBlob(file.slice(0, 5), signal);
   const signature = new TextDecoder("ascii").decode(signatureBuffer);
   return signature === "%PDF-";
 };

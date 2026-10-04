@@ -144,11 +144,13 @@ test("React validates file selection and preserves output on multiple-file rejec
 
 test("cancelling a pending file read prevents late validation and worker requests", async () => {
   const app = await mountConversion();
-  let finish;
+  let cancelled = false;
   const input = new File(["%PDF-"], "slow.pdf");
-  input.arrayBuffer = () =>
-    new Promise((resolve) => {
-      finish = resolve;
+  input.stream = () =>
+    new ReadableStream({
+      cancel() {
+        cancelled = true;
+      },
     });
   try {
     let pending;
@@ -161,9 +163,7 @@ test("cancelling a pending file read prevents late validation and worker request
       app.value.clearDocument();
       await pending;
     });
-    await act(async () => {
-      finish(new ArrayBuffer(0));
-    });
+    assert.equal(cancelled, true);
     assert.equal(app.value.status.title, "Ready");
     assert.equal(app.worker.loads, 0);
     assert.equal(app.value.processing, false);
