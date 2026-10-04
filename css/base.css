@@ -1,23 +1,24 @@
 :root {
   color-scheme: dark;
 
-  --background: #1e2127;
-  --surface: #282c34;
-  --surface-alt: #21252b;
-  --surface-hover: #2c313c;
-  --surface-selected: rgb(97 175 239 / 12%);
-  --surface-overlay: rgb(30 33 39 / 94%);
-  --border: #3e4451;
-  --border-strong: #4b5263;
-  --text: #abb2bf;
-  --text-strong: #d7dae0;
-  --text-muted: #7f848e;
-  --primary: #61afef;
-  --primary-hover: #78b9ed;
-  --success: #98c379;
-  --warning: #e5c07b;
-  --danger: #e06c75;
-  --focus-ring: 0 0 0 3px rgb(97 175 239 / 28%);
+  --background: #181b1f;
+  --surface: #24282d;
+  --surface-alt: #1e2227;
+  --surface-hover: #2d333a;
+  --surface-selected: rgb(94 212 194 / 12%);
+  --surface-overlay: rgb(24 27 31 / 96%);
+  --border: #363d45;
+  --border-strong: #687480;
+  --text: #e6e9ed;
+  --text-strong: #f4f6f7;
+  --text-muted: #adb5bf;
+  --primary: #5ed4c2;
+  --primary-hover: #80dfd0;
+  --success: #8dc798;
+  --warning: #e3bc7a;
+  --danger: #ee929a;
+  --focus-ring: 0 0 0 3px rgb(94 212 194 / 28%);
+  --preview-background: #202224;
   --radius-control: 4px;
   --radius-overlay: 8px;
   --space-1: 4px;
@@ -28,8 +29,9 @@
   --space-6: 16px;
   --space-7: 20px;
   --space-8: 24px;
-  --font-size-small: 0.78rem;
-  --font-size-body-small: 0.85rem;
+  --font-size-small: 0.75rem;
+  --font-size-control: 0.8125rem;
+  --font-size-body-small: 0.875rem;
   --shadow: 0 var(--space-2) var(--space-8) rgb(0 0 0 / 24%);
 }
 
@@ -50,15 +52,24 @@ body {
   background: var(--background);
   color: var(--text);
   font-family:
-    Inter,
+    "IBM Plex Sans",
     ui-sans-serif,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: var(--font-size-body-small);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3,
+strong {
+  font-weight: 600;
 }
 
 button,
@@ -80,7 +91,7 @@ code {
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text-strong);
-  font-family: SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-family: inherit;
   font-size: 0.9em;
 }
 

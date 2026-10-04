@@ -17,8 +17,8 @@
   margin-bottom: 6px;
   padding: 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: var(--font-size-small);
+  font-weight: 500;
 }
 
 .layoutOptions {
@@ -44,15 +44,15 @@
   height: 32px;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px;
+  gap: 3px;
+  padding: 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface-alt);
 }
 
 .layoutOption:hover .layoutCard {
-  border-color: var(--primary);
+  border-color: var(--border-strong);
 }
 
 .layoutOption input:checked + .layoutCard {
@@ -70,17 +70,21 @@
 }
 
 .layoutDiagram {
-  width: 18px;
+  width: 14px;
   flex: 0 0 auto;
   fill: none;
   stroke: currentcolor;
   stroke-width: 1.5;
+  color: var(--text-muted);
+}
+
+.layoutOption input:checked + .layoutCard .layoutDiagram {
   color: var(--primary);
 }
 
 .layoutCard strong {
   color: var(--text-strong);
-  font-size: 0.72rem;
+  font-size: var(--font-size-control);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -124,7 +128,7 @@
 .hint {
   margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: var(--font-size-small);
   line-height: 1.45;
 }
 
@@ -148,7 +152,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px var(--space-6);
+  gap: 4px var(--space-4);
   margin-inline: calc(-1 * var(--space-5));
   padding: 4px var(--space-5);
   border-top: 1px solid var(--border);

@@ -19,7 +19,6 @@
   place-items: center;
   border: 1px solid var(--primary);
   color: var(--primary);
-  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.8rem;
 }
 
@@ -68,7 +67,6 @@
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text-strong);
-  font-family: SFMono-Regular, Consolas, monospace;
   font-size: 0.82rem;
   overflow-x: auto;
   white-space: nowrap;

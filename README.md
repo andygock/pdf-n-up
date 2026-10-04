@@ -105,6 +105,12 @@ The application ships version-pinned copies of `pdf-lib`, PDF.js `6.2.108`
 and `fflate` for ZIP packaging.
 All runtime resources load from the same site; there are no CDN requests.
 
+The charcoal interface uses locally bundled IBM Plex Sans (Latin, weights 400,
+500 and 600) with tabular numerals for measurements and counts. Vite emits the
+font files from the pinned `@fontsource/ibm-plex-sans` dependency; no external
+font service is contacted. Its licence is included at
+`public/fonts/ibm-plex-sans-LICENSE.txt`.
+
 ## Run locally
 
 The app uses React, TypeScript and Vite. Node.js 22.13 or newer and pnpm are

@@ -14,7 +14,7 @@ export function drawMeasurements(
   const sy = height / measurements.outputHeight;
   const fontSize = Math.max(11, Math.min(18, width / 45));
   context.save();
-  context.font = `600 ${fontSize}px sans-serif`;
+  context.font = `600 ${fontSize}px "IBM Plex Sans", sans-serif`;
   context.textBaseline = "top";
   const label = (text: string, x: number, y: number) => {
     const textWidth = context.measureText(text).width;
@@ -22,7 +22,7 @@ export function drawMeasurements(
     const top = Math.max(0, Math.min(y, height - fontSize - 8));
     context.fillStyle = "rgba(255,255,255,0.92)";
     context.fillRect(left, top, textWidth + 8, fontSize + 8);
-    context.fillStyle = "#075985";
+    context.fillStyle = "#176b63";
     context.fillText(text, left + 4, top + 4);
   };
   const box = measurements.boxes[0];

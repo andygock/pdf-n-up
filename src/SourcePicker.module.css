@@ -39,8 +39,8 @@
   border: 1px solid var(--primary);
   border-radius: var(--radius-control);
   color: var(--primary);
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: var(--font-size-small);
+  font-weight: 600;
 }
 
 .sourceCopy {
