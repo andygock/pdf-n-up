@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SpacingInputProps {
   id: string;
+  min?: number;
+  max?: number;
+  step?: number;
   disabled: boolean;
   value: number;
   onCommit: (value: number) => void;
@@ -9,11 +12,15 @@ interface SpacingInputProps {
 
 export function SpacingInput({
   id,
+  min = 0,
+  max = 100,
+  step = 0.5,
   disabled,
   value,
   onCommit,
 }: SpacingInputProps) {
   const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
   const commit = () => {
     if (Number(draft) !== value) onCommit(Number(draft));
   };
@@ -23,9 +30,9 @@ export function SpacingInput({
     <input
       id={id}
       type="number"
-      min="0"
-      max="100"
-      step="0.5"
+      min={min}
+      max={max}
+      step={step}
       disabled={disabled}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}

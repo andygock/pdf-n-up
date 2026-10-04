@@ -119,3 +119,34 @@ test("output filenames replace only a final PDF extension", () => {
   assert.equal(makeOutputFilename("draft.v2", 4), "draft.v2_4up.pdf");
   assert.equal(makeOutputFilename("  ", 2), "document_2up.pdf");
 });
+
+test("fixed paper sizes and custom dimensions choose the best orientation", () => {
+  const source = { width: 100, height: 200, layout: LAYOUTS[4] };
+  for (const [paperMode, short, long] of [
+    ["a4", 210, 297],
+    ["a3", 297, 420],
+    ["custom", 120, 180],
+  ]) {
+    const result = getOutputGeometry({
+      ...source,
+      paperMode,
+      paperWidthMm: 120,
+      paperHeightMm: 180,
+    });
+    assert.ok(
+      Math.abs(
+        Math.min(result.outputWidth, result.outputHeight) - (short * 72) / 25.4,
+      ) < 1e-8,
+    );
+    assert.ok(
+      Math.abs(
+        Math.max(result.outputWidth, result.outputHeight) - (long * 72) / 25.4,
+      ) < 1e-8,
+    );
+  }
+  assert.throws(
+    () =>
+      getOutputGeometry({ ...source, paperMode: "custom", paperWidthMm: 0 }),
+    /Custom paper/,
+  );
+});

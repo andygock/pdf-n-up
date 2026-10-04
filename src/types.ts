@@ -4,7 +4,7 @@ export interface Layout {
   readonly rows: number;
 }
 
-export type PaperMode = "expand" | "same";
+export type PaperMode = "expand" | "same" | "a4" | "a3" | "custom";
 
 export type OutputAction = "open" | "save";
 
@@ -20,6 +20,8 @@ export interface ConversionOptions {
   paperMode: PaperMode;
   marginMm?: number;
   gutterMm?: number;
+  paperWidthMm?: number;
+  paperHeightMm?: number;
 }
 
 export interface PageBox {

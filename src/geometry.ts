@@ -94,6 +94,8 @@ export const getOutputGeometry = ({
   paperMode,
   marginMm = 0,
   gutterMm = 0,
+  paperWidthMm = 210,
+  paperHeightMm = 297,
 }: ConversionOptions & { width: number; height: number }) => {
   if (
     ![width, height].every((value) => Number.isFinite(value) && value > 0) ||
@@ -103,7 +105,7 @@ export const getOutputGeometry = ({
         item.columns === layout.columns &&
         item.rows === layout.rows,
     ) ||
-    !["expand", "same"].includes(paperMode)
+    !["expand", "same", "a4", "a3", "custom"].includes(paperMode)
   ) {
     throw new Error("Invalid page dimensions or layout options.");
   }
@@ -126,9 +128,26 @@ export const getOutputGeometry = ({
     };
   }
 
+  const paper =
+    paperMode === "a4"
+      ? [210, 297]
+      : paperMode === "a3"
+        ? [297, 420]
+        : [paperWidthMm, paperHeightMm];
+  if (
+    paperMode === "custom" &&
+    !paper.every(
+      (value) => Number.isFinite(value) && value > 0 && value <= 5080,
+    )
+  )
+    throw new Error(
+      "Custom paper dimensions must be greater than zero and at most 5,080 mm.",
+    );
+  const sheetWidth = paperMode === "same" ? width : (paper[0] * 72) / 25.4;
+  const sheetHeight = paperMode === "same" ? height : (paper[1] * 72) / 25.4;
   const orientations = [
-    { outputWidth: width, outputHeight: height },
-    { outputWidth: height, outputHeight: width },
+    { outputWidth: sheetWidth, outputHeight: sheetHeight },
+    { outputWidth: sheetHeight, outputHeight: sheetWidth },
   ];
 
   const candidates = orientations.map((orientation) => ({

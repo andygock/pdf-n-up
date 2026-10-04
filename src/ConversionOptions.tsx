@@ -84,6 +84,55 @@ export function ConversionOptions({
             <small>Scale copies to fit</small>
           </span>
         </label>
+        {(["a4", "a3", "custom"] as const).map((paperMode) => (
+          <label className={styles.sizeOption} key={paperMode}>
+            <input
+              type="radio"
+              name="paperMode"
+              disabled={processing}
+              checked={options.paperMode === paperMode}
+              onChange={() => void changeOptions({ paperMode })}
+            />
+            <span>
+              <strong>
+                {paperMode === "custom"
+                  ? "Custom size"
+                  : paperMode.toUpperCase()}
+              </strong>
+              <small>Best-fit orientation</small>
+            </span>
+          </label>
+        ))}
+        {options.paperMode === "custom" && (
+          <div className={styles.spacingOptions}>
+            <label htmlFor="paperWidthMm">
+              Width (mm)
+              <SpacingInput
+                id="paperWidthMm"
+                disabled={processing}
+                value={options.paperWidthMm ?? 210}
+                min={0.1}
+                max={5080}
+                onCommit={(paperWidthMm) =>
+                  void changeOptions({ paperWidthMm })
+                }
+              />
+            </label>
+            <label htmlFor="paperHeightMm">
+              Height (mm)
+              <SpacingInput
+                id="paperHeightMm"
+                disabled={processing}
+                value={options.paperHeightMm ?? 297}
+                min={0.1}
+                max={5080}
+                onCommit={(paperHeightMm) =>
+                  void changeOptions({ paperHeightMm })
+                }
+              />
+            </label>
+          </div>
+        )}
       </fieldset>
       <fieldset className={`${styles.optionGroup} ${styles.spacingOptions}`}>
         <legend>Spacing (mm)</legend>
