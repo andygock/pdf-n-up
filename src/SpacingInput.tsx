@@ -22,11 +22,23 @@ export function SpacingInput({
 }: SpacingInputProps) {
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
-  const commit = () => {
-    if (Number(draft) !== value) onCommit(Number(draft));
-  };
-  // Native change committed on blur. Keep an editable draft so typing a
-  // multi-digit margin never starts conversion and disables the field midway.
+  const number = Number(draft);
+  const valid =
+    draft.trim() !== "" &&
+    Number.isFinite(number) &&
+    number >= min &&
+    number <= max &&
+    (step !== 1 || Number.isInteger(number));
+
+  useEffect(() => {
+    if (disabled || !valid || number === value) return;
+
+    // Allow multi-digit edits and keep pending drafts until conversion is idle.
+    // Avoid blur commits: they can disable the next control before its click.
+    const timer = setTimeout(() => onCommit(number), 350);
+    return () => clearTimeout(timer);
+  }, [number, valid, disabled, value, onCommit]);
+
   return (
     <input
       className={ui.control}
@@ -37,11 +49,9 @@ export function SpacingInput({
       step={step}
       disabled={disabled}
       value={draft}
+      aria-invalid={!valid}
+      title={`Enter ${step === 1 ? "a whole number" : "a number"} from ${min} to ${max}. Updates automatically.`}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") commit();
-      }}
     />
   );
 }
