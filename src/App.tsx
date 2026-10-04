@@ -81,6 +81,31 @@ export default function App() {
               processing={processing}
               changeOptions={changeOptions}
             />
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={conversion.rememberSettings}
+                  disabled={processing}
+                  onChange={(event) =>
+                    conversion.setRememberSettings(event.target.checked)
+                  }
+                />
+                Remember settings on this device
+              </label>{" "}
+              <button
+                type="button"
+                disabled={processing}
+                onClick={() => void conversion.resetSettings()}
+              >
+                Reset settings
+              </button>
+              {conversion.preferenceError && (
+                <p role="status">
+                  Could not save preferences: {conversion.preferenceError}
+                </p>
+              )}
+            </div>
             <ConversionFeedback
               source={source}
               output={output}

@@ -14,8 +14,12 @@ import {
   getOutputGeometry,
   getResolvedLayout,
   getSpacing,
-  LAYOUTS,
 } from "./geometry.ts";
+import {
+  DEFAULT_OPTIONS,
+  readPreferences,
+  savePreferences,
+} from "./preferences.ts";
 import { readBlob } from "./read-blob.ts";
 import type {
   ConversionOptions,
@@ -51,19 +55,29 @@ const ready: Status = {
 export function useConversion(
   createWorker = () => new ConversionWorkerClient(),
 ) {
+  const [savedPreferences] = useState(readPreferences);
+  const [rememberSettings, setRememberSettings] = useState(!!savedPreferences);
+  const [preferenceError, setPreferenceError] = useState("");
   const [state, setState] = useState<ConversionState>({
     source: null,
     output: null,
-    options: {
-      layout: LAYOUTS[4],
-      paperMode: "expand",
-      marginMm: 0,
-      gutterMm: 0,
-    },
+    options: savedPreferences ?? DEFAULT_OPTIONS,
     processing: false,
     failed: false,
     status: ready,
   });
+  useEffect(() => {
+    try {
+      savePreferences(rememberSettings ? state.options : null);
+      setPreferenceError("");
+    } catch (error) {
+      setPreferenceError(
+        error instanceof Error
+          ? error.message
+          : "Browser storage is unavailable.",
+      );
+    }
+  }, [rememberSettings, state.options]);
   const current = useRef(state);
   const [worker] = useState(createWorker);
   const operation = useRef(0);
@@ -347,6 +361,13 @@ export function useConversion(
   return {
     ...state,
     details,
+    rememberSettings,
+    setRememberSettings,
+    preferenceError,
+    resetSettings: async () => {
+      setRememberSettings(false);
+      await changeOptions(DEFAULT_OPTIONS);
+    },
     selectFiles,
     selectPage,
     changeOptions,

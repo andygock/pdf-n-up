@@ -27,6 +27,7 @@ Demo: <https://pdfnup.gock.net/>
 - Generates the result entirely in browser memory, using the browser's PDF viewer
   when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
+- Opt in to remember layout settings locally; Reset settings removes saved preferences
 - Toggle measurement overlays on the canvas preview without changing the saved PDF
 - Exact percentage or copy dimensions preserve proportions and report when the sheet is too small
 - Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork

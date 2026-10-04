@@ -605,3 +605,25 @@ test("page selection regenerates output and preserves the loaded document", asyn
     await app.close();
   }
 });
+
+test("reset clears remembered settings and optional sizing choices", async () => {
+  const app = await mountConversion();
+  try {
+    await act(() => app.value.setRememberSettings(true));
+    await act(() =>
+      app.value.changeOptions({
+        scaleMode: "percent",
+        scalePercent: 25,
+        cropMarks: true,
+      }),
+    );
+    assert.ok(localStorage.getItem("pdf-nup.preferences.v1"));
+    await act(() => app.value.resetSettings());
+    assert.equal(app.value.options.scaleMode, "fit");
+    assert.equal(app.value.options.cropMarks, false);
+    assert.equal(app.value.rememberSettings, false);
+    assert.equal(localStorage.getItem("pdf-nup.preferences.v1"), null);
+  } finally {
+    await app.close();
+  }
+});

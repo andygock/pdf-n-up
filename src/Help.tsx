@@ -100,11 +100,12 @@ export function Help({ view }: { view: View }) {
         </article>
 
         <article className={styles.contentSection}>
-          <h2>No persistent history</h2>
+          <h2>Optional settings, no document history</h2>
           <p>
-            The application does not retain conversion history, filenames, file
-            sizes, completion times, source PDFs or generated PDFs in persistent
-            browser storage.
+            You can opt in to remember layout settings on this device and remove
+            them with Reset settings. The application does not retain conversion
+            history, filenames, file sizes, completion times, source PDFs or
+            generated PDFs in persistent browser storage.
           </p>
         </article>
 
