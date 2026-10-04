@@ -192,7 +192,9 @@ export function ConversionOptions({
                 mm
               </label>
             </div>
-            <p className={styles.hint}>Keep the source proportions.</p>
+            <p className={styles.hint}>
+              Width and height stay linked to the source proportions.
+            </p>
           </>
         ) : null}
       </fieldset>

@@ -11,6 +11,7 @@ import {
   getOutputGeometry,
   getResolvedLayout,
   getSpacing,
+  linkCopyDimensions,
 } from "./geometry.ts";
 import {
   DEFAULT_OPTIONS,
@@ -221,7 +222,18 @@ export function useConversion(
         [bytes.buffer],
       );
       if (token !== operation.current) return;
-      update({ source });
+      update({
+        source,
+        options:
+          current.current.options.scaleMode === "dimensions"
+            ? {
+                ...current.current.options,
+                ...linkCopyDimensions(source, {
+                  copyWidthMm: current.current.options.copyWidthMm ?? 90,
+                }),
+              }
+            : current.current.options,
+      });
       await generate(token);
     } catch (error) {
       if (token === operation.current)
@@ -242,7 +254,18 @@ export function useConversion(
     try {
       const source = await worker.request("selectPage", pageNumber);
       if (token !== operation.current) return;
-      update({ source });
+      update({
+        source,
+        options:
+          current.current.options.scaleMode === "dimensions"
+            ? {
+                ...current.current.options,
+                ...linkCopyDimensions(source, {
+                  copyWidthMm: current.current.options.copyWidthMm ?? 90,
+                }),
+              }
+            : current.current.options,
+      });
       await generate(token);
     } catch (error) {
       if (token === operation.current)
@@ -254,7 +277,20 @@ export function useConversion(
 
   const changeOptions = async (patch: Partial<ConversionOptions>) => {
     if (current.current.processing) return;
-    update({ options: { ...current.current.options, ...patch } });
+    const options = { ...current.current.options, ...patch };
+    const source = current.current.source;
+    if (source && options.scaleMode === "dimensions") {
+      Object.assign(
+        options,
+        linkCopyDimensions(
+          source,
+          patch.copyHeightMm !== undefined && patch.copyWidthMm === undefined
+            ? { copyHeightMm: patch.copyHeightMm }
+            : { copyWidthMm: options.copyWidthMm ?? 90 },
+        ),
+      );
+    }
+    update({ options });
     resetOutput();
     // Controlled inputs and conversion use the same options; browser-restored
     // radio values cannot diverge from the applied layout.

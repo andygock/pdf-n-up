@@ -352,3 +352,19 @@ export const getCropMarkLines = (box: PageBox) => {
     }),
   );
 };
+
+// Keep full precision in state; display rounding must not accumulate distortion.
+export const linkCopyDimensions = (
+  source: { width: number; height: number },
+  dimension: { copyWidthMm?: number; copyHeightMm?: number },
+) =>
+  dimension.copyWidthMm !== undefined
+    ? {
+        copyWidthMm: dimension.copyWidthMm,
+        copyHeightMm: (dimension.copyWidthMm * source.height) / source.width,
+      }
+    : {
+        copyWidthMm:
+          ((dimension.copyHeightMm ?? 50) * source.width) / source.height,
+        copyHeightMm: dimension.copyHeightMm ?? 50,
+      };

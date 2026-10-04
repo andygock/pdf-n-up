@@ -375,10 +375,7 @@ test("empty state and navigation use accessible DOM controls", async () => {
     assert.equal(query("#downloadOutputButton"), null);
     assert.equal(query("#statusBox"), null);
     assert.equal(query('input[name="layout"][value="4"]').checked, true);
-    assert.equal(
-      query('input[name="paperMode"][value="expand"]').checked,
-      true,
-    );
+    assert.equal(query('select[aria-label="Output paper"]').value, "expand");
     for (const view of ["privacy", "guide", "convert"]) {
       await act(async () => {
         query(`footer a[data-view="${view}"]`).click();
@@ -510,7 +507,7 @@ test("dropping converts and replaces PDFs with a save action in native mode", as
   }
 });
 
-test("spacing drafts commit on blur and Enter through DOM events", async () => {
+test("spacing drafts commit after an idle delay through DOM events", async () => {
   let root;
   const commits = [];
   await act(() => {
@@ -535,18 +532,14 @@ test("spacing drafts commit on blur and Enter through DOM events", async () => {
       input.dispatchEvent(new window.Event("input", { bubbles: true }));
     });
     assert.deepEqual(commits, []);
-    await act(() => input.blur());
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
     assert.deepEqual(commits, [12.5]);
     await act(() => {
       input.focus();
       setValue.call(input, "20");
       input.dispatchEvent(new window.Event("input", { bubbles: true }));
     });
-    await act(() =>
-      input.dispatchEvent(
-        new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
-      ),
-    );
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
     assert.deepEqual(commits, [12.5, 20]);
   } finally {
     await act(() => root.unmount());
@@ -758,5 +751,25 @@ test("multiple file drops queue a batch through the app", async () => {
   } finally {
     await act(() => root.unmount());
     window.history.replaceState(null, "", "/");
+  }
+});
+
+test("exact dimensions stay linked across edits and source changes", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file(100, 200)]));
+    await act(() =>
+      app.value.changeOptions({ scaleMode: "dimensions", copyWidthMm: 30 }),
+    );
+    assert.equal(app.value.options.copyHeightMm, 60);
+    assert.equal(app.value.failed, false);
+    await act(() => app.value.changeOptions({ copyHeightMm: 80 }));
+    assert.equal(app.value.options.copyWidthMm, 40);
+    await act(async () => app.value.selectFiles([await file(200, 100)]));
+    assert.equal(app.value.options.copyWidthMm, 40);
+    assert.equal(app.value.options.copyHeightMm, 20);
+    assert.equal(app.value.failed, false);
+  } finally {
+    await app.close();
   }
 });
