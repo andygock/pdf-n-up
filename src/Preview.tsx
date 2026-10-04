@@ -9,6 +9,7 @@ export interface PreviewProps {
   active: boolean;
   nativeViewer?: boolean;
   showMeasurements?: boolean;
+  pageNumber?: number;
 }
 
 export function Preview({
@@ -16,16 +17,20 @@ export function Preview({
   active,
   nativeViewer = false,
   showMeasurements = false,
+  pageNumber = 1,
 }: PreviewProps) {
   const canvasOutput = useMemo(
     () =>
       output
         ? {
             ...output,
-            measurements: showMeasurements ? output.measurements : undefined,
+            previewPage: pageNumber,
+            measurements: showMeasurements
+              ? (output.sheets?.[pageNumber - 1] ?? output.measurements)
+              : undefined,
           }
         : null,
-    [output, showMeasurements],
+    [output, showMeasurements, pageNumber],
   );
   if (!nativeViewer || showMeasurements)
     return <CanvasPreview output={canvasOutput} active={active} />;

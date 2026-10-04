@@ -265,3 +265,41 @@ test("resizing and hiding reuse the document, while replacement and disposal rel
   controller.cancel();
   assert.equal(lib.stats.destroyed, 1);
 });
+
+test("sheet navigation reuses the parsed PDF and requests the selected page", async () => {
+  const pages = [];
+  let parses = 0,
+    destroys = 0;
+  const lib = {
+    getDocument: () => {
+      parses++;
+      return {
+        destroy: async () => {
+          destroys++;
+        },
+        promise: Promise.resolve({
+          getPage: async (number) => {
+            pages.push(number);
+            return {
+              getViewport: ({ scale }) => ({
+                width: 200 * scale,
+                height: 300 * scale,
+              }),
+              render: () => ({ promise: Promise.resolve(), cancel() {} }),
+            };
+          },
+        }),
+      };
+    },
+  };
+  const { controller, currentOutput } = setup({ loadLibrary: async () => lib });
+  controller.update(currentOutput, true);
+  await controller.render();
+  controller.update({ ...currentOutput, previewPage: 2 }, true);
+  await controller.render();
+  assert.equal(pages.at(-1), 2);
+  assert.equal(parses, 1);
+  assert.equal(destroys, 0);
+  controller.cancel();
+  assert.equal(destroys, 1);
+});

@@ -108,19 +108,21 @@ export function BatchPanel({
           {batch.entries.map((entry) => (
             <li key={entry.id}>
               <strong>{entry.file.name}</strong>
-              <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
-                Page{" "}
-                <SpacingInput
-                  key={`${entry.id}-${entry.file.name}`}
-                  id={`batchPage${entry.id}`}
-                  value={entry.pageNumber}
-                  min={1}
-                  max={100000}
-                  step={1}
-                  disabled={disabled}
-                  onCommit={(page) => batch.setPage(entry.id, page)}
-                />
-              </label>
+              {options.mode !== "sequence" && (
+                <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
+                  Page{" "}
+                  <SpacingInput
+                    key={`${entry.id}-${entry.file.name}`}
+                    id={`batchPage${entry.id}`}
+                    value={entry.pageNumber}
+                    min={1}
+                    max={100000}
+                    step={1}
+                    disabled={disabled}
+                    onCommit={(page) => batch.setPage(entry.id, page)}
+                  />
+                </label>
+              )}
               <span className={styles.status} data-status={entry.status}>
                 {entry.status}
               </span>

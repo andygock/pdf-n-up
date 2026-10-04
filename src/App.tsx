@@ -8,8 +8,8 @@ import { DropOverlay } from "./DropOverlay.tsx";
 import { Help } from "./Help.tsx";
 import { OutputPanel } from "./OutputPanel.tsx";
 import { PageHeading } from "./PageHeading.tsx";
+import { PageOptions } from "./PageOptions.tsx";
 import { SourcePicker } from "./SourcePicker.tsx";
-import { SpacingInput } from "./SpacingInput.tsx";
 import ui from "./ui.module.css";
 import { useBatch } from "./useBatch.ts";
 import { useConversion } from "./useConversion.ts";
@@ -84,20 +84,13 @@ export default function App() {
                 processing={processing}
                 changeOptions={changeOptions}
               >
-                {source && source.pageCount > 1 && (
-                  <label className={ui.field} htmlFor="sourcePage">
-                    Page to repeat (1–{source.pageCount}){" "}
-                    <SpacingInput
-                      id="sourcePage"
-                      min={1}
-                      max={source.pageCount}
-                      step={1}
-                      value={source.pageNumber}
-                      disabled={processing}
-                      onCommit={(page) => void conversion.selectPage(page)}
-                    />
-                  </label>
-                )}
+                <PageOptions
+                  source={source}
+                  options={options}
+                  processing={processing}
+                  changeOptions={changeOptions}
+                  selectPage={conversion.selectPage}
+                />
                 <div className={styles.preferences}>
                   <label className={ui.checkbox}>
                     <input

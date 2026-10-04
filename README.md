@@ -1,7 +1,7 @@
 # PDF N-Up
 
 PDF N-Up is a small, client-side web app that arranges repeated copies of a
-single PDF page on one sheet. It is useful for preparing print-ready sheets
+single PDF page on one sheet, or imposes sequential pages across multiple sheets. It is useful for preparing print-ready sheets
 while keeping the source page's visual content in PDF form rather than
 rasterising it.
 
@@ -14,6 +14,8 @@ Demo: <https://pdfnup.gock.net/>
 
 - Drag-and-drop or file-picker input
 - Validates that the source is a non-empty PDF and lets you select a page to repeat
+- Pages offers sequential N-up, page ranges and row/column reading order
+- Multi-sheet canvas previews include sheet navigation and per-sheet measurements
 - Rejects encrypted, password-protected, malformed files
 - Accepts PDF files up to 50 MB, subject to the browser's available memory
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3) and 16-up (4×4)
@@ -45,6 +47,13 @@ Demo: <https://pdfnup.gock.net/>
 Interactive PDF features are outside the current imposition pipeline. Links,
 annotations and form controls are not copied to the output, although their
 visible appearances may remain part of the page content.
+
+Sequential mode preserves the order of entered ranges (for example `3-6, 1`).
+The first selected page determines source-sized or expanded output paper. Mixed
+page sizes fit proportionally in the same cells; exact sizing reports pages that
+cannot fit. Unused cells on the final sheet remain blank. Selection is limited
+to 10,000 pages and output to 1,000 sheets per PDF. Page ranges are never stored
+in remembered settings. Batch mode applies the range to each document.
 
 ## How the layout works
 

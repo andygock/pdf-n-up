@@ -25,7 +25,15 @@ export interface Measurements {
   gutter: number;
 }
 
+export interface OutputSheet extends Measurements {
+  capacity: number;
+  scales: number[];
+  sourcePages: number[];
+}
+
 export interface PdfOutput {
+  sheets?: OutputSheet[];
+  previewPage?: number;
   measurements?: Measurements;
   blob: Blob;
   url: string;
@@ -35,6 +43,9 @@ export interface PdfOutput {
 
 export interface ConversionOptions {
   layout: Layout;
+  mode?: "repeat" | "sequence";
+  pageRange?: string;
+  pageOrder?: "rows" | "columns";
   autoLayout?: boolean;
   rotateCopies?: boolean;
   paperMode: PaperMode;
@@ -82,6 +93,8 @@ export interface SourceMetadata extends VisiblePageGeometry, FileMetadata {
 }
 
 export interface ConversionResult {
+  sheets: OutputSheet[];
+  warnings: string[];
   bytes: Uint8Array<ArrayBuffer>;
   filename: string;
 }

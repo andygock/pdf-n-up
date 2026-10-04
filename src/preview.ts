@@ -120,7 +120,7 @@ export const createPreviewController = (
         loadingTask = null;
       }
       if (!current()) return;
-      const page = await pdfDocument.getPage(1);
+      const page = await pdfDocument.getPage(renderedOutput.previewPage ?? 1);
       if (!current()) return;
       const base = page.getViewport({ scale: 1 });
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -193,7 +193,8 @@ export const createPreviewController = (
   const update = (nextOutput: PdfOutput | null, nextActive: boolean) => {
     const changed = output !== nextOutput;
     if (changed) {
-      cancel();
+      if (output?.blob !== nextOutput?.blob) cancel();
+      else cancelRender();
       elements.pdfPreview.width = 0;
       elements.pdfPreview.height = 0;
       elements.pdfPreview.hidden = true;

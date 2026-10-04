@@ -4,6 +4,9 @@ import type { ConversionOptions } from "./types.ts";
 export const PREFERENCES_KEY = "pdf-nup.preferences.v1";
 export const DEFAULT_OPTIONS: ConversionOptions = {
   layout: LAYOUTS[4],
+  mode: "repeat",
+  pageRange: "",
+  pageOrder: "rows",
   autoLayout: false,
   rotateCopies: false,
   paperMode: "expand",
@@ -95,6 +98,19 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     if (data[key] !== undefined && typeof data[key] !== "boolean") return null;
     result[key] = data[key] === true;
   }
+  if (
+    data.mode !== undefined &&
+    !["repeat", "sequence"].includes(data.mode as string)
+  )
+    return null;
+  if (
+    data.pageOrder !== undefined &&
+    !["rows", "columns"].includes(data.pageOrder as string)
+  )
+    return null;
+  result.mode = data.mode === "sequence" ? "sequence" : "repeat";
+  result.pageOrder = data.pageOrder === "columns" ? "columns" : "rows";
+  // Page ranges belong to the current document and are never persisted.
   result.cropMarks = data.cropMarks === true;
   result.scaleMode = data.scaleMode as ConversionOptions["scaleMode"];
   return result;

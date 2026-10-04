@@ -37,7 +37,7 @@ export async function processBatch(
         [bytes.buffer],
       );
       signal.throwIfAborted();
-      if (entry.pageNumber !== 1)
+      if (options.mode !== "sequence" && entry.pageNumber !== 1)
         metadata = await worker.request("selectPage", entry.pageNumber);
       signal.throwIfAborted();
       const output = await worker.request("generate", options);
@@ -48,7 +48,7 @@ export async function processBatch(
       report(entry.id, {
         status: "ready",
         output,
-        warnings: metadata.warnings,
+        warnings: output.warnings ?? metadata.warnings,
       });
     } catch (error) {
       if (signal.aborted) break;

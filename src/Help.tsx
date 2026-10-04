@@ -12,10 +12,11 @@ export function Help({ view }: { view: View }) {
         <div className={styles.infoGrid}>
           <article className={styles.infoCard}>
             <div className={styles.infoNumber}>01</div>
-            <h2>Select one page</h2>
+            <h2>Choose your pages</h2>
             <p>
-              Choose a PDF, then select the page to repeat. Encrypted,
-              password-protected and malformed files are rejected.
+              Choose a PDF, then use Pages to repeat one page or arrange
+              sequential pages. Encrypted, password-protected and malformed
+              files are rejected.
             </p>
           </article>
 
@@ -23,8 +24,10 @@ export function Help({ view }: { view: View }) {
             <div className={styles.infoNumber}>02</div>
             <h2>Arrange the copies</h2>
             <p>
-              The page is embedded once and repeated in your chosen grid. Vector
-              content, text and images remain embedded as PDF content.
+              Repeat a page or fill sheets sequentially in row or column order.
+              Page ranges follow the order entered; unused final cells stay
+              blank. Vector content, text and images remain embedded as PDF
+              content.
             </p>
           </article>
 

@@ -7,11 +7,9 @@ import {
 } from "./format.ts";
 import {
   assertCompatibleOutputSize,
-  getCopyBoxes,
   getFitRecovery,
   getOutputGeometry,
   getResolvedLayout,
-  getSpacing,
   linkCopyDimensions,
 } from "./geometry.ts";
 import {
@@ -148,7 +146,8 @@ export function useConversion(
     const { source, options } = current.current;
     if (!source) return;
     // Ordinary option errors keep the validated source available for recovery.
-    assertCompatibleOutputSize(getOutputGeometry({ ...source, ...options }));
+    if (options.mode !== "sequence")
+      assertCompatibleOutputSize(getOutputGeometry({ ...source, ...options }));
     update({
       status: {
         title: "Creating output",
@@ -161,13 +160,11 @@ export function useConversion(
     if (token !== operation.current) return;
     const blob = new Blob([result.bytes], { type: "application/pdf" });
     update({
+      source: { ...source, warnings: result.warnings },
       output: {
         blob,
-        measurements: {
-          ...getOutputGeometry({ ...source, ...options }),
-          ...getSpacing(options),
-          boxes: getCopyBoxes({ ...source, ...options }),
-        },
+        sheets: result.sheets,
+        measurements: result.sheets[0],
         url: URL.createObjectURL(blob),
         filename: result.filename,
         size: blob.size,
@@ -371,8 +368,22 @@ export function useConversion(
       // the actionable error instead of leaving stale output dimensions.
     }
   }
+  const sheets = state.output?.sheets;
+  if (sheets?.length && state.options.mode === "sequence") {
+    const scales = sheets.flatMap((sheet) => sheet.scales);
+    const min = Math.min(...scales) * 100,
+      max = Math.max(...scales) * 100;
+    details = {
+      outputSize: formatPageSize(sheets[0].outputWidth, sheets[0].outputHeight),
+      layout: `${sheets[0].capacity}-up / ${sheets.length} sheets`,
+      scale:
+        Math.abs(max - min) < 0.0001
+          ? `${Number(min.toFixed(2))}%`
+          : `${Number(min.toFixed(2))}-${Number(max.toFixed(2))}%`,
+    };
+  }
   let recovery: ReturnType<typeof getFitRecovery> = null;
-  if (state.failed && state.source) {
+  if (state.failed && state.source && state.options.mode !== "sequence") {
     try {
       recovery = getFitRecovery({ ...state.source, ...state.options });
     } catch {

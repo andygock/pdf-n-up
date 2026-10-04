@@ -6,13 +6,22 @@ import {
   getCropMarkLines,
   getOutputGeometry,
   getRotatedDrawOptions,
+  getSpacing,
   getVisiblePageGeometry,
+  linkCopyDimensions,
   makeOutputFilename,
 } from "./geometry.ts";
+import {
+  fitPageToCell,
+  getCellBoxes,
+  MAX_OUTPUT_SHEETS,
+  parsePageRange,
+} from "./imposition.ts";
 import type {
   ConversionOptions,
   ConversionResult,
   FileMetadata,
+  OutputSheet,
   SourceMetadata,
 } from "./types.ts";
 
@@ -27,6 +36,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
     document: PDFDocument,
     { name, size }: FileMetadata,
     pageNumber: number,
+    retain = true,
   ): SourceMetadata => {
     if (
       !Number.isInteger(pageNumber) ||
@@ -64,7 +74,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
     };
     // Output compatibility belongs to generate(), so changing paper mode can
     // recover from an oversized layout without selecting the source again.
-    source = { page, document, ...metadata };
+    if (retain) source = { page, document, ...metadata };
     return metadata;
   };
 
@@ -106,17 +116,50 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
 
     async generate(options: ConversionOptions): Promise<ConversionResult> {
       if (!source) throw new Error("Select a PDF before converting.");
-      const { outputWidth, outputHeight, scale, layout, rotation } =
-        getOutputGeometry({
-          ...source,
-          ...options,
-        });
-      assertCompatibleOutputSize({ outputWidth, outputHeight });
+      const original = source;
+      if (
+        options.mode !== undefined &&
+        !["repeat", "sequence"].includes(options.mode)
+      )
+        throw new Error("Invalid page arrangement mode.");
+      if (
+        options.pageOrder !== undefined &&
+        !["rows", "columns"].includes(options.pageOrder)
+      )
+        throw new Error("Invalid page order.");
+      const sequence = options.mode === "sequence";
+      const selectedPages = sequence
+        ? parsePageRange(options.pageRange ?? "", original.pageCount)
+        : [original.pageNumber];
+      const reference = sequence
+        ? selectPage(original.document, original, selectedPages[0], false)
+        : original;
+      const layoutOptions =
+        sequence && options.scaleMode === "dimensions"
+          ? {
+              ...options,
+              ...linkCopyDimensions(reference, {
+                copyWidthMm: options.copyWidthMm ?? 90,
+              }),
+            }
+          : options;
+      const geometry = getOutputGeometry({ ...reference, ...layoutOptions });
+      const { outputWidth, outputHeight, scale, layout, rotation } = geometry;
+      assertCompatibleOutputSize(geometry);
       const { copies } = layout;
+      const pageNumbers = sequence
+        ? selectedPages
+        : Array.from({ length: copies }, () => original.pageNumber);
+      if (Math.ceil(pageNumbers.length / copies) > MAX_OUTPUT_SHEETS)
+        throw new Error(
+          "Output is limited to 1,000 sheets. Select fewer pages or more copies per sheet.",
+        );
       const filename = makeOutputFilename(
-        source.pageCount > 1
-          ? `${source.name.replace(/\.pdf$/i, "")}_page${source.pageNumber}.pdf`
-          : source.name,
+        sequence
+          ? `${original.name.replace(/\.pdf$/i, "")}_pages.pdf`
+          : original.pageCount > 1
+            ? `${original.name.replace(/\.pdf$/i, "")}_page${original.pageNumber}.pdf`
+            : original.name,
         copies,
       );
       const output = await pdfLib.PDFDocument.create();
@@ -124,64 +167,122 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       output.setSubject(`${copies}-up PDF layout`);
       output.setCreator("PDF N-up browser application");
       output.setProducer("pdf-lib");
-      const outputPage = output.addPage([outputWidth, outputHeight]);
-      const { x, y, width, height } = source.cropBox;
-      // Missing /Contents is valid for a blank PDF page. Avoid asking pdf-lib
-      // to embed it: there is no visual content to repeat.
-      const contents = source.page.node.Contents();
-      const blank =
-        !contents ||
-        (contents instanceof pdfLib.PDFArray && contents.size() === 0);
-      if (!blank) {
-        const embedded = await output.embedPage(source.page, {
-          left: x,
-          bottom: y,
-          right: x + width,
-          top: y + height,
-        });
-        const group = source.page.node.get(pdfLib.PDFName.of("Group"));
-        if (group) {
-          // pdf-lib omits page transparency groups when creating Form XObjects.
-          // Materialise the form before restoring the group, copying indirect
-          // colour-space references into the destination document as well.
-          await embedded.embed();
-          const form = output.context.lookup(embedded.ref, pdfLib.PDFStream);
-          form.dict.set(
-            pdfLib.PDFName.of("Group"),
-            pdfLib.PDFObjectCopier.for(
-              source.document.context,
-              output.context,
-            ).copy(group),
-          );
-        }
-        for (const box of getCopyBoxes({ ...source, ...options })) {
-          const draw = getRotatedDrawOptions({
-            left: box.x,
-            bottom: box.y,
-            sourceWidth: width,
-            sourceHeight: height,
-            // Embedded streams retain source units; output pages use points.
-            scale: scale * source.userUnit,
-            rotation: source.rotation + rotation,
-          });
-          outputPage.drawPage(embedded, {
-            x: draw.x,
-            y: draw.y,
-            xScale: draw.xScale,
-            yScale: draw.yScale,
-            rotate: pdfLib.degrees(draw.degrees),
-          });
-        }
-      }
-      if (options.cropMarks) {
-        for (const box of getCopyBoxes({ ...source, ...options })) {
-          for (const line of getCropMarkLines(box))
-            outputPage.drawLine({
-              ...line,
-              thickness: 0.25,
-              color: pdfLib.rgb(0, 0, 0),
+      const sheets: OutputSheet[] = [];
+      const warnings = new Set<string>();
+      const cells = getCellBoxes(geometry, options);
+      const repeatBoxes = sequence
+        ? []
+        : getCopyBoxes({ ...reference, ...layoutOptions });
+      const embeddedPages = new Map<number, PDFLib.PDFEmbeddedPage | null>();
+      const pageInfo = new Map<number, SourceMetadata>();
+      for (let offset = 0; offset < pageNumbers.length; offset += copies) {
+        const outputPage = output.addPage([outputWidth, outputHeight]);
+        const sheet: OutputSheet = {
+          outputWidth,
+          outputHeight,
+          ...getSpacing(options),
+          boxes: [],
+          scales: [],
+          sourcePages: [],
+          capacity: copies,
+        };
+        for (
+          let slot = 0;
+          slot < copies && offset + slot < pageNumbers.length;
+          slot++
+        ) {
+          const pageNumber = pageNumbers[offset + slot];
+          let metadata = pageInfo.get(pageNumber);
+          if (!metadata) {
+            metadata = selectPage(
+              original.document,
+              original,
+              pageNumber,
+              false,
+            );
+            pageInfo.set(pageNumber, metadata);
+          }
+          for (const warning of metadata.warnings) warnings.add(warning);
+          let placement: ReturnType<typeof fitPageToCell>;
+          try {
+            placement = sequence
+              ? fitPageToCell(metadata, cells[slot], options, rotation)
+              : { scale, box: repeatBoxes[slot] };
+          } catch (error) {
+            throw new Error(
+              `Source page ${pageNumber}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+          const page = original.document.getPage(pageNumber - 1);
+          const { x, y, width, height } = metadata.cropBox;
+          if (!embeddedPages.has(pageNumber)) {
+            // Missing /Contents is valid for a blank PDF page. Avoid asking pdf-lib
+            // to embed it: there is no visual content to repeat.
+            const contents = page.node.Contents();
+            const blank =
+              !contents ||
+              (contents instanceof pdfLib.PDFArray && contents.size() === 0);
+            let embedded: PDFLib.PDFEmbeddedPage | null = null;
+            if (!blank) {
+              embedded = await output.embedPage(page, {
+                left: x,
+                bottom: y,
+                right: x + width,
+                top: y + height,
+              });
+              const group = page.node.get(pdfLib.PDFName.of("Group"));
+              if (group) {
+                // pdf-lib omits page transparency groups when creating Form XObjects.
+                // Materialise the form before restoring the group, copying indirect
+                // colour-space references into the destination document as well.
+                await embedded.embed();
+                const form = output.context.lookup(
+                  embedded.ref,
+                  pdfLib.PDFStream,
+                );
+                form.dict.set(
+                  pdfLib.PDFName.of("Group"),
+                  pdfLib.PDFObjectCopier.for(
+                    original.document.context,
+                    output.context,
+                  ).copy(group),
+                );
+              }
+            }
+            embeddedPages.set(pageNumber, embedded);
+          }
+          const embedded = embeddedPages.get(pageNumber);
+          if (embedded) {
+            const draw = getRotatedDrawOptions({
+              left: placement.box.x,
+              bottom: placement.box.y,
+              sourceWidth: width,
+              sourceHeight: height,
+              // Embedded streams retain source units; output pages use points.
+              scale: placement.scale * metadata.userUnit,
+              rotation: metadata.rotation + rotation,
             });
+            outputPage.drawPage(embedded, {
+              x: draw.x,
+              y: draw.y,
+              xScale: draw.xScale,
+              yScale: draw.yScale,
+              rotate: pdfLib.degrees(draw.degrees),
+            });
+          }
+          if (options.cropMarks) {
+            for (const line of getCropMarkLines(placement.box))
+              outputPage.drawLine({
+                ...line,
+                thickness: 0.25,
+                color: pdfLib.rgb(0, 0, 0),
+              });
+          }
+          sheet.boxes.push(placement.box);
+          sheet.scales.push(placement.scale);
+          sheet.sourcePages.push(pageNumber);
         }
+        sheets.push(sheet);
       }
       const bytes = await output.save({
         useObjectStreams: true,
@@ -194,7 +295,12 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         );
       // pdf-lib serialises into an ordinary ArrayBuffer; its declarations predate
       // TypeScript''s distinction between ordinary and shared typed-array buffers.
-      return { bytes: bytes as Uint8Array<ArrayBuffer>, filename };
+      return {
+        bytes: bytes as Uint8Array<ArrayBuffer>,
+        filename,
+        sheets,
+        warnings: [...warnings],
+      };
     },
   };
 };

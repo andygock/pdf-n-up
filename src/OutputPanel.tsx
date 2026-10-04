@@ -12,6 +12,14 @@ interface OutputPanelProps {
 }
 export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
   const [showMeasurements, setShowMeasurements] = useState(false);
+  const [selection, setSelection] = useState<{ url?: string; page: number }>({
+    page: 1,
+  });
+  const pageCount = output?.sheets?.length ?? 1;
+  const pageNumber =
+    selection.url === output?.url ? Math.min(selection.page, pageCount) : 1;
+  const setPageNumber = (page: number) =>
+    setSelection({ url: output?.url, page });
   const nativeViewer = navigator.pdfViewerEnabled === true;
   return (
     <article
@@ -30,6 +38,31 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           </p>
         </div>
         <div className={styles.outputActions}>
+          {pageCount > 1 && (!nativeViewer || showMeasurements) && (
+            <nav className={styles.outputActions} aria-label="Output sheets">
+              <button
+                type="button"
+                className={`${ui.button} ${ui.compact}`}
+                disabled={pageNumber <= 1}
+                onClick={() => setPageNumber(pageNumber - 1)}
+                aria-label="Previous sheet"
+              >
+                Previous
+              </button>
+              <span className={styles.panelSubtitle}>
+                Sheet {pageNumber} / {pageCount}
+              </span>
+              <button
+                type="button"
+                className={`${ui.button} ${ui.compact}`}
+                disabled={pageNumber >= pageCount}
+                onClick={() => setPageNumber(pageNumber + 1)}
+                aria-label="Next sheet"
+              >
+                Next
+              </button>
+            </nav>
+          )}
           {output?.measurements && (
             <label
               className={ui.checkbox}
@@ -69,6 +102,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
         active={active}
         nativeViewer={nativeViewer}
         showMeasurements={showMeasurements}
+        pageNumber={pageNumber}
       />
       <p className={styles.previewNote}>
         {nativeViewer && !showMeasurements
