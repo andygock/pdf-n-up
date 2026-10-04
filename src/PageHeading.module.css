@@ -19,14 +19,6 @@
   font-size: 0.84rem;
 }
 
-.compactHeading {
-  margin-bottom: var(--space-3);
-}
-
-.compactHeading .pageTitle {
-  font-size: 1rem;
-}
-
 @media (width <= 640px) {
   .pageHeading {
     align-items: flex-start;

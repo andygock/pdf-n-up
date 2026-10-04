@@ -18,6 +18,18 @@
   background: var(--surface-hover);
 }
 
+.sourceBar.compact {
+  flex: 1;
+  padding: 0 0 0 var(--space-6);
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+}
+
+.compact .fileSymbol {
+  display: none;
+}
+
 .fileSymbol {
   display: grid;
   width: 38px;
@@ -74,5 +86,15 @@
   .documentActions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .sourceBar.compact {
+    flex-basis: 100%;
+    padding: 0;
+    border: 0;
+  }
+
+  .compact .sourceCopy {
+    flex-basis: 100%;
   }
 }

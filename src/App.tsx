@@ -32,26 +32,35 @@ export default function App() {
   return (
     <div className={styles.appShell}>
       {dragging && <DropOverlay hasSource={!!source} />}
-      <AppHeader />
+      <AppHeader>
+        {source && view === "convert" && (
+          <SourcePicker
+            source={source}
+            processing={processing}
+            dragging={dragging}
+            onSelectFiles={selectFiles}
+            onClear={clearDocument}
+            compact
+          />
+        )}
+      </AppHeader>
       <main className={styles.main}>
-        <PageHeading
-          view={view}
-          compact={view === "convert" && !!source}
-          headingRef={headingRef}
-        />
+        <PageHeading view={view} headingRef={headingRef} />
         <section
           hidden={view !== "convert"}
           id="view-convert"
           data-view-container="convert"
         >
           <div className={styles.converter}>
-            <SourcePicker
-              source={source}
-              processing={processing}
-              dragging={dragging}
-              onSelectFiles={selectFiles}
-              onClear={clearDocument}
-            />
+            {!source && (
+              <SourcePicker
+                source={source}
+                processing={processing}
+                dragging={dragging}
+                onSelectFiles={selectFiles}
+                onClear={clearDocument}
+              />
+            )}
             <ConversionOptions
               options={options}
               processing={processing}

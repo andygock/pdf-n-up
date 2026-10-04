@@ -6,14 +6,13 @@ import type { View } from "./useView.ts";
 
 interface PageHeadingProps {
   view: View;
-  compact: boolean;
   headingRef: Ref<HTMLHeadingElement>;
 }
-export function PageHeading({ view, compact, headingRef }: PageHeadingProps) {
+export function PageHeading({ view, headingRef }: PageHeadingProps) {
+  if (view === "convert") return null;
+
   return (
-    <div
-      className={`${styles.pageHeading} ${compact ? styles.compactHeading : ""}`}
-    >
+    <div className={styles.pageHeading}>
       <div>
         <h1
           className={styles.pageTitle}
@@ -23,21 +22,17 @@ export function PageHeading({ view, compact, headingRef }: PageHeadingProps) {
         >
           {pageTitles[view].title}
         </h1>
-        {!compact && (
-          <p className={styles.pageDescription} id="pageDescription">
-            {pageTitles[view].description}
-          </p>
-        )}
+        <p className={styles.pageDescription} id="pageDescription">
+          {pageTitles[view].description}
+        </p>
       </div>
-      {view !== "convert" && (
-        <a
-          className={`${ui.button} ${ui.compact}`}
-          href="#view-convert"
-          data-view="convert"
-        >
-          ← Back to PDF
-        </a>
-      )}
+      <a
+        className={`${ui.button} ${ui.compact}`}
+        href="#view-convert"
+        data-view="convert"
+      >
+        ← Back to PDF
+      </a>
     </div>
   );
 }

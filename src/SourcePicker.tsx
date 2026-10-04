@@ -5,6 +5,7 @@ import type { SourceMetadata } from "./types.ts";
 import ui from "./ui.module.css";
 
 interface SourcePickerProps {
+  compact?: boolean;
   source: SourceMetadata | null;
   processing: boolean;
   dragging: boolean;
@@ -12,6 +13,7 @@ interface SourcePickerProps {
   onClear: () => void;
 }
 export function SourcePicker({
+  compact = false,
   source,
   processing,
   dragging,
@@ -25,7 +27,7 @@ export function SourcePicker({
   };
   return (
     <section
-      className={`${styles.sourceBar} ${dragging ? styles.dragging : ""} ${source ? styles.hasFile : ""}`}
+      className={`${styles.sourceBar} ${dragging ? styles.dragging : ""} ${source ? styles.hasFile : ""} ${compact ? styles.compact : ""}`}
       id="dropZone"
       aria-label="Source PDF"
     >
@@ -46,7 +48,9 @@ export function SourcePicker({
         PDF
       </div>
       <div className={styles.sourceCopy}>
-        <h2 id="dropTitle">{source?.name ?? "Drop a PDF anywhere"}</h2>
+        <h2 id="dropTitle" title={source?.name}>
+          {source?.name ?? "Drop a PDF anywhere"}
+        </h2>
         <p id="dropDescription">
           {source
             ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · one page`

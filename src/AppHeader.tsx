@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import styles from "./AppHeader.module.css";
 
-export function AppHeader() {
+export function AppHeader({ children }: { children?: ReactNode }) {
   return (
     <header className={styles.topbar}>
       <a
@@ -11,6 +12,7 @@ export function AppHeader() {
         <img className={styles.brandMark} src="./icon.svg" alt="" />
         <span className={styles.brandTitle}>PDF N-up</span>
       </a>
+      {children}
     </header>
   );
 }
