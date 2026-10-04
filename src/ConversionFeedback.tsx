@@ -1,5 +1,6 @@
 import styles from "./ConversionFeedback.module.css";
 import { formatBytes, formatPageSize } from "./format.ts";
+import { Modal } from "./Modal.tsx";
 import ui from "./ui.module.css";
 import type { useConversion } from "./useConversion.ts";
 
@@ -68,8 +69,10 @@ export function ConversionFeedback({
             </button>
           )}
           {source && (
-            <details className={styles.sourceDetails} id="sourceDetails">
-              <summary>Document details</summary>
+            <Modal
+              title="Document details"
+              triggerClassName={styles.detailsButton}
+            >
               <dl className={styles.summaryList} id="detailsList">
                 {[
                   ["Filename", source.name],
@@ -85,7 +88,7 @@ export function ConversionFeedback({
                   </div>
                 ))}
               </dl>
-            </details>
+            </Modal>
           )}
         </div>
       )}
