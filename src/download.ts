@@ -32,8 +32,8 @@ export async function downloadPdf(blob: Blob, suggestedName: string) {
     return { filename: handle.name, saved: true };
   }
 
-  // This ordinary download still follows browser preferences. The visible link
-  // also supports Firefox's native Save Link As command for an explicit save.
+  // Browsers without an embedded PDF viewer or save picker use their download
+  // manager, whose save location and opening behaviour follow user preferences.
   const url = URL.createObjectURL(
     new Blob([blob], { type: "application/octet-stream" }),
   );

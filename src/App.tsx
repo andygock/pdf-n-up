@@ -7,6 +7,7 @@ import { useConversion } from "./useConversion.ts";
 
 type View = keyof typeof pageTitles;
 export default function App() {
+  const nativeViewer = navigator.pdfViewerEnabled === true;
   const [view, setView] = useState<View>("convert");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(
@@ -662,44 +663,43 @@ export default function App() {
                     >
                       Open
                     </button>
-                    {output ? (
-                      <a
-                        className="button primary"
-                        id="downloadOutputButton"
-                        href={output.url}
-                        download={output.filename}
-                        aria-describedby="downloadHelp"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          void openOutput(true);
-                        }}
-                      >
-                        Download
-                      </a>
-                    ) : (
-                      <button
-                        className="button primary"
-                        id="downloadOutputButton"
-                        type="button"
-                        disabled
-                      >
-                        Download
-                      </button>
-                    )}
+                    {!nativeViewer &&
+                      (output ? (
+                        <a
+                          className="button primary"
+                          id="downloadOutputButton"
+                          href={output.url}
+                          download={output.filename}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            void openOutput(true);
+                          }}
+                        >
+                          Download
+                        </a>
+                      ) : (
+                        <button
+                          className="button primary"
+                          id="downloadOutputButton"
+                          type="button"
+                          disabled
+                        >
+                          Download
+                        </button>
+                      ))}
                   </div>
                 </div>
 
-                <Preview output={output} active={view === "convert"} />
-                {output && (
-                  <p className="preview-note" id="downloadHelp">
-                    To save without opening in Firefox, right-click Download and
-                    choose “Save Link As…” to select a filename and location.
-                  </p>
-                )}
+                <Preview
+                  output={output}
+                  active={view === "convert"}
+                  nativeViewer={nativeViewer}
+                />
                 <p className="preview-note">
-                  Preview only: images above 16 megapixels may be omitted. Open
-                  the PDF to check it before printing. Print at actual size to
-                  preserve the chosen dimensions.
+                  {nativeViewer
+                    ? "Use the Save button in the PDF viewer’s toolbar to save your PDF. "
+                    : "Preview only: images above 16 megapixels may be omitted. Open the PDF to check it before printing. "}
+                  Print at actual size to preserve the chosen dimensions.
                 </p>
               </article>
             </div>
@@ -826,7 +826,7 @@ export default function App() {
               <p>
                 The completed PDF is only saved to your configured Downloads
                 folder, or another location selected by you or your browser, if
-                you choose Download.
+                you choose Download or Save in the PDF viewer.
               </p>
             </article>
 

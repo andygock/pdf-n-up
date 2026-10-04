@@ -6,6 +6,7 @@ import { act, create } from "react-test-renderer";
 import App from "../src/App.tsx";
 import { createConversionEngine } from "../src/conversion.ts";
 import { LAYOUTS } from "../src/geometry.ts";
+import { Preview } from "../src/Preview.tsx";
 import { useConversion } from "../src/useConversion.ts";
 import { WorkerLostError } from "../src/worker-client.ts";
 
@@ -305,6 +306,66 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
   } finally {
     globalThis.document = previousDocument;
     await app.close();
+  }
+});
+
+test("native PDF preview follows regenerated output and clears without retaining a frame", async () => {
+  const app = await mountConversion();
+  let root;
+  const render = () =>
+    createElement(Preview, {
+      output: app.value.output,
+      active: true,
+      nativeViewer: true,
+    });
+  try {
+    await act(() => {
+      root = create(render());
+    });
+    assert.equal(root.root.findAllByType("iframe").length, 0);
+    await act(async () => app.value.selectFiles([await file()]));
+    await act(() => root.update(render()));
+    const firstUrl = app.value.output.url;
+    assert.equal(
+      root.root.findByType("iframe").props.src,
+      `${firstUrl}#filename=handout_4up.pdf&zoom=page-fit`,
+    );
+    assert.equal(root.root.findAllByType("canvas").length, 0);
+    await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
+    await act(() => root.update(render()));
+    assert.equal(
+      root.root.findByType("iframe").props.src,
+      `${app.value.output.url}#filename=handout_8up.pdf&zoom=page-fit`,
+    );
+    await assert.rejects(fetch(firstUrl));
+    await act(() => app.value.clearDocument());
+    await act(() => root.update(render()));
+    assert.equal(root.root.findAllByType("iframe").length, 0);
+  } finally {
+    if (root) await act(() => root.unmount());
+    await app.close();
+  }
+});
+
+test("native PDF viewer replaces the separate Download control", async (t) => {
+  t.mock.getter(globalThis, "navigator", () => ({ pdfViewerEnabled: true }));
+  let root;
+  await act(() => {
+    root = create(createElement(App));
+  });
+  try {
+    assert.equal(
+      root.root.findAllByProps({ id: "downloadOutputButton" }).length,
+      0,
+    );
+    assert.equal(root.root.findAllByProps({ id: "downloadHelp" }).length, 0);
+    assert.equal(root.root.findByType(Preview).props.nativeViewer, true);
+    assert.match(
+      root.root.findByProps({ className: "preview-note" }).children.join(""),
+      /Save button in the PDF viewer/,
+    );
+  } finally {
+    await act(() => root.unmount());
   }
 });
 

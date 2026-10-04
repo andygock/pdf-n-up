@@ -4,9 +4,37 @@ import { createPreviewController, type PreviewOutput } from "./preview";
 export interface PreviewProps {
   output: PreviewOutput | null;
   active: boolean;
+  nativeViewer?: boolean;
 }
 
-export function Preview({ output, active }: PreviewProps) {
+export function Preview({
+  output,
+  active,
+  nativeViewer = false,
+}: PreviewProps) {
+  if (!nativeViewer) return <CanvasPreview output={output} active={active} />;
+
+  return (
+    <div className="native-preview-viewport" id="previewViewport">
+      {output ? (
+        <iframe
+          key={output.url}
+          className="pdf-viewer"
+          // The fragment lets PDF.js infer a useful save filename from a Blob URL.
+          src={`${output.url}#filename=${encodeURIComponent(output.filename)}&zoom=page-fit`}
+          title={`PDF viewer: ${output.filename}`}
+          loading="lazy"
+        />
+      ) : (
+        <p className="preview-loading" role="status">
+          Select a PDF to see the output preview.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CanvasPreview({ output, active }: PreviewProps) {
   const previewViewport = useRef<HTMLDivElement>(null);
   const previewLoading = useRef<HTMLDivElement>(null);
   const pdfPreview = useRef<HTMLCanvasElement>(null);
