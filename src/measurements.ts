@@ -16,8 +16,6 @@ export function drawMeasurements(
   context.save();
   context.font = `600 ${fontSize}px sans-serif`;
   context.textBaseline = "top";
-  context.lineWidth = 1.5;
-  context.strokeStyle = "#075985";
   const label = (text: string, x: number, y: number) => {
     const textWidth = context.measureText(text).width;
     const left = Math.max(0, Math.min(x, width - textWidth - 8));
@@ -27,16 +25,15 @@ export function drawMeasurements(
     context.fillStyle = "#075985";
     context.fillText(text, left + 4, top + 4);
   };
-  for (const [index, box] of measurements.boxes.entries()) {
+  const box = measurements.boxes[0];
+  if (box) {
     const x = box.x * sx;
     const y = (measurements.outputHeight - box.y - box.height) * sy;
-    context.strokeRect(x, y, box.width * sx, box.height * sy);
-    if (index === 0)
-      label(
-        `Copy: ${mm(box.width)} × ${mm(box.height)}`,
-        x,
-        y + (box.height * sy) / 2,
-      );
+    label(
+      `Copy: ${mm(box.width)} × ${mm(box.height)}`,
+      x,
+      y + (box.height * sy) / 2,
+    );
   }
   label(
     `Min. margin: ${mm(measurements.margin)} · Cell gap: ${mm(measurements.gutter)}`,

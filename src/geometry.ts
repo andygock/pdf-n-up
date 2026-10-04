@@ -298,7 +298,7 @@ export const makeOutputFilename = (inputName: string, copies: number) => {
   return `${basename}_${copies}up.pdf`;
 };
 
-// Reserve 1 mm clearance plus 3 mm marks, with spare room at sheet edges.
+// Crosshairs extend 1–4 mm beyond trim edges; reserve room around each copy.
 export const getSpacing = (
   options: Pick<ConversionOptions, "marginMm" | "gutterMm" | "cropMarks">,
 ) => ({
@@ -339,16 +339,27 @@ export const getCopyBoxes = (
 };
 
 export const getCropMarkLines = (box: PageBox) => {
-  const clearance = 72 / 25.4;
-  const reach = 4 * clearance;
+  const pointsPerMm = 72 / 25.4;
+  const offset = 2.5 * pointsPerMm;
+  const arm = 1.5 * pointsPerMm;
   return [box.x, box.x + box.width].flatMap((x) =>
     [box.y, box.y + box.height].flatMap((y) => {
       const dx = x === box.x ? -1 : 1;
       const dy = y === box.y ? -1 : 1;
+      // Crosshair centres follow the trim-line extensions, clear of the artwork.
       return [
-        { start: { x: x + dx * clearance, y }, end: { x: x + dx * reach, y } },
-        { start: { x, y: y + dy * clearance }, end: { x, y: y + dy * reach } },
-      ];
+        { x: x + dx * offset, y },
+        { x, y: y + dy * offset },
+      ].flatMap((centre) => [
+        {
+          start: { x: centre.x - arm, y: centre.y },
+          end: { x: centre.x + arm, y: centre.y },
+        },
+        {
+          start: { x: centre.x, y: centre.y - arm },
+          end: { x: centre.x, y: centre.y + arm },
+        },
+      ]);
     }),
   );
 };

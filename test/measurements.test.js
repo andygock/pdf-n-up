@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { drawMeasurements } from "../src/measurements.ts";
 
-test("measurement overlay maps PDF bottom-left coordinates to the canvas", () => {
+test("measurement overlay shows dimensions without rectangular copy outlines", () => {
   const boxes = [],
     labels = [];
   const context = {
@@ -26,7 +26,7 @@ test("measurement overlay maps PDF bottom-left coordinates to the canvas", () =>
     margin: 10,
     gutter: 5,
   });
-  assert.deepEqual(boxes, [[20, 360, 100, 200]]);
+  assert.deepEqual(boxes, []);
   assert.ok(
     labels.some(
       (text) => text.includes("17.64 mm") && text.includes("35.28 mm"),

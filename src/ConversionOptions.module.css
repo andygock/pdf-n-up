@@ -101,6 +101,7 @@
   width: 66px;
 }
 
+.layoutOptions + .fields,
 .secondaryRow,
 .dimensionFields {
   margin-top: 6px;

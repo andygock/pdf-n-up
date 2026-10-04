@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import styles from "./ConversionOptions.module.css";
+import { CustomGrid } from "./CustomGrid.tsx";
 import { LAYOUTS } from "./geometry.ts";
 import { SpacingInput } from "./SpacingInput.tsx";
 import type { ConversionOptions as Options } from "./types.ts";
@@ -61,35 +62,11 @@ export function ConversionOptions({
           ))}
         </div>
         {options.layout.custom && (
-          <>
-            <div className={styles.fields}>
-              {(["columns", "rows"] as const).map((axis) => (
-                <label className={ui.field} key={axis} htmlFor={axis}>
-                  {axis === "columns" ? "Columns" : "Rows"}
-                  <SpacingInput
-                    id={axis}
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={options.layout[axis]}
-                    disabled={processing}
-                    onCommit={(value) => {
-                      const layout = { ...options.layout, [axis]: value };
-                      void changeOptions({
-                        layout: {
-                          ...layout,
-                          copies: layout.columns * layout.rows,
-                        },
-                      });
-                    }}
-                  />
-                </label>
-              ))}
-            </div>
-            <p className={styles.hint}>
-              Up to 20 per axis, 100 copies. Keeps your row and column order.
-            </p>
-          </>
+          <CustomGrid
+            layout={options.layout}
+            disabled={processing}
+            onCommit={(layout) => void changeOptions({ layout })}
+          />
         )}
       </fieldset>
 
