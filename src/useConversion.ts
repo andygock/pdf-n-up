@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { withDeadline } from "./async.ts";
+import { downloadPdf } from "./download.ts";
 import {
   detectPdfSignature,
   formatBytes,
@@ -250,26 +251,47 @@ export function useConversion(
     }
   };
 
-  const openOutput = (download: boolean) => {
+  const openOutput = async (download: boolean) => {
     const output = current.current.output;
     if (!output) return;
+    if (download) {
+      try {
+        const result = await downloadPdf(output.blob, output.filename);
+        if (!result || current.current.output !== output) return;
+        update({
+          status: {
+            type: "success",
+            symbol: "↓",
+            title: result.saved ? "PDF saved" : "Download started",
+            message: result.saved
+              ? `${result.filename} has been saved.`
+              : `${result.filename} has been passed to the browser download manager.`,
+          },
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        if (current.current.output !== output) return;
+        update({
+          status: {
+            type: "error",
+            symbol: "!",
+            title: "Download failed",
+            message:
+              error instanceof Error
+                ? error.message
+                : "The PDF could not be saved. Please try again.",
+          },
+        });
+      }
+      return;
+    }
     const anchor = document.createElement("a");
     anchor.href = output.url;
-    anchor.rel = download ? "noopener" : "noopener noreferrer";
-    if (download) anchor.download = output.filename;
-    else anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.target = "_blank";
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-    if (download)
-      update({
-        status: {
-          type: "success",
-          symbol: "↓",
-          title: "Download started",
-          message: `${output.filename} has been passed to the browser download manager.`,
-        },
-      });
   };
 
   let details = { outputSize: "Spacing does not fit", scale: "—", layout: "" };

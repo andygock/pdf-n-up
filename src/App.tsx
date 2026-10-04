@@ -662,19 +662,40 @@ export default function App() {
                     >
                       Open
                     </button>
-                    <button
-                      className="button primary"
-                      id="downloadOutputButton"
-                      type="button"
-                      disabled={!output}
-                      onClick={() => openOutput(true)}
-                    >
-                      Download
-                    </button>
+                    {output ? (
+                      <a
+                        className="button primary"
+                        id="downloadOutputButton"
+                        href={output.url}
+                        download={output.filename}
+                        aria-describedby="downloadHelp"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void openOutput(true);
+                        }}
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <button
+                        className="button primary"
+                        id="downloadOutputButton"
+                        type="button"
+                        disabled
+                      >
+                        Download
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <Preview output={output} active={view === "convert"} />
+                {output && (
+                  <p className="preview-note" id="downloadHelp">
+                    To save without opening in Firefox, right-click Download and
+                    choose “Save Link As…” to select a filename and location.
+                  </p>
+                )}
                 <p className="preview-note">
                   Preview only: images above 16 megapixels may be omitted. Open
                   the PDF to check it before printing. Print at actual size to

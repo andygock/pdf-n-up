@@ -201,6 +201,113 @@ test("pagehide preserves cached documents and releases uncached documents", asyn
   }
 });
 
+test("Download saves the PDF bytes under the chosen filename", async () => {
+  const app = await mountConversion();
+  let written;
+  let closed = false;
+  window.showSaveFilePicker = async ({ suggestedName }) => {
+    assert.equal(suggestedName, "handout_4up.pdf");
+    return {
+      name: "chosen.pdf",
+      createWritable: async () => ({
+        write: async (blob) => {
+          written = await blob.arrayBuffer();
+        },
+        close: async () => {
+          closed = true;
+        },
+      }),
+    };
+  };
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const expected = await app.value.output.blob.arrayBuffer();
+    await act(() => app.value.openOutput(true));
+    assert.deepEqual(written, expected);
+    assert.equal(closed, true);
+    assert.equal(app.value.status.title, "PDF saved");
+    assert.match(app.value.status.message, /chosen\.pdf/);
+  } finally {
+    delete window.showSaveFilePicker;
+    await app.close();
+  }
+});
+
+test("Download cancellation and write failure preserve the generated PDF", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const output = app.value.output;
+    window.showSaveFilePicker = async () => {
+      throw new DOMException("Cancelled", "AbortError");
+    };
+    await act(() => app.value.openOutput(true));
+    assert.equal(app.value.status.title, "Output ready");
+    let aborted = false;
+    window.showSaveFilePicker = async () => ({
+      name: "chosen.pdf",
+      createWritable: async () => ({
+        write: async () => {
+          throw new Error("Disk full");
+        },
+        abort: async () => {
+          aborted = true;
+        },
+      }),
+    });
+    await act(() => app.value.openOutput(true));
+    assert.equal(aborted, true);
+    assert.equal(app.value.status.title, "Download failed");
+    assert.equal(app.value.status.message, "Disk full");
+    assert.equal(app.value.output, output);
+    assert.equal(app.value.failed, false);
+  } finally {
+    delete window.showSaveFilePicker;
+    await app.close();
+  }
+});
+
+test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t) => {
+  const app = await mountConversion();
+  const anchors = [];
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({
+      click() {
+        anchors.push(this);
+      },
+      remove() {},
+    }),
+    body: { append() {} },
+  };
+  let revoke;
+  t.mock.method(globalThis, "setTimeout", (callback) => {
+    revoke = callback;
+  });
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    await act(() => app.value.openOutput(true));
+    assert.equal(anchors[0].download, "handout_4up.pdf");
+    assert.equal(anchors[0].target, undefined);
+    const downloaded = await (await fetch(anchors[0].href)).blob();
+    assert.equal(downloaded.type, "application/octet-stream");
+    assert.deepEqual(
+      await downloaded.arrayBuffer(),
+      await app.value.output.blob.arrayBuffer(),
+    );
+    revoke();
+    await assert.rejects(fetch(anchors[0].href));
+    await act(() => app.value.openOutput(false));
+    assert.equal(anchors[1].href, app.value.output.url);
+    assert.equal(app.value.output.blob.type, "application/pdf");
+    assert.equal(anchors[1].target, "_blank");
+    assert.equal(anchors[1].download, undefined);
+  } finally {
+    globalThis.document = previousDocument;
+    await app.close();
+  }
+});
+
 test("React preserves navigation, default options and mobile drawer accessibility", async () => {
   let root;
   await act(() => {
