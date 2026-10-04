@@ -18,6 +18,8 @@ Demo: <https://pdfnup.gock.net/>
 - Accepts PDF files up to 50 MB, subject to the browser's available memory
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3) and 16-up (4×4)
 - Supports custom grids with up to 20 rows or columns and 100 copies per sheet
+- Layout details can fit as many exact-sized copies as possible on fixed paper, considering both artwork orientations
+- Custom grid, paper dimensions and copy dimensions open in compact modals
 - Handles rotation, physical `/UserUnit` scaling and the CropBox/MediaBox intersection
 - Converts valid blank pages, including pages without a content stream
 - Automatically transposes rectangular grids for landscape source pages

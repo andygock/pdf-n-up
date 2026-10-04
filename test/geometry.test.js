@@ -32,7 +32,13 @@ test("expanded output preserves scale and multiplies dimensions", () => {
       layout: LAYOUTS[4],
       paperMode: "expand",
     }),
-    { outputWidth: 1200, outputHeight: 1600, scale: 1 },
+    {
+      outputWidth: 1200,
+      outputHeight: 1600,
+      scale: 1,
+      layout: LAYOUTS[4],
+      rotation: 0,
+    },
   );
 });
 
@@ -188,7 +194,7 @@ test("custom grids retain their axes and reject excessive or fractional counts",
   assert.deepEqual(getResolvedLayout(layout, 200, 100), layout);
   assert.deepEqual(
     getOutputGeometry({ width: 200, height: 100, layout, paperMode: "expand" }),
-    { outputWidth: 600, outputHeight: 200, scale: 1 },
+    { outputWidth: 600, outputHeight: 200, scale: 1, layout, rotation: 0 },
   );
   for (const invalid of [
     { columns: 0, rows: 2, copies: 0 },
@@ -269,5 +275,35 @@ test("independent margins and gaps position copies inside the printable area", (
   assert.throws(
     () => getOutputGeometry({ ...options, gapVerticalMm: -1 }),
     /Margins/,
+  );
+});
+
+test("automatic packing maximises copies without shrinking artwork", () => {
+  const options = {
+    width: (90 * 72) / 25.4,
+    height: (50 * 72) / 25.4,
+    layout: LAYOUTS[4],
+    paperMode: "a4",
+    autoLayout: true,
+    scaleMode: "percent",
+    scalePercent: 100,
+  };
+  const result = getOutputGeometry(options);
+  assert.equal(result.layout.copies, 12);
+  assert.equal(result.scale, 1);
+  const boxes = getCopyBoxes(options);
+  assert.equal(boxes.length, 12);
+  for (const box of boxes) {
+    assert.ok(box.x >= -1e-9 && box.y >= -1e-9);
+    assert.ok(box.x + box.width <= result.outputWidth + 1e-9);
+    assert.ok(box.y + box.height <= result.outputHeight + 1e-9);
+  }
+  assert.throws(
+    () => getOutputGeometry({ ...options, paperMode: "expand" }),
+    /fixed paper/,
+  );
+  assert.equal(
+    getOutputGeometry({ ...options, width: 1, height: 1 }).layout.copies,
+    100,
   );
 });

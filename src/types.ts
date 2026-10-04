@@ -35,6 +35,8 @@ export interface PdfOutput {
 
 export interface ConversionOptions {
   layout: Layout;
+  autoLayout?: boolean;
+  rotateCopies?: boolean;
   paperMode: PaperMode;
   marginTopMm?: number;
   marginRightMm?: number;

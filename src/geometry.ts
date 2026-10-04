@@ -87,7 +87,7 @@ export const getResolvedLayout = (
     ? { copies: layout.copies, columns: layout.rows, rows: layout.columns }
     : { ...layout };
 
-export const getOutputGeometry = ({
+const calculateOutputGeometry = ({
   width,
   height,
   layout,
@@ -231,6 +231,75 @@ export const getOutputGeometry = ({
   return best;
 };
 
+export const getOutputGeometry = (
+  options: ConversionOptions & { width: number; height: number },
+): {
+  outputWidth: number;
+  outputHeight: number;
+  scale: number;
+  layout: Layout;
+  rotation: number;
+} => {
+  const calculate = (layout: Layout, rotated: boolean) => {
+    const width = rotated ? options.height : options.width;
+    const height = rotated ? options.width : options.height;
+    const result = calculateOutputGeometry({
+      ...options,
+      layout,
+      width,
+      height,
+      copyWidthMm: rotated ? options.copyHeightMm : options.copyWidthMm,
+      copyHeightMm: rotated ? options.copyWidthMm : options.copyHeightMm,
+    });
+    return {
+      ...result,
+      layout: getResolvedLayout(layout, width, height),
+      rotation: rotated ? 90 : 0,
+    };
+  };
+  if (!options.autoLayout)
+    return calculate(options.layout, options.rotateCopies ?? false);
+  if (options.paperMode === "expand")
+    throw new Error("Choose fixed paper for automatic packing.");
+  // Automatic packing preserves the requested size, including 100% in automatic sizing.
+  const packedOptions =
+    options.scaleMode === undefined || options.scaleMode === "fit"
+      ? {
+          ...options,
+          autoLayout: false,
+          scaleMode: "percent" as const,
+          scalePercent: 100,
+        }
+      : { ...options, autoLayout: false };
+  let best: ReturnType<typeof calculate> | undefined;
+  for (const rotated of [false, true]) {
+    for (let rows = 1; rows <= 20; rows++) {
+      for (let columns = 1; columns <= 20 && columns * rows <= 100; columns++) {
+        if (best && columns * rows <= best.layout.copies) continue;
+        try {
+          const candidate = getOutputGeometry({
+            ...packedOptions,
+            rotateCopies: rotated,
+            layout: { custom: true, rows, columns, copies: rows * columns },
+          });
+          if (!best || candidate.layout.copies > best.layout.copies)
+            best = candidate;
+        } catch {
+          // A candidate that cannot fit is excluded; other grids may still work.
+        }
+      }
+    }
+  }
+  if (!best) {
+    // Preserve specific input-validation errors when even one copy cannot fit.
+    return getOutputGeometry({
+      ...packedOptions,
+      layout: { custom: true, rows: 1, columns: 1, copies: 1 },
+    });
+  }
+  return best;
+};
+
 export const assertCompatibleOutputSize = ({
   outputWidth,
   outputHeight,
@@ -344,11 +413,7 @@ export const getCopyBoxes = (
   options: ConversionOptions & { width: number; height: number },
 ) => {
   const geometry = getOutputGeometry(options);
-  const { columns, rows, copies } = getResolvedLayout(
-    options.layout,
-    options.width,
-    options.height,
-  );
+  const { columns, rows, copies } = geometry.layout;
   const { edges } = getSpacing(options);
   const cellWidth =
     (geometry.outputWidth -
@@ -362,8 +427,10 @@ export const getCopyBoxes = (
       edges.bottom -
       (rows - 1) * edges.vertical) /
     rows;
-  const width = options.width * geometry.scale;
-  const height = options.height * geometry.scale;
+  const width =
+    (geometry.rotation ? options.height : options.width) * geometry.scale;
+  const height =
+    (geometry.rotation ? options.width : options.height) * geometry.scale;
   return Array.from({ length: copies }, (_, index) => ({
     x:
       edges.left +

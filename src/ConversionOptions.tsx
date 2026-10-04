@@ -36,10 +36,17 @@ export function ConversionOptions({
                 value={String(layout.copies)}
                 disabled={processing}
                 checked={
+                  !options.autoLayout &&
                   !options.layout.custom &&
                   options.layout.copies === layout.copies
                 }
-                onChange={() => void changeOptions({ layout })}
+                onChange={() =>
+                  void changeOptions({
+                    layout,
+                    autoLayout: false,
+                    rotateCopies: false,
+                  })
+                }
               />
               <span className={styles.layoutCard}>
                 <svg
@@ -62,13 +69,6 @@ export function ConversionOptions({
             </label>
           ))}
         </div>
-        {options.layout.custom && (
-          <CustomGrid
-            layout={options.layout}
-            disabled={processing}
-            onCommit={(layout) => void changeOptions({ layout })}
-          />
-        )}
       </fieldset>
 
       <fieldset className={styles.optionGroup}>
@@ -92,36 +92,41 @@ export function ConversionOptions({
           <option value="custom">Custom dimensions</option>
         </select>
         {options.paperMode === "custom" ? (
-          <div className={styles.dimensionFields}>
-            <label className={ui.field} htmlFor="paperWidthMm">
-              Width{" "}
-              <SpacingInput
-                id="paperWidthMm"
-                disabled={processing}
-                value={options.paperWidthMm ?? 210}
-                min={0.1}
-                max={5080}
-                onCommit={(paperWidthMm) =>
-                  void changeOptions({ paperWidthMm })
-                }
-              />{" "}
-              mm
-            </label>
-            <label className={ui.field} htmlFor="paperHeightMm">
-              Height{" "}
-              <SpacingInput
-                id="paperHeightMm"
-                disabled={processing}
-                value={options.paperHeightMm ?? 297}
-                min={0.1}
-                max={5080}
-                onCommit={(paperHeightMm) =>
-                  void changeOptions({ paperHeightMm })
-                }
-              />{" "}
-              mm
-            </label>
-          </div>
+          <Modal
+            title="Paper dimensions"
+            triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+          >
+            <div className={styles.dimensionFields}>
+              <label className={ui.field} htmlFor="paperWidthMm">
+                Width{" "}
+                <SpacingInput
+                  id="paperWidthMm"
+                  disabled={processing}
+                  value={options.paperWidthMm ?? 210}
+                  min={0.1}
+                  max={5080}
+                  onCommit={(paperWidthMm) =>
+                    void changeOptions({ paperWidthMm })
+                  }
+                />{" "}
+                mm
+              </label>
+              <label className={ui.field} htmlFor="paperHeightMm">
+                Height{" "}
+                <SpacingInput
+                  id="paperHeightMm"
+                  disabled={processing}
+                  value={options.paperHeightMm ?? 297}
+                  min={0.1}
+                  max={5080}
+                  onCommit={(paperHeightMm) =>
+                    void changeOptions({ paperHeightMm })
+                  }
+                />{" "}
+                mm
+              </label>
+            </div>
+          </Modal>
         ) : null}
       </fieldset>
 
@@ -144,60 +149,67 @@ export function ConversionOptions({
           <option value="percent">Exact percentage</option>
           <option value="dimensions">Exact dimensions</option>
         </select>
-        {options.scaleMode === "percent" ? (
-          <div className={styles.secondaryRow}>
-            <label className={ui.field} htmlFor="scalePercent">
-              Scale{" "}
-              <SpacingInput
-                id="scalePercent"
-                disabled={processing}
-                min={0.1}
-                max={10000}
-                value={options.scalePercent ?? 100}
-                onCommit={(scalePercent) =>
-                  void changeOptions({ scalePercent })
-                }
-              />{" "}
-              %
-            </label>
-          </div>
-        ) : options.scaleMode === "dimensions" ? (
-          <>
-            <div className={styles.dimensionFields}>
-              <label className={ui.field} htmlFor="copyWidthMm">
-                Width{" "}
-                <SpacingInput
-                  id="copyWidthMm"
-                  disabled={processing}
-                  min={0.1}
-                  max={5080}
-                  value={options.copyWidthMm ?? 90}
-                  onCommit={(copyWidthMm) =>
-                    void changeOptions({ copyWidthMm })
-                  }
-                />{" "}
-                mm
-              </label>
-              <label className={ui.field} htmlFor="copyHeightMm">
-                Height{" "}
-                <SpacingInput
-                  id="copyHeightMm"
-                  disabled={processing}
-                  min={0.1}
-                  max={5080}
-                  value={options.copyHeightMm ?? 50}
-                  onCommit={(copyHeightMm) =>
-                    void changeOptions({ copyHeightMm })
-                  }
-                />{" "}
-                mm
-              </label>
-            </div>
-            <p className={styles.hint}>
-              Width and height stay linked to the source proportions.
-            </p>
-          </>
-        ) : null}
+        {options.scaleMode && options.scaleMode !== "fit" && (
+          <Modal
+            title="Copy dimensions"
+            triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+          >
+            {options.scaleMode === "percent" ? (
+              <div className={styles.secondaryRow}>
+                <label className={ui.field} htmlFor="scalePercent">
+                  Scale{" "}
+                  <SpacingInput
+                    id="scalePercent"
+                    disabled={processing}
+                    min={0.1}
+                    max={10000}
+                    value={options.scalePercent ?? 100}
+                    onCommit={(scalePercent) =>
+                      void changeOptions({ scalePercent })
+                    }
+                  />{" "}
+                  %
+                </label>
+              </div>
+            ) : options.scaleMode === "dimensions" ? (
+              <>
+                <div className={styles.dimensionFields}>
+                  <label className={ui.field} htmlFor="copyWidthMm">
+                    Width{" "}
+                    <SpacingInput
+                      id="copyWidthMm"
+                      disabled={processing}
+                      min={0.1}
+                      max={5080}
+                      value={options.copyWidthMm ?? 90}
+                      onCommit={(copyWidthMm) =>
+                        void changeOptions({ copyWidthMm })
+                      }
+                    />{" "}
+                    mm
+                  </label>
+                  <label className={ui.field} htmlFor="copyHeightMm">
+                    Height{" "}
+                    <SpacingInput
+                      id="copyHeightMm"
+                      disabled={processing}
+                      min={0.1}
+                      max={5080}
+                      value={options.copyHeightMm ?? 50}
+                      onCommit={(copyHeightMm) =>
+                        void changeOptions({ copyHeightMm })
+                      }
+                    />{" "}
+                    mm
+                  </label>
+                </div>
+                <p className={styles.hint}>
+                  Width and height stay linked to the source proportions.
+                </p>
+              </>
+            ) : null}
+          </Modal>
+        )}
       </fieldset>
 
       <fieldset className={styles.optionGroup}>
@@ -279,21 +291,72 @@ export function ConversionOptions({
             copies.
           </p>
         </Modal>
-        <label className={ui.checkbox}>
-          <input
-            type="checkbox"
-            disabled={processing}
-            checked={options.layout.custom ?? false}
-            onChange={(event) =>
-              void changeOptions({
-                layout: event.target.checked
-                  ? { ...options.layout, custom: true }
-                  : LAYOUTS[4],
-              })
-            }
-          />
-          Custom grid
-        </label>
+        <Modal
+          title={options.autoLayout ? "Layout: auto" : "Layout details"}
+          triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+        >
+          <div className={styles.advancedFields}>
+            <label className={ui.checkbox}>
+              <input
+                type="checkbox"
+                disabled={processing}
+                checked={options.autoLayout ?? false}
+                onChange={(event) =>
+                  void changeOptions({
+                    autoLayout: event.target.checked,
+                    rotateCopies: false,
+                    ...(event.target.checked && options.paperMode === "expand"
+                      ? { paperMode: "a4" as const }
+                      : {}),
+                    ...(event.target.checked &&
+                    (!options.scaleMode || options.scaleMode === "fit")
+                      ? { scaleMode: "dimensions" as const }
+                      : {}),
+                  })
+                }
+              />
+              Fit as many as possible
+            </label>
+            <p>
+              Preserves the copy size and chooses a grid and artwork orientation
+              for fixed paper. Up to 100 copies per sheet, with at most 20 rows
+              or columns.
+            </p>
+            <label className={ui.checkbox}>
+              <input
+                type="checkbox"
+                disabled={processing || options.autoLayout}
+                checked={options.layout.custom ?? false}
+                onChange={(event) =>
+                  void changeOptions({
+                    layout: event.target.checked
+                      ? { ...options.layout, custom: true }
+                      : LAYOUTS[4],
+                  })
+                }
+              />
+              Custom grid
+            </label>
+            {!options.autoLayout && options.layout.custom && (
+              <CustomGrid
+                layout={options.layout}
+                disabled={processing}
+                onCommit={(layout) => void changeOptions({ layout })}
+              />
+            )}
+            <label className={ui.checkbox}>
+              <input
+                type="checkbox"
+                disabled={processing || options.autoLayout}
+                checked={options.rotateCopies ?? false}
+                onChange={(event) =>
+                  void changeOptions({ rotateCopies: event.target.checked })
+                }
+              />
+              Rotate artwork 90 degrees
+            </label>
+          </div>
+        </Modal>
         <label
           className={ui.checkbox}
           title="Reserves at least 5 mm margins and 10 mm gaps for cutting guides."

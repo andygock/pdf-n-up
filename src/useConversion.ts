@@ -355,12 +355,13 @@ export function useConversion(
     const layout = getResolvedLayout(state.options.layout, width, height);
     details.layout = `${layout.copies}-up (${layout.columns}×${layout.rows})`;
     try {
-      const { outputWidth, outputHeight, scale } = getOutputGeometry({
+      const { outputWidth, outputHeight, scale, layout } = getOutputGeometry({
         ...state.source,
         ...state.options,
       });
       details = {
         ...details,
+        layout: `${layout.copies}-up (${layout.columns}\u00d7${layout.rows})`,
         outputSize: formatPageSize(outputWidth, outputHeight),
         scale: `${Number((scale * 100).toFixed(4))}%`,
       };

@@ -5,7 +5,6 @@ import {
   getCopyBoxes,
   getCropMarkLines,
   getOutputGeometry,
-  getResolvedLayout,
   getRotatedDrawOptions,
   getVisiblePageGeometry,
   makeOutputFilename,
@@ -107,16 +106,13 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
 
     async generate(options: ConversionOptions): Promise<ConversionResult> {
       if (!source) throw new Error("Select a PDF before converting.");
-      const { outputWidth, outputHeight, scale } = getOutputGeometry({
-        ...source,
-        ...options,
-      });
+      const { outputWidth, outputHeight, scale, layout, rotation } =
+        getOutputGeometry({
+          ...source,
+          ...options,
+        });
       assertCompatibleOutputSize({ outputWidth, outputHeight });
-      const { copies } = getResolvedLayout(
-        options.layout,
-        source.width,
-        source.height,
-      );
+      const { copies } = layout;
       const filename = makeOutputFilename(
         source.pageCount > 1
           ? `${source.name.replace(/\.pdf$/i, "")}_page${source.pageNumber}.pdf`
@@ -166,7 +162,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
             sourceHeight: height,
             // Embedded streams retain source units; output pages use points.
             scale: scale * source.userUnit,
-            rotation: source.rotation,
+            rotation: source.rotation + rotation,
           });
           outputPage.drawPage(embedded, {
             x: draw.x,

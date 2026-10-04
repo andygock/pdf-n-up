@@ -4,6 +4,8 @@ import type { ConversionOptions } from "./types.ts";
 export const PREFERENCES_KEY = "pdf-nup.preferences.v1";
 export const DEFAULT_OPTIONS: ConversionOptions = {
   layout: LAYOUTS[4],
+  autoLayout: false,
+  rotateCopies: false,
   paperMode: "expand",
   marginTopMm: undefined,
   marginRightMm: undefined,
@@ -88,6 +90,10 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     )
       return null;
     result[key] = value;
+  }
+  for (const key of ["autoLayout", "rotateCopies"] as const) {
+    if (data[key] !== undefined && typeof data[key] !== "boolean") return null;
+    result[key] = data[key] === true;
   }
   result.cropMarks = data.cropMarks === true;
   result.scaleMode = data.scaleMode as ConversionOptions["scaleMode"];
