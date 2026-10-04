@@ -1,6 +1,0 @@
-node_modules/
-vendor/
-.playwright-cli/
-package-lock.json
-favicon.ico
-apple-touch-icon.png

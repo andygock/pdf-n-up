@@ -7,8 +7,14 @@ const makeElement = () => {
   const classes = new Set();
   return {
     classList: {
-      add: (...names) => names.forEach((name) => classes.add(name)),
-      remove: (...names) => names.forEach((name) => classes.delete(name)),
+      add: (...names) =>
+        names.forEach((name) => {
+          classes.add(name);
+        }),
+      remove: (...names) =>
+        names.forEach((name) => {
+          classes.delete(name);
+        }),
       contains: (name) => classes.has(name),
     },
     style: {},
@@ -28,14 +34,7 @@ const makeElement = () => {
     },
   };
 };
-const nodes = new Map();
-globalThis.document = {
-  querySelector: (selector) => {
-    if (!nodes.has(selector)) nodes.set(selector, makeElement());
-    return nodes.get(selector);
-  },
-  createElement: makeElement,
-};
+globalThis.document = { createElement: makeElement };
 globalThis.window = { devicePixelRatio: 1 };
 globalThis.getComputedStyle = () => ({
   paddingLeft: "0",
@@ -43,9 +42,7 @@ globalThis.getComputedStyle = () => ({
   paddingTop: "0",
   paddingBottom: "0",
 });
-const { state, elements } = await import("../js/core.js");
-const { renderOutputPreview } = await import("../js/preview.js");
-
+const { createPreviewController } = await import("../src/preview.ts");
 const deferred = () => {
   let resolve;
   const promise = new Promise((done) => {
@@ -57,11 +54,20 @@ const output = () => ({
   blob: new Blob(["pdf"]),
   url: "blob:available",
   filename: "test.pdf",
+  size: 3,
 });
-const library = ({ loadPromise, renderPromise = Promise.resolve() } = {}) => {
+const library = ({
+  loadPromise,
+  renderPromise = Promise.resolve(),
+  pageWidth = 200,
+  pageHeight = 400,
+} = {}) => {
   const stats = { destroyed: 0, cancelled: 0 };
   const page = {
-    getViewport: ({ scale }) => ({ width: 200 * scale, height: 400 * scale }),
+    getViewport: ({ scale }) => ({
+      width: pageWidth * scale,
+      height: pageHeight * scale,
+    }),
     render: () => ({
       promise: renderPromise,
       cancel: () => {
@@ -80,74 +86,157 @@ const library = ({ loadPromise, renderPromise = Promise.resolve() } = {}) => {
     }),
   };
 };
+const setup = (options = {}) => {
+  const elements = Object.fromEntries(
+    [
+      "previewViewport",
+      "previewLoading",
+      "pdfPreview",
+      "previewError",
+      "retryPreviewButton",
+    ].map((key) => [key, makeElement()]),
+  );
+  const controller = createPreviewController(elements, options);
+  const currentOutput = output();
+  controller.update(currentOutput, false);
+  return { elements, controller, currentOutput };
+};
 
 test("hidden views defer preview loading and render when visible again", async () => {
-  state.output = output();
-  state.activeView = "privacy";
   let loads = 0;
-  const loadLibrary = async () => {
-    loads++;
-    return library();
-  };
-  await renderOutputPreview({ loadLibrary });
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => {
+      loads++;
+      return library();
+    },
+  });
+  await controller.render();
   assert.equal(loads, 0);
-  state.activeView = "convert";
-  await renderOutputPreview({ loadLibrary });
+  controller.update(currentOutput, true);
+  await controller.render();
   assert.equal(loads, 1);
   assert.equal(elements.pdfPreview.width, 200);
   assert.equal(elements.pdfPreview.height, 400);
+  controller.cancel();
 });
 
 test("preview timeout destroys the task and leaves output available for retry", async () => {
-  state.output = output();
-  const lib = library({ loadPromise: new Promise(() => {}) });
-  await renderOutputPreview({ loadLibrary: async () => lib, timeoutMs: 10 });
+  let lib = library({ loadPromise: new Promise(() => {}) });
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => lib,
+    timeoutMs: 10,
+  });
+  controller.update(currentOutput, true);
+  await controller.render();
   assert.equal(lib.stats.destroyed, 1);
-  assert.equal(state.output.url, "blob:available");
+  assert.equal(currentOutput.url, "blob:available");
   assert.match(elements.previewError.textContent, /still available/);
   assert.equal(elements.retryPreviewButton.classList.contains("hidden"), false);
-  await renderOutputPreview({ loadLibrary: async () => library() });
+  lib = library();
+  await controller.render();
   assert.equal(elements.pdfPreview.classList.contains("hidden"), false);
   assert.equal(elements.retryPreviewButton.classList.contains("hidden"), true);
+  controller.cancel();
 });
 
 test("late library completion cannot render into a replacement output", async () => {
   const waiting = deferred();
-  state.output = output();
-  const old = state.output;
-  const oldRender = renderOutputPreview({ loadLibrary: () => waiting.promise });
-  old.cancelPreview();
-  state.output = output();
-  await renderOutputPreview({ loadLibrary: async () => library() });
+  let loadLibrary = () => waiting.promise;
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: () => loadLibrary(),
+  });
+  controller.update(currentOutput, true);
+  const oldRender = controller.render();
+  controller.cancel();
+  loadLibrary = async () => library();
+  controller.update(output(), false);
+  const replacement = output();
+  controller.update(replacement, false);
+  controller.update(replacement, true);
+  await controller.render();
   const before = elements.pdfPreview.draws;
   waiting.resolve(library());
   await oldRender;
   assert.equal(elements.pdfPreview.draws, before);
+  controller.cancel();
 });
 
 test("replacing an in-flight render cancels it without stale canvas writes", async () => {
-  state.output = output();
   const pending = deferred();
-  const lib = library({ renderPromise: pending.promise });
-  const oldRender = renderOutputPreview({ loadLibrary: async () => lib });
+  let lib = library({ renderPromise: pending.promise });
+  const oldLibrary = lib;
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => lib,
+  });
+  controller.update(currentOutput, true);
+  const oldRender = controller.render();
   await new Promise((resolve) => setImmediate(resolve));
-  state.output.cancelPreview();
-  assert.equal(lib.stats.cancelled, 1);
-  state.output = output();
-  await renderOutputPreview({ loadLibrary: async () => library() });
+  controller.cancel();
+  assert.equal(oldLibrary.stats.cancelled, 1);
+  lib = library();
+  const replacement = output();
+  controller.update(replacement, false);
+  controller.update(replacement, true);
+  await controller.render();
   const before = elements.pdfPreview.draws;
   pending.resolve();
   await oldRender;
   assert.equal(elements.pdfPreview.draws, before);
+  controller.cancel();
 });
 
 test("rerendering after a size change uses the new dimensions", async () => {
-  state.output = output();
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => library(),
+  });
   elements.previewViewport.getBoundingClientRect = () => ({
     width: 100,
     height: 100,
   });
-  await renderOutputPreview({ loadLibrary: async () => library() });
+  controller.update(currentOutput, true);
+  await controller.render();
   assert.equal(elements.pdfPreview.width, 50);
   assert.equal(elements.pdfPreview.height, 100);
+  controller.cancel();
+});
+
+test("hiding the view cancels rendering and clearing output resets the preview", async () => {
+  const pending = deferred();
+  const lib = library({ renderPromise: pending.promise });
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => lib,
+  });
+  controller.update(currentOutput, true);
+  const rendering = controller.render();
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.update(currentOutput, false);
+  assert.equal(lib.stats.cancelled, 1);
+  pending.resolve();
+  await rendering;
+  assert.equal(elements.pdfPreview.draws, 0);
+  controller.update(null, false);
+  assert.equal(elements.pdfPreview.classList.contains("hidden"), true);
+  assert.equal(
+    elements.previewLoading.textContent,
+    "Select a PDF to see the output preview.",
+  );
+  controller.cancel();
+});
+
+test("preview limits pixel density and the canvas area for large pages", async () => {
+  globalThis.window.devicePixelRatio = 4;
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => library({ pageWidth: 10000, pageHeight: 10000 }),
+  });
+  elements.previewViewport.getBoundingClientRect = () => ({
+    width: 10000,
+    height: 10000,
+  });
+  controller.update(currentOutput, true);
+  await controller.render();
+  assert.equal(elements.pdfPreview.width, 2000);
+  assert.equal(elements.pdfPreview.height, 2000);
+  assert.equal(elements.pdfPreview.style.width, "1000px");
+  controller.cancel();
+  globalThis.window.devicePixelRatio = 1;
 });

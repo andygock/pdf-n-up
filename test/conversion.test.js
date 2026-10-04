@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import * as pdfLib from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { fileURLToPath } from "node:url";
-import { createConversionEngine } from "../js/conversion.js";
-import { LAYOUTS } from "../js/geometry.js";
+import { createConversionEngine } from "../src/conversion.ts";
+import { LAYOUTS } from "../src/geometry.ts";
 
 const options = { layout: LAYOUTS[4], paperMode: "expand" };
 const fixture = async (configure = () => {}, dimensions = [100, 200]) => {
@@ -64,7 +64,7 @@ test("CropBox clipping, UserUnit and rotation survive actual PDF serialisation",
       data: result.bytes.slice(),
       stopAtErrors: true,
       standardFontDataUrl: fileURLToPath(
-        new URL("../vendor/pdfjs-dist/standard_fonts/", import.meta.url),
+        new URL("../public/vendor/pdfjs-dist/standard_fonts/", import.meta.url),
       ).replaceAll("\\", "/"),
     });
     try {
@@ -150,23 +150,21 @@ test("annotations and form fields generate a persistent source warning", async (
   assert.equal((await outputPage(result)).node.Annots()?.size() ?? 0, 0);
 });
 
-test(
-  "a bounded complex content fixture can be converted repeatedly",
-  { timeout: 10_000 },
-  async () => {
-    const { engine } = await load(
-      await fixture((page) => {
-        for (let i = 0; i < 2000; i++)
-          page.drawRectangle({ x: i % 100, y: i % 200, width: 1, height: 1 });
-      }),
+test("a bounded complex content fixture can be converted repeatedly", {
+  timeout: 10_000,
+}, async () => {
+  const { engine } = await load(
+    await fixture((page) => {
+      for (let i = 0; i < 2000; i++)
+        page.drawRectangle({ x: i % 100, y: i % 200, width: 1, height: 1 });
+    }),
+  );
+  for (const layout of [LAYOUTS[16], LAYOUTS[2], LAYOUTS[9]]) {
+    const result = await engine.generate({ layout, paperMode: "same" });
+    assert.equal(
+      (await pdfLib.PDFDocument.load(result.bytes)).getPageCount(),
+      1,
     );
-    for (const layout of [LAYOUTS[16], LAYOUTS[2], LAYOUTS[9]]) {
-      const result = await engine.generate({ layout, paperMode: "same" });
-      assert.equal(
-        (await pdfLib.PDFDocument.load(result.bytes)).getPageCount(),
-        1,
-      );
-      assert.ok(result.bytes.length < 1_000_000);
-    }
-  },
-);
+    assert.ok(result.bytes.length < 1_000_000);
+  }
+});

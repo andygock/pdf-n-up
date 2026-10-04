@@ -1,0 +1,235 @@
+import type {
+  ConversionOptions,
+  Layout,
+  PageBox,
+  VisiblePageGeometry,
+} from "./types.ts";
+
+// Pure layout and page-geometry helpers. Keeping these functions independent
+// from DOM and application state makes the PDF calculations easy to test.
+export const LAYOUTS = Object.freeze({
+  2: Object.freeze({ copies: 2, columns: 2, rows: 1 }),
+  4: Object.freeze({ copies: 4, columns: 2, rows: 2 }),
+  8: Object.freeze({ copies: 8, columns: 4, rows: 2 }),
+  9: Object.freeze({ copies: 9, columns: 3, rows: 3 }),
+  16: Object.freeze({ copies: 16, columns: 4, rows: 4 }),
+});
+
+export const MAX_PDF_PAGE_DIMENSION = 14_400;
+
+const normaliseRotation = (angle: number) => ((angle % 360) + 360) % 360;
+
+export const getVisiblePageGeometry = (
+  cropBox: PageBox,
+  rotationAngle = 0,
+  mediaBox = cropBox,
+  userUnit = 1,
+): VisiblePageGeometry => {
+  const rotation = normaliseRotation(rotationAngle);
+
+  if (![0, 90, 180, 270].includes(rotation)) {
+    throw new Error(`Unsupported PDF page rotation: ${rotationAngle} degrees.`);
+  }
+
+  for (const box of [cropBox, mediaBox]) {
+    if (
+      !box ||
+      ![
+        box.x,
+        box.y,
+        box.width,
+        box.height,
+        box.x + box.width,
+        box.y + box.height,
+      ].every(Number.isFinite) ||
+      box.width <= 0 ||
+      box.height <= 0
+    ) {
+      throw new Error("The PDF page has an invalid visible area.");
+    }
+  }
+  if (!Number.isFinite(userUnit) || userUnit <= 0 || userUnit > 75_000) {
+    throw new Error("The PDF page has an invalid UserUnit scale.");
+  }
+
+  // Page boxes use default user-space units. Clip there first, then convert
+  // physical dimensions to points; keep the clipped box for page embedding.
+  const x = Math.max(cropBox.x, mediaBox.x);
+  const y = Math.max(cropBox.y, mediaBox.y);
+  const width =
+    Math.min(cropBox.x + cropBox.width, mediaBox.x + mediaBox.width) - x;
+  const height =
+    Math.min(cropBox.y + cropBox.height, mediaBox.y + mediaBox.height) - y;
+  if (width <= 0 || height <= 0) {
+    throw new Error("The PDF CropBox does not overlap its MediaBox.");
+  }
+
+  const swapsAxes = rotation === 90 || rotation === 270;
+  if (![width * userUnit, height * userUnit].every(Number.isFinite)) {
+    throw new Error("The PDF page has invalid physical dimensions.");
+  }
+
+  return {
+    cropBox: { x, y, width, height },
+    rotation,
+    userUnit,
+    width: (swapsAxes ? height : width) * userUnit,
+    height: (swapsAxes ? width : height) * userUnit,
+  };
+};
+
+export const getResolvedLayout = (
+  layout: Layout,
+  width: number,
+  height: number,
+): Layout =>
+  width > height
+    ? { copies: layout.copies, columns: layout.rows, rows: layout.columns }
+    : { ...layout };
+
+export const getOutputGeometry = ({
+  width,
+  height,
+  layout,
+  paperMode,
+  marginMm = 0,
+  gutterMm = 0,
+}: ConversionOptions & { width: number; height: number }) => {
+  if (
+    ![width, height].every((value) => Number.isFinite(value) && value > 0) ||
+    !Object.values(LAYOUTS).some(
+      (item) =>
+        item.copies === layout?.copies &&
+        item.columns === layout.columns &&
+        item.rows === layout.rows,
+    ) ||
+    !["expand", "same"].includes(paperMode)
+  ) {
+    throw new Error("Invalid page dimensions or layout options.");
+  }
+  if (
+    ![marginMm, gutterMm].every(
+      (value) => Number.isFinite(value) && value >= 0 && value <= 100,
+    )
+  ) {
+    throw new Error("Margins and gutters must be between 0 and 100 mm.");
+  }
+  const margin = (marginMm * 72) / 25.4;
+  const gutter = (gutterMm * 72) / 25.4;
+  const { columns, rows } = getResolvedLayout(layout, width, height);
+
+  if (paperMode === "expand") {
+    return {
+      outputWidth: width * columns + 2 * margin + (columns - 1) * gutter,
+      outputHeight: height * rows + 2 * margin + (rows - 1) * gutter,
+      scale: 1,
+    };
+  }
+
+  const orientations = [
+    { outputWidth: width, outputHeight: height },
+    { outputWidth: height, outputHeight: width },
+  ];
+
+  const candidates = orientations.map((orientation) => ({
+    ...orientation,
+    scale: Math.min(
+      (orientation.outputWidth - 2 * margin - (columns - 1) * gutter) /
+        columns /
+        width,
+      (orientation.outputHeight - 2 * margin - (rows - 1) * gutter) /
+        rows /
+        height,
+    ),
+  }));
+
+  const best = candidates.reduce((best, candidate) =>
+    candidate.scale > best.scale ? candidate : best,
+  );
+  if (best.scale <= 0)
+    throw new Error(
+      "Margins and gutters leave no space for copies. Reduce the spacing or expand the paper.",
+    );
+  return best;
+};
+
+export const assertCompatibleOutputSize = ({
+  outputWidth,
+  outputHeight,
+}: {
+  outputWidth: number;
+  outputHeight: number;
+}) => {
+  if (
+    ![outputWidth, outputHeight].every(
+      (value) =>
+        Number.isFinite(value) && value > 0 && value <= MAX_PDF_PAGE_DIMENSION,
+    )
+  ) {
+    throw new Error(
+      "The output sheet exceeds the supported 5,080 mm PDF page limit. Choose source-page size, reduce spacing or use a smaller source page.",
+    );
+  }
+};
+
+// pdf-lib draws positive angles counter-clockwise, while a PDF page's /Rotate
+// value describes clockwise display rotation. The translated origins below
+// keep every rotated page's visible lower-left corner at (left, bottom).
+export const getRotatedDrawOptions = ({
+  left,
+  bottom,
+  sourceWidth,
+  sourceHeight,
+  scale,
+  rotation,
+}: {
+  left: number;
+  bottom: number;
+  sourceWidth: number;
+  sourceHeight: number;
+  scale: number;
+  rotation: number;
+}) => {
+  switch (normaliseRotation(rotation)) {
+    case 0:
+      return { x: left, y: bottom, xScale: scale, yScale: scale, degrees: 0 };
+    case 90:
+      return {
+        x: left,
+        y: bottom + sourceWidth * scale,
+        xScale: scale,
+        yScale: scale,
+        degrees: -90,
+      };
+    case 180:
+      return {
+        x: left + sourceWidth * scale,
+        y: bottom + sourceHeight * scale,
+        xScale: scale,
+        yScale: scale,
+        degrees: -180,
+      };
+    case 270:
+      return {
+        x: left + sourceHeight * scale,
+        y: bottom,
+        xScale: scale,
+        yScale: scale,
+        degrees: -270,
+      };
+    default:
+      throw new Error(`Unsupported PDF page rotation: ${rotation} degrees.`);
+  }
+};
+
+export const makeOutputFilename = (inputName: string, copies: number) => {
+  const cleanedName = inputName.trim() || "document.pdf";
+  const lastDot = cleanedName.lastIndexOf(".");
+  const hasPdfExtension =
+    lastDot > 0 && cleanedName.slice(lastDot).toLowerCase() === ".pdf";
+  const basename = hasPdfExtension
+    ? cleanedName.slice(0, lastDot)
+    : cleanedName;
+
+  return `${basename}_${copies}up.pdf`;
+};

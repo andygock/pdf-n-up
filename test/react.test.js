@@ -1,0 +1,243 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import * as pdfLib from "pdf-lib";
+import { createElement } from "react";
+import { act, create } from "react-test-renderer";
+import App from "../src/App.tsx";
+import { createConversionEngine } from "../src/conversion.ts";
+import { LAYOUTS } from "../src/geometry.ts";
+import { useConversion } from "../src/useConversion.ts";
+import { WorkerLostError } from "../src/worker-client.ts";
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+const listeners = new Map();
+globalThis.window = {
+  matchMedia: () => ({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  }),
+  addEventListener: (name, callback) => listeners.set(name, callback),
+  removeEventListener: (name) => listeners.delete(name),
+  scrollTo() {},
+};
+globalThis.localStorage = { removeItem() {} };
+
+const makeWorker = () => {
+  const engine = createConversionEngine(pdfLib);
+  return {
+    loads: 0,
+    dispose() {},
+    request(method, payload) {
+      if (method === "load") {
+        this.loads++;
+        return engine.load(payload.bytes, payload.metadata);
+      }
+      return engine.generate(payload);
+    },
+  };
+};
+const mountConversion = async (worker = makeWorker()) => {
+  let value;
+  let root;
+  function Harness() {
+    value = useConversion(() => worker);
+    return null;
+  }
+  await act(() => {
+    root = create(createElement(Harness));
+  });
+  return {
+    get value() {
+      return value;
+    },
+    worker,
+    close: () => act(() => root.unmount()),
+  };
+};
+const file = async (width = 100, height = 200) => {
+  const doc = await pdfLib.PDFDocument.create();
+  doc.addPage([width, height]);
+  return new File([await doc.save()], "handout.pdf", {
+    type: "application/pdf",
+  });
+};
+
+test("React conversion retains the source and regenerates every layout and paper mode", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    assert.equal(app.value.status.title, "Output ready");
+    assert.equal(app.value.processing, false);
+    const oldUrl = app.value.output.url;
+    for (const layout of Object.values(LAYOUTS)) {
+      for (const paperMode of ["expand", "same"]) {
+        await act(() => app.value.changeOptions({ layout, paperMode }));
+        const output = await pdfLib.PDFDocument.load(
+          await app.value.output.blob.arrayBuffer(),
+        );
+        assert.equal(output.getPageCount(), 1);
+        assert.equal(
+          app.value.output.filename,
+          `handout_${layout.copies}up.pdf`,
+        );
+        assert.equal(app.value.processing, false);
+      }
+    }
+    assert.equal(app.worker.loads, 1);
+    await assert.rejects(fetch(oldUrl));
+    await act(() => app.value.changeOptions({ marginMm: 100, gutterMm: 100 }));
+    assert.equal(app.value.status.title, "Conversion failed");
+    assert.equal(app.value.details.outputSize, "Spacing does not fit");
+    assert.ok(app.value.source);
+    assert.equal(app.value.output, null);
+    await act(() => app.value.changeOptions({ marginMm: 0, gutterMm: 0 }));
+    assert.equal(app.value.status.title, "Output ready");
+    const url = app.value.output.url;
+    await act(() => app.value.clearDocument());
+    assert.equal(app.value.source, null);
+    assert.equal(app.value.output, null);
+    await assert.rejects(fetch(url));
+  } finally {
+    await app.close();
+  }
+});
+
+test("React recovers from oversized output using the retained source", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file(8000, 8000)]));
+    assert.equal(app.value.failed, true);
+    assert.ok(app.value.source);
+    await act(() => app.value.changeOptions({ paperMode: "same" }));
+    assert.equal(app.value.status.title, "Output ready");
+    assert.equal(app.worker.loads, 1);
+  } finally {
+    await app.close();
+  }
+});
+
+test("React validates file selection and preserves output on multiple-file rejection", async () => {
+  const app = await mountConversion();
+  try {
+    for (const [input, message] of [
+      [new File([], "empty.pdf"), /empty/],
+      [new File(["%PDF-"], "wrong.txt"), /extension/],
+      [new File(["not a PDF"], "wrong.pdf"), /header/],
+    ]) {
+      await act(() => app.value.selectFiles([input]));
+      assert.match(app.value.status.message, message);
+      assert.equal(app.value.processing, false);
+    }
+    const input = await file();
+    await act(() => app.value.selectFiles([input]));
+    const output = app.value.output;
+    await act(() => app.value.selectFiles([input, input]));
+    assert.equal(app.value.status.title, "Multiple files rejected");
+    assert.equal(app.value.output, output);
+  } finally {
+    await app.close();
+  }
+});
+
+test("cancelling a pending file read prevents late validation and worker requests", async () => {
+  const app = await mountConversion();
+  let finish;
+  const input = new File(["%PDF-"], "slow.pdf");
+  input.arrayBuffer = () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  try {
+    let pending;
+    await act(async () => {
+      pending = app.value.selectFiles([input]);
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+    assert.equal(app.value.processing, true);
+    await act(async () => {
+      app.value.clearDocument();
+      await pending;
+    });
+    await act(async () => {
+      finish(new ArrayBuffer(0));
+    });
+    assert.equal(app.value.status.title, "Ready");
+    assert.equal(app.worker.loads, 0);
+    assert.equal(app.value.processing, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("worker loss clears the React source and unlocks file selection", async () => {
+  const worker = makeWorker();
+  const app = await mountConversion(worker);
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    worker.request = async () => {
+      throw new WorkerLostError("Worker stopped");
+    };
+    await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
+    assert.equal(app.value.status.message, "Worker stopped");
+    assert.equal(app.value.source, null);
+    assert.equal(app.value.output, null);
+    assert.equal(app.value.processing, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("pagehide preserves cached documents and releases uncached documents", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    await act(() => listeners.get("pagehide")({ persisted: true }));
+    assert.ok(app.value.output);
+    await act(() => listeners.get("pagehide")({ persisted: false }));
+    assert.equal(app.value.output, null);
+  } finally {
+    await app.close();
+  }
+});
+
+test("React preserves navigation, default options and mobile drawer accessibility", async () => {
+  let root;
+  await act(() => {
+    root = create(createElement(App));
+  });
+  try {
+    const byId = (id) => root.root.findByProps({ id });
+    assert.equal(
+      root.root.findByProps({ name: "layout", value: "4" }).props.checked,
+      true,
+    );
+    assert.equal(
+      root.root.findByProps({ name: "paperMode", value: "expand" }).props
+        .checked,
+      true,
+    );
+    assert.equal(byId("openOutputButton").props.disabled, true);
+    assert.equal(byId("sidebar").props.inert, true);
+    await act(() => byId("mobileMenuButton").props.onClick());
+    assert.equal(byId("mobileMenuButton").props["aria-expanded"], true);
+    assert.equal(byId("sidebar").props.inert, false);
+    await act(() =>
+      root.root.findByProps({ "data-view": "privacy" }).props.onClick(),
+    );
+    assert.equal(byId("view-privacy").props.className, "view");
+    assert.equal(byId("view-convert").props.className, "view hidden");
+    assert.equal(byId("pageTitle").children.join(""), "Privacy");
+    assert.equal(byId("sidebar").props.inert, true);
+    await act(() =>
+      root.root.findByProps({ "data-view": "guide" }).props.onClick(),
+    );
+    assert.equal(byId("pageTitle").children.join(""), "How it works");
+    await act(() =>
+      root.root.findByProps({ "data-view": "convert" }).props.onClick(),
+    );
+    assert.equal(byId("view-convert").props.className, "view");
+  } finally {
+    await act(() => root.unmount());
+  }
+});

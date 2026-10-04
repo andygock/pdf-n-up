@@ -8,7 +8,7 @@ import {
   getVisiblePageGeometry,
   LAYOUTS,
   makeOutputFilename,
-} from "../js/geometry.js";
+} from "../src/geometry.ts";
 
 const closeTo = (actual, expected) =>
   assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);

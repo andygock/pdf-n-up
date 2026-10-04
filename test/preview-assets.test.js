@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import * as pdfLib from "pdf-lib";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { createConversionEngine } from "../js/conversion.js";
-import { LAYOUTS } from "../js/geometry.js";
+import { createConversionEngine } from "../src/conversion.ts";
+import { LAYOUTS } from "../src/geometry.ts";
 
 const assetPath = (directory) =>
   fileURLToPath(
-    new URL(`../vendor/pdfjs-dist/${directory}/`, import.meta.url),
+    new URL(`../public/vendor/pdfjs-dist/${directory}/`, import.meta.url),
   ).replaceAll("\\", "/");
 const loadOutput = async (document) => {
   const engine = createConversionEngine(pdfLib);

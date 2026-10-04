@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { ConversionWorkerClient } from "../js/worker-client.js";
-import { withDeadline } from "../js/async.js";
 import { PDFDocument } from "pdf-lib";
-import { LAYOUTS } from "../js/geometry.js";
+import { withDeadline } from "../src/async.ts";
+import { LAYOUTS } from "../src/geometry.ts";
+import { ConversionWorkerClient } from "../src/worker-client.ts";
 
 const fakeWorker = () => ({
   terminated: false,
@@ -69,26 +69,24 @@ test("worker crash invalidates the retained source, including idle crashes", asy
   );
 });
 
-test(
-  "watchdog terminates a real worker stuck in CPU-bound work",
-  { timeout: 5000 },
-  async () => {
-    let thread;
-    let exited;
-    const client = new ConversionWorkerClient(() => {
-      thread = new Worker("while (true) {}", { eval: true });
-      exited = new Promise((resolve) => thread.once("exit", resolve));
-      return { postMessage() {}, terminate: () => thread.terminate() };
-    }, 100);
-    try {
-      await assert.rejects(client.request("load", {}), /exceeded/);
-      await exited;
-      assert.equal(client.worker, null);
-    } finally {
-      client.dispose();
-    }
-  },
-);
+test("watchdog terminates a real worker stuck in CPU-bound work", {
+  timeout: 5000,
+}, async () => {
+  let thread;
+  let exited;
+  const client = new ConversionWorkerClient(() => {
+    thread = new Worker("while (true) {}", { eval: true });
+    exited = new Promise((resolve) => thread.once("exit", resolve));
+    return { postMessage() {}, terminate: () => thread.terminate() };
+  }, 100);
+  try {
+    await assert.rejects(client.request("load", {}), /exceeded/);
+    await exited;
+    assert.equal(client.worker, null);
+  } finally {
+    client.dispose();
+  }
+});
 
 test("deadlines and cancellation settle even when the underlying operation never does", async () => {
   await assert.rejects(
@@ -110,58 +108,56 @@ test("deadlines and cancellation settle even when the underlying operation never
   );
 });
 
-test(
-  "the shipped browser worker loads its vendored library and transfers a PDF",
-  { timeout: 10_000 },
-  async () => {
-    const client = new ConversionWorkerClient(() => {
-      // Adapt Node's transport only; execute the actual browser worker module,
-      // including its UMD library import and request dispatch implementation.
-      const thread = new Worker(
-        new URL(
-          "data:text/javascript," +
-            encodeURIComponent(`
+test("the shipped browser worker loads its bundled library and transfers a PDF", {
+  timeout: 10_000,
+}, async () => {
+  const client = new ConversionWorkerClient(() => {
+    // Adapt Node's transport only; execute the actual browser worker module,
+    // including its package library import and request dispatch implementation.
+    const thread = new Worker(
+      new URL(
+        "data:text/javascript," +
+          encodeURIComponent(`
       import { parentPort, workerData } from 'node:worker_threads';
       globalThis.self = globalThis;
       globalThis.postMessage = (data, transfer) => parentPort.postMessage(data, transfer);
       import(workerData).then(() => parentPort.on('message', data => self.onmessage({ data })));
     `),
-        ),
-        {
-          workerData: new URL("../js/conversion-worker.js", import.meta.url)
-            .href,
-        },
-      );
-      const adapter = {
-        postMessage: (data, transfer) => thread.postMessage(data, transfer),
-        terminate: () => thread.terminate(),
-      };
-      thread.on("message", (data) => adapter.onmessage({ data }));
-      thread.on("error", () => adapter.onerror());
-      return adapter;
+      ),
+      {
+        workerData: new URL("../src/conversion-worker.ts", import.meta.url)
+          .href,
+      },
+    );
+    const adapter = {
+      postMessage: (data, transfer) => thread.postMessage(data, transfer),
+      terminate: () => thread.terminate(),
+    };
+    thread.on("message", (data) => adapter.onmessage({ data }));
+    thread.on("error", () => adapter.onerror());
+    return adapter;
+  });
+  try {
+    const doc = await PDFDocument.create();
+    doc.addPage([100, 200]);
+    const bytes = await doc.save();
+    const loaded = await client.request(
+      "load",
+      { bytes, metadata: { name: "worker.pdf", size: bytes.length } },
+      [bytes.buffer],
+    );
+    assert.equal(bytes.byteLength, 0);
+    assert.equal(loaded.width, 100);
+    const result = await client.request("generate", {
+      layout: LAYOUTS[4],
+      paperMode: "expand",
     });
-    try {
-      const doc = await PDFDocument.create();
-      doc.addPage([100, 200]);
-      const bytes = await doc.save();
-      const loaded = await client.request(
-        "load",
-        { bytes, metadata: { name: "worker.pdf", size: bytes.length } },
-        [bytes.buffer],
-      );
-      assert.equal(bytes.byteLength, 0);
-      assert.equal(loaded.width, 100);
-      const result = await client.request("generate", {
-        layout: LAYOUTS[4],
-        paperMode: "expand",
-      });
-      const output = await PDFDocument.load(result.bytes);
-      assert.deepEqual(output.getPage(0).getSize(), {
-        width: 200,
-        height: 400,
-      });
-    } finally {
-      client.dispose();
-    }
-  },
-);
+    const output = await PDFDocument.load(result.bytes);
+    assert.deepEqual(output.getPage(0).getSize(), {
+      width: 200,
+      height: 400,
+    });
+  } finally {
+    client.dispose();
+  }
+});

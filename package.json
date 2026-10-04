@@ -8,24 +8,36 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "test": "node --test",
-    "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.js",
+    "lint": "biome lint .",
     "lint:css": "stylelint \"css/**/*.css\"",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "vendor": "node scripts/vendor-dependencies.mjs",
-    "check": "pnpm test && pnpm lint && pnpm lint:css && pnpm format:check"
+    "check": "pnpm vendor && pnpm vendor --check && pnpm typecheck && pnpm test && pnpm biome:check && pnpm lint:css && pnpm build",
+    "dev": "pnpm vendor && vite",
+    "build": "pnpm vendor && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "biome:check": "biome check ."
   },
   "dependencies": {
     "pdf-lib": "1.17.1",
-    "pdfjs-dist": "6.2.108"
+    "pdfjs-dist": "6.2.108",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "10.0.1",
-    "eslint": "10.8.0",
-    "globals": "17.9.0",
-    "prettier": "3.9.6",
+    "@biomejs/biome": "2.5.14",
+    "@types/node": "26.6.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "react-test-renderer": "19.3.0",
     "stylelint": "17.14.1",
-    "stylelint-config-standard": "40.0.0"
+    "stylelint-config-standard": "40.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "8.3.1"
   }
 }

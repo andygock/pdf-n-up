@@ -77,76 +77,74 @@ All runtime resources load from the same site; there are no CDN requests.
 
 ## Run locally
 
-The deployed application contains only static HTML, CSS, JavaScript and a
-vendored PDF libraries. It has no server-side processing or runtime build step.
-Serve the complete `vendor/` directory so text and image decoders are available.
-PDF generation and downloading still work if preview resources fail to load.
-
-Serve the repository with any static web server. For example, with Python:
-
-```sh
-python -m http.server 8000
-```
-
-Then open [http://localhost:8000](http://localhost:8000).
-
-Do not open `index.html` through a `file://` URL. Browsers commonly block local
-ES-module and worker loading in that context.
-
-## Development checks
-
-Node.js 22 or newer and pnpm are only required for contributor tooling and
-refreshing the vendored libraries:
+The app uses React, TypeScript and Vite. Node.js 22.13 or newer and pnpm are
+required for development and production builds. Document processing remains
+entirely in the browser.
 
 ```sh
 pnpm install
+pnpm dev
+```
+
+Open the local URL printed by Vite. Do not open `index.html` through a `file://`
+URL; browsers block module and worker loading in that context.
+
+## Development checks
+
+```sh
 pnpm check
 ```
 
-Useful individual commands are:
+This verifies generated PDF.js assets, TypeScript, tests, Biome linting and formatting, CSS linting
+and the production build. Useful individual commands are:
 
 ```sh
 pnpm test
+pnpm typecheck
 pnpm lint
+pnpm biome:check
 pnpm lint:css
 pnpm format:check
+pnpm build
+pnpm preview
 pnpm vendor
 pnpm vendor --check
 pnpm audit
 ```
 
-`pnpm vendor` recreates `vendor/` from the exact dependency versions in
-`pnpm-lock.yaml`. Commit regenerated vendor files together with dependency
-updates. Regeneration builds a replacement before swapping it into place;
-`--check` compares file inventory and bytes without changing the vendor files.
+`pnpm dev` and `pnpm build` generate `public/vendor/` from the exact installed
+PDF library versions. This generated directory is ignored by Git. It contains
+the PDF.js module, worker, CMaps, fonts, ICC profiles, image decoders and library
+licences. Vite bundles pdf-lib into the conversion worker; its old UMD copy is
+no longer needed. Regeneration builds a replacement before swapping it into
+place; `--check` verifies its file inventory and bytes.
+
+Biome replaces ESLint and Prettier for JavaScript, TypeScript, JSX and JSON.
+Stylelint checks the original CSS, which is kept unchanged.
 
 The repository enforces a seven-day `minimumReleaseAge` in `pnpm-workspace.yaml`.
 Do not bypass it for dependency updates. Both PDF libraries are represented in
 the lockfile and dependency audits. CI runs checks and audits for pull requests,
 pushes and a weekly schedule; only the master branch can deploy.
 
-Tests exercise the conversion engine with generated PDFs, physical scaling and
-rotation, blank pages, spacing, invalid input, source retention, Japanese CMaps,
-JPEG 2000 decoding, worker termination and preview cancellation. The async UI
-tests use DOM doubles, and a Node transport adapter runs the shipped conversion
-worker. They do not launch a browser or run smoke tests.
+Tests exercise PDF conversion, physical scaling, rotation, blank pages,
+spacing, invalid input, source retention, Japanese CMaps, JPEG 2000 decoding,
+worker termination, React interaction and preview cancellation. They use Node,
+React test rendering and DOM doubles, without browser smoke tests.
 
 ## Deploy
 
-Copy these files and directories to any static web host:
-
-```text
-index.html
-css/
-js/
-vendor/
-icon.svg
-favicon.ico
-apple-touch-icon.png
+```sh
+pnpm build
 ```
 
-No environment variables or database are required. The included GitHub Actions
-workflow stages only these runtime files for GitHub Pages.
+Publish the contents of `dist/` to a static web host. The relative Vite base
+supports deployment under a subdirectory, including GitHub Pages. The included
+GitHub Actions workflow builds and uploads `dist/`.
+
+No environment variables or database are required. All runtime resources load
+from the same site. The production security policy remains strict; Vite's
+local development server allows its injected refresh preamble and styles.
 
 ## Privacy
 
@@ -188,22 +186,21 @@ exhaust memory before a deadline or output-size check takes effect.
 
 ## Project structure
 
-- `index.html` — application markup, privacy copy and security policy
-- `css/` — base, component and responsive styles
-- `js/app.js` — event wiring and application initialisation
-- `js/core.js` — shared state, DOM references and display formatting
-- `js/geometry.js` — pure layout, rotation and page-size calculations
-- `js/pdf.js` — file validation, conversion orchestration, opening and downloads
-- `js/conversion.js` — PDF parsing and generation engine
-- `js/conversion-worker.js`, `js/worker-client.js` — worker transport and watchdog
-- `js/preview.js`, `js/async.js` — independent preview lifecycle and deadlines
-- `js/ui.js` — status and document-detail rendering
-- `js/navigation.js` — application view and mobile-navigation behaviour
-- `js/dependencies.js` — lazy local PDF.js loading and auxiliary asset locations
-- `vendor/` — pinned PDF libraries, auxiliary resources and licences
-- `test/` — Node.js unit and PDF integration tests
-- `scripts/` — contributor utilities, including vendor regeneration
-- `icon.svg`, `favicon.ico`, `apple-touch-icon.png` — site icons
+- `index.html` — Vite entry point, metadata and production security policy
+- `src/App.tsx` — React interface, page content and accessible navigation
+- `src/useConversion.ts` — conversion state, file validation and document lifecycle
+- `src/format.ts` — display formatting and old-history cleanup
+- `src/geometry.ts` — pure layout, rotation and page-size calculations
+- `src/conversion.ts` — PDF parsing and generation engine
+- `src/conversion-worker.ts`, `src/worker-client.ts` — worker transport and watchdog
+- `src/Preview.tsx`, `src/preview.ts` — preview component and render lifecycle
+- `src/dependencies.ts`, `src/async.ts` — lazy PDF.js loading and deadlines
+- `src/types.ts` — shared PDF metadata and worker protocol types
+- `css/` — original base, component and responsive styles
+- `public/` — site icons and generated PDF.js resources
+- `test/` — Node, React and PDF integration tests
+- `scripts/` — generated asset preparation and verification
+- `vite.config.ts`, `tsconfig.json` — build and strict TypeScript configuration
 
 ## Browser requirements
 
