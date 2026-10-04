@@ -8,7 +8,7 @@ rasterising it.
 All document processing happens in the browser. Source and generated PDF data
 is not uploaded to a server.
 
-Demo: <https://andygock.github.io/pdf-n-up/>
+Demo: <https://pdfnup.gock.net/>
 
 ## Features
 
