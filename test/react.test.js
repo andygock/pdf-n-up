@@ -382,6 +382,10 @@ test("empty state and navigation use accessible DOM controls", async () => {
         await new Promise((resolve) => setTimeout(resolve, 20));
       });
       assert.equal(query(`#view-${view}`).hidden, false);
+      assert.equal(
+        document.activeElement?.id,
+        view === "convert" ? "selectFileButton" : "pageTitle",
+      );
     }
   } finally {
     await act(() => root.unmount());
