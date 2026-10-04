@@ -5,11 +5,13 @@ import * as pdfLib from "pdf-lib";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import App from "../src/App.tsx";
+import { createArchive } from "../src/archive.ts";
 import { createConversionEngine } from "../src/conversion.ts";
 import { LAYOUTS } from "../src/geometry.ts";
 import { Modal } from "../src/Modal.tsx";
 import { Preview } from "../src/Preview.tsx";
 import { SpacingInput } from "../src/SpacingInput.tsx";
+import { useBatch } from "../src/useBatch.ts";
 import { useConversion } from "../src/useConversion.ts";
 import { WorkerLostError } from "../src/worker-client.ts";
 
@@ -625,5 +627,136 @@ test("reset clears remembered settings and optional sizing choices", async () =>
     assert.equal(localStorage.getItem("pdf-nup.preferences.v1"), null);
   } finally {
     await app.close();
+  }
+});
+
+test("batch hook produces a ZIP, invalidates changed pages and clears retained results", async () => {
+  const previousWorker = globalThis.Worker;
+  globalThis.Worker = class {
+    constructor(url) {
+      this.archive = url.pathname.includes("archive-worker");
+      this.engine = createConversionEngine(pdfLib);
+    }
+    postMessage(data) {
+      Promise.resolve().then(async () => {
+        if (this.archive) {
+          this.onmessage({ data: { bytes: createArchive(data) } });
+          return;
+        }
+        try {
+          const result =
+            data.method === "load"
+              ? await this.engine.load(
+                  data.payload.bytes,
+                  data.payload.metadata,
+                )
+              : data.method === "selectPage"
+                ? this.engine.selectPage(data.payload)
+                : await this.engine.generate(data.payload);
+          this.onmessage({ data: { id: data.id, result } });
+        } catch (error) {
+          this.onmessage({ data: { id: data.id, error: error.message } });
+        }
+      });
+    }
+    terminate() {}
+  };
+  let value, root;
+  function Harness() {
+    value = useBatch();
+    return null;
+  }
+  await act(() => {
+    root = create(createElement(Harness));
+  });
+  try {
+    await act(async () =>
+      value.selectFiles([await file(), new File(["bad"], "bad.pdf")]),
+    );
+    await act(() => value.run({ layout: LAYOUTS[4], paperMode: "a4" }));
+    assert.equal(value.processing, false);
+    assert.equal(value.entries[0].status, "ready");
+    assert.equal(value.entries[1].status, "failed");
+    assert.equal(value.archive.type, "application/zip");
+    assert.match(value.message, /1 of 2/);
+    await act(() => value.setPage(0, 2));
+    assert.equal(value.archive, null);
+    assert.equal(value.entries[0].output, undefined);
+    await act(() => value.clear());
+    assert.equal(value.entries.length, 0);
+    assert.equal(value.archive, null);
+  } finally {
+    await act(() => root.unmount());
+    if (previousWorker === undefined) delete globalThis.Worker;
+    else globalThis.Worker = previousWorker;
+  }
+});
+
+test("batch hook cancellation prevents stale work from repopulating cleared results", async () => {
+  const previousWorker = globalThis.Worker;
+  let terminated = false;
+  globalThis.Worker = class {
+    postMessage() {}
+    terminate() {
+      terminated = true;
+    }
+  };
+  let value, root;
+  function Harness() {
+    value = useBatch();
+    return null;
+  }
+  await act(() => {
+    root = create(createElement(Harness));
+  });
+  try {
+    await act(async () => value.selectFiles([await file()]));
+    let running;
+    await act(async () => {
+      running = value.run({ layout: LAYOUTS[4], paperMode: "expand" });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    assert.equal(value.processing, true);
+    await act(async () => {
+      value.clear();
+      await running;
+    });
+    assert.equal(value.processing, false);
+    assert.equal(value.entries.length, 0);
+    assert.equal(value.archive, null);
+    assert.equal(terminated, true);
+  } finally {
+    await act(() => root.unmount());
+    if (previousWorker === undefined) delete globalThis.Worker;
+    else globalThis.Worker = previousWorker;
+  }
+});
+
+test("multiple file drops queue a batch through the app", async () => {
+  let root;
+  await act(() => {
+    root = create(createElement(App));
+  });
+  try {
+    const files = [await file(), await file()];
+    const event = new window.Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", {
+      value: { types: ["Files"], files },
+    });
+    await act(async () => window.dispatchEvent(event));
+    const panel = root.container.querySelector(
+      '[aria-label="Batch conversion"]',
+    );
+    assert.equal(panel.querySelectorAll("li").length, 2);
+    assert.ok(panel.textContent.includes("Convert batch"));
+    assert.equal(
+      root.container
+        .querySelector('[role="status"]')
+        .textContent.includes("Multiple files rejected"),
+      false,
+    );
+  } finally {
+    await act(() => root.unmount());
+    window.history.replaceState(null, "", "/");
   }
 });

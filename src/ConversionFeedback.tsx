@@ -62,6 +62,7 @@ export function ConversionFeedback({
             <button
               className={`${ui.button} ${ui.compact}`}
               id="useSourceSizeButton"
+              disabled={processing}
               onClick={() => void changeOptions({ paperMode: "same" })}
               type="button"
             >

@@ -39,5 +39,9 @@ test("malformed and out-of-range preferences fall back safely", () => {
     parsePreferences({ ...DEFAULT_OPTIONS, scalePercent: Infinity }),
     null,
   );
+  assert.equal(
+    parsePreferences({ ...DEFAULT_OPTIONS, paperMode: ["a4"] }),
+    null,
+  );
   localStorage.clear();
 });

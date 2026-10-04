@@ -1,0 +1,40 @@
+.panel {
+  padding: var(--space-4) var(--space-5);
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.actions,
+.files li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.files {
+  padding: 0;
+  list-style: none;
+}
+
+.files li {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.files strong {
+  flex: 1 1 200px;
+  overflow-wrap: anywhere;
+}
+
+.files input {
+  width: 80px;
+}
+
+.files p {
+  flex-basis: 100%;
+  margin: 0;
+}

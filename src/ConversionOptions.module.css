@@ -128,8 +128,9 @@
   font-size: var(--font-size-small);
 }
 
-.spacingOptions input {
-  width: 62px;
+.spacingOptions input[type="number"],
+.spacingOptions select {
+  width: 90px;
   min-height: 36px;
   padding: var(--space-1) 6px;
   border: 1px solid var(--border);
@@ -177,4 +178,14 @@
   .sizeOption span {
     min-height: 44px;
   }
+}
+
+.spacingOptions select {
+  width: auto;
+  max-width: 100%;
+}
+
+.spacingOptions small {
+  flex-basis: 100%;
+  color: var(--text-muted);
 }

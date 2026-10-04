@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { withDeadline } from "./async.ts";
 import { downloadPdf } from "./download.ts";
 import {
-  detectPdfSignature,
   formatBytes,
   formatPageSize,
-  MAX_FILE_SIZE,
   removeLegacyPersistedState,
 } from "./format.ts";
 import {
@@ -20,7 +17,7 @@ import {
   readPreferences,
   savePreferences,
 } from "./preferences.ts";
-import { readBlob } from "./read-blob.ts";
+import { readPdfFile } from "./read-pdf-file.ts";
 import type {
   ConversionOptions,
   OutputAction,
@@ -67,8 +64,9 @@ export function useConversion(
     status: ready,
   });
   useEffect(() => {
+    if (!rememberSettings) return;
     try {
-      savePreferences(rememberSettings ? state.options : null);
+      savePreferences(state.options);
       setPreferenceError("");
     } catch (error) {
       setPreferenceError(
@@ -210,32 +208,9 @@ export function useConversion(
     });
     try {
       const file = selected[0];
-      if (!(file instanceof File))
-        throw new Error("No readable file was selected.");
-      if (!file.size) throw new Error("The selected file is empty.");
-      if (file.size > MAX_FILE_SIZE)
-        throw new Error(
-          `The selected file exceeds the ${formatBytes(MAX_FILE_SIZE)} limit.`,
-        );
-      if (!file.name.toLowerCase().endsWith(".pdf"))
-        throw new Error("The selected file does not have a .pdf extension.");
       const controller = new AbortController();
       readingController.current = controller;
-      const read = async () => {
-        if (!(await detectPdfSignature(file, controller.signal)))
-          throw new Error(
-            "The selected file does not contain a valid PDF header.",
-          );
-        controller.signal.throwIfAborted();
-        return readBlob(file, controller.signal);
-      };
-      const bytes = await withDeadline(
-        read(),
-        controller.signal,
-        15_000,
-        "Reading the file timed out. Try selecting it again.",
-      ).finally(() => {
-        controller.abort();
+      const bytes = await readPdfFile(file, controller.signal).finally(() => {
         if (readingController.current === controller)
           readingController.current = null;
       });
@@ -362,10 +337,34 @@ export function useConversion(
     ...state,
     details,
     rememberSettings,
-    setRememberSettings,
+    setRememberSettings: (enabled: boolean) => {
+      if (!enabled) {
+        try {
+          savePreferences(null);
+          setPreferenceError("");
+        } catch (error) {
+          setPreferenceError(
+            error instanceof Error
+              ? error.message
+              : "Browser storage is unavailable.",
+          );
+        }
+      }
+      setRememberSettings(enabled);
+    },
     preferenceError,
     resetSettings: async () => {
       setRememberSettings(false);
+      try {
+        savePreferences(null);
+        setPreferenceError("");
+      } catch (error) {
+        setPreferenceError(
+          error instanceof Error
+            ? error.message
+            : "Browser storage is unavailable.",
+        );
+      }
       await changeOptions(DEFAULT_OPTIONS);
     },
     selectFiles,

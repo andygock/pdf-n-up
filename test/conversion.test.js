@@ -242,3 +242,45 @@ test("multi-page selection updates dimensions, content and filenames without rel
   assert.throws(() => engine.selectPage(1.5), /page number/);
   assert.equal(engine.selectPage(1).width, 100);
 });
+
+test("custom grids, fixed paper, exact dimensions and crop marks combine in real PDF output", async () => {
+  const pointsPerMm = 72 / 25.4;
+  const { engine } = await load(
+    await fixture(
+      (page) => page.drawText("Ticket", { x: 10, y: 20, size: 10 }),
+      [90 * pointsPerMm, 50 * pointsPerMm],
+    ),
+  );
+  const result = await engine.generate({
+    layout: { columns: 2, rows: 3, copies: 6, custom: true },
+    paperMode: "a4",
+    scaleMode: "dimensions",
+    copyWidthMm: 90,
+    copyHeightMm: 50,
+    cropMarks: true,
+  });
+  const page = await outputPage(result);
+  assert.ok(
+    Math.abs(Math.min(page.getWidth(), page.getHeight()) - 210 * pointsPerMm) <
+      1e-8,
+  );
+  assert.ok(
+    Math.abs(Math.max(page.getWidth(), page.getHeight()) - 297 * pointsPerMm) <
+      1e-8,
+  );
+  const task = getDocument({
+    data: result.bytes.slice(),
+    standardFontDataUrl: fileURLToPath(
+      new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url),
+    ).replaceAll("\\", "/"),
+  });
+  try {
+    const document = await task.promise;
+    const content = await (await document.getPage(1)).getTextContent();
+    const tickets = content.items.filter((item) => item.str === "Ticket");
+    assert.equal(tickets.length, 6);
+    for (const ticket of tickets) assert.equal(ticket.transform[0], 10);
+  } finally {
+    await task.destroy();
+  }
+});

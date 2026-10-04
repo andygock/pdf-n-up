@@ -40,6 +40,7 @@ export function SourcePicker({
           event.target.value = "";
           void onSelectFiles(files);
         }}
+        multiple
         type="file"
         accept="application/pdf,.pdf"
         hidden
@@ -53,8 +54,8 @@ export function SourcePicker({
         </h2>
         <p id="dropDescription">
           {source
-            ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · one page`
-            : "Up to 50 MB. Choose which page to repeat. Converts as soon as you choose a file."}
+            ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · page ${source.pageNumber} of ${source.pageCount}`
+            : "Up to 50 MB per PDF. Choose one file to convert, or several to prepare a batch."}
         </p>
       </div>
       <div className={styles.documentActions}>

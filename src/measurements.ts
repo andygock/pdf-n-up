@@ -39,7 +39,7 @@ export function drawMeasurements(
       );
   }
   label(
-    `Margin: ${mm(measurements.margin)} · Gap: ${mm(measurements.gutter)}`,
+    `Min. margin: ${mm(measurements.margin)} · Cell gap: ${mm(measurements.gutter)}`,
     4,
     4,
   );

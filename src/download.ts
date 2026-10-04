@@ -8,7 +8,16 @@ interface SavePickerWindow extends Window {
   }>;
 }
 
-export async function downloadPdf(blob: Blob, suggestedName: string) {
+export const downloadPdf = (blob: Blob, suggestedName: string) =>
+  downloadFile(blob, suggestedName, "pdf");
+export const downloadZip = (blob: Blob, suggestedName: string) =>
+  downloadFile(blob, suggestedName, "zip");
+
+async function downloadFile(
+  blob: Blob,
+  suggestedName: string,
+  format: "pdf" | "zip",
+) {
   const pickerWindow = window as SavePickerWindow;
   if (pickerWindow.showSaveFilePicker) {
     // Invoke the picker before awaiting anything to preserve the click gesture.
@@ -16,8 +25,11 @@ export async function downloadPdf(blob: Blob, suggestedName: string) {
       suggestedName,
       types: [
         {
-          description: "PDF document",
-          accept: { "application/pdf": [".pdf"] },
+          description: format === "pdf" ? "PDF document" : "ZIP archive",
+          accept:
+            format === "pdf"
+              ? { "application/pdf": [".pdf"] }
+              : { "application/zip": [".zip"] },
         },
       ],
     });

@@ -1,6 +1,7 @@
 import styles from "./App.module.css";
 import { AppFooter } from "./AppFooter.tsx";
 import { AppHeader } from "./AppHeader.tsx";
+import { BatchPanel } from "./BatchPanel.tsx";
 import { ConversionFeedback } from "./ConversionFeedback.tsx";
 import { ConversionOptions } from "./ConversionOptions.tsx";
 import { DropOverlay } from "./DropOverlay.tsx";
@@ -9,6 +10,7 @@ import { OutputPanel } from "./OutputPanel.tsx";
 import { PageHeading } from "./PageHeading.tsx";
 import { SourcePicker } from "./SourcePicker.tsx";
 import { SpacingInput } from "./SpacingInput.tsx";
+import { useBatch } from "./useBatch.ts";
 import { useConversion } from "./useConversion.ts";
 import { useFileDrop } from "./useFileDrop.ts";
 import { useView } from "./useView.ts";
@@ -19,15 +21,23 @@ export default function App() {
     source,
     output,
     options,
-    processing,
+    processing: converting,
     status,
     failed,
     details,
-    selectFiles,
+    selectFiles: selectSingleFile,
     changeOptions,
     clearDocument,
     openOutput,
   } = conversion;
+  const batch = useBatch();
+  const processing = converting || batch.processing;
+  const selectFiles = async (files: FileList | File[] | null) => {
+    if (processing) return;
+    const selected = Array.from(files ?? []);
+    if (selected.length > 1) batch.selectFiles(selected);
+    else await selectSingleFile(selected);
+  };
   const { view, setView, headingRef } = useView();
   const dragging = useFileDrop(processing, selectFiles, setView);
   return (
@@ -40,7 +50,7 @@ export default function App() {
             processing={processing}
             dragging={dragging}
             onSelectFiles={selectFiles}
-            onClear={clearDocument}
+            onClear={batch.processing ? batch.cancel : clearDocument}
             compact
           />
         )}
@@ -59,7 +69,7 @@ export default function App() {
                 processing={processing}
                 dragging={dragging}
                 onSelectFiles={selectFiles}
-                onClear={clearDocument}
+                onClear={batch.processing ? batch.cancel : clearDocument}
               />
             )}
             {source && source.pageCount > 1 && (
@@ -116,13 +126,14 @@ export default function App() {
               details={details}
               changeOptions={changeOptions}
             />
-            {(source || processing) && (
+            {(source || converting) && (
               <OutputPanel
                 output={output}
                 active={view === "convert"}
                 openOutput={openOutput}
               />
             )}
+            <BatchPanel batch={batch} options={options} disabled={processing} />
           </div>
         </section>
         <Help view={view} />

@@ -27,6 +27,7 @@ Demo: <https://pdfnup.gock.net/>
 - Generates the result entirely in browser memory, using the browser's PDF viewer
   when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
+- Batch-convert up to 20 PDFs with per-file page selection, cancellation, individual downloads and one ZIP
 - Opt in to remember layout settings locally; Reset settings removes saved preferences
 - Toggle measurement overlays on the canvas preview without changing the saved PDF
 - Exact percentage or copy dimensions preserve proportions and report when the sheet is too small
@@ -44,10 +45,12 @@ visible appearances may remain part of the page content.
 
 ## How the layout works
 
-With expanded paper, the output width is the visible source width multiplied by
-the grid columns and the output height is multiplied by its rows. Copies remain
-at 100%. With source-page size, the output uses the visible input dimensions and
-copies are uniformly scaled and centred in each grid cell.
+With automatic sizing and expanded paper, copies remain at 100%. Fixed paper
+(source-page size, A4, A3 or custom millimetre dimensions) uses the best-fit sheet
+orientation and uniformly scales and centres each copy within its cell. Exact
+percentage or dimension modes retain the requested size. Dimension inputs must
+match the source proportions within 0.1 mm; artwork is never stretched. Requests
+that cannot fit fixed paper are rejected with the maximum available scale.
 
 For example:
 
@@ -55,7 +58,8 @@ For example:
 - 4-up source-page size uses 50% copies
 - 8-up uses four columns and two rows for a portrait source
 
-Rectangular grids are transposed for landscape pages. Source-page output also
+Preset rectangular grids are transposed for landscape pages; custom grids keep
+the selected rows and columns. Fixed-paper output also
 compares portrait and landscape sheet orientations and chooses the larger fit.
 
 PDF pages larger than 14,400 points (5,080 mm) on either output axis are
@@ -64,9 +68,11 @@ exceed that limit, choose source-page size instead. The validated source remains
 available after an incompatible output choice, so it does not need to be selected again.
 
 Margins and gaps default to zero. Expanded paper adds twice the outer margin
-and one gap between each adjacent row or column, while retaining 100% copy scale.
-Source-page size deducts this spacing from the available area before calculating
+and one gap between each adjacent row or column, while retaining the requested copy scale (100% in automatic mode).
+Fixed paper deducts this spacing from the available area before calculating
 the best uniform fit. Print at actual size to preserve the generated dimensions.
+
+Batch input and combined results are each limited to 100 MB; the 50 MB per-file limit still applies. Files run sequentially, and failed files do not prevent other results from being downloaded. Batch results use a snapshot of the current settings. Run the batch again after changing options. ZIP entries have numbered prefixes to keep duplicate filenames distinct. All batch data is held only in memory and released on replacement, clearing or closing the tab.
 
 The generated filename includes the selected layout. For example,
 `handout.pdf` becomes `handout_8up.pdf` for an 8-up conversion.
@@ -79,8 +85,9 @@ The generated filename includes the selected layout. For example,
 4. Open the generated PDF in a new tab or choose Save PDF when needed.
    Built-in viewer controls may also offer saving and printing.
 
-The application ships version-pinned copies of `pdf-lib` and PDF.js `6.2.108`,
-including the worker, CMaps, standard fonts, ICC profiles and image decoders.
+The application ships version-pinned copies of `pdf-lib`, PDF.js `6.2.108`
+(including its worker, CMaps, standard fonts, ICC profiles and image decoders),
+and `fflate` for ZIP packaging.
 All runtime resources load from the same site; there are no CDN requests.
 
 ## Run locally
@@ -218,6 +225,11 @@ exhaust memory before a deadline or output-size check takes effect.
 - `src/Preview.tsx`, `src/preview.ts` — preview component and render lifecycle
 - `src/dependencies.ts`, `src/async.ts` — lazy PDF.js loading and deadlines
 - `src/types.ts` — shared PDF metadata and worker protocol types
+- `src/BatchPanel.tsx`, `src/useBatch.ts`, `src/batch.ts` — batch controls, lifecycle and sequential processing
+- `src/archive.ts`, `src/archive-worker.ts`, `src/archive-client.ts` — local ZIP packaging in a terminable worker
+- `src/preferences.ts` — allowlisted, opt-in settings storage
+- `src/measurements.ts` — preview-only measurement drawing
+- `src/read-pdf-file.ts` — shared cancellable file validation and reading
 - `css/base.css` — shared CSS variables, document defaults and accessibility rules
 - `src/*.module.css` — scoped component styles with their responsive rules; `ui.module.css` shares button and panel styles
 - `public/` — site icons

@@ -115,7 +115,7 @@ export function ConversionOptions({
           />
           <span>
             <strong>Expand paper</strong>
-            <small>Original-size copies</small>
+            <small>Size sheet to copies</small>
           </span>
         </label>
         <label className={styles.sizeOption}>
@@ -129,7 +129,7 @@ export function ConversionOptions({
           />
           <span>
             <strong>Same paper</strong>
-            <small>Scale copies to fit</small>
+            <small>Source sheet dimensions</small>
           </span>
         </label>
         {(["a4", "a3", "custom"] as const).map((paperMode) => (

@@ -33,6 +33,6 @@ test("measurement overlay maps PDF bottom-left coordinates to the canvas", () =>
     ),
   );
   assert.ok(
-    labels.some((text) => text.includes("Margin:") && text.includes("Gap:")),
+    labels.some((text) => text.includes("margin:") && text.includes("gap:")),
   );
 });

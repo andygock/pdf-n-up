@@ -44,24 +44,28 @@ export function Help({ view }: { view: View }) {
         >
           <h2>Page-size calculation</h2>
           <p>
-            Expand paper size multiplies the source width by the number of
-            columns and its height by the number of rows, keeping each copy at
-            100%. Keep source page size retains the visible dimensions and
-            scales each copy uniformly to fit its grid cell.
+            Choose expanded paper, source-sized paper, A4, A3 or custom
+            dimensions. Automatic sizing keeps copies at 100% on expanded paper
+            and fits them proportionally onto fixed paper. Exact percentage and
+            dimension modes retain the requested size and report when the sheet
+            is too small.
           </p>
           <p>
             Outer margins and gaps between copies default to zero. Expanded
-            paper adds the selected spacing without shrinking copies.
-            Source-page size reserves that spacing before scaling the copies.
+            paper adds the selected spacing without shrinking copies. Fixed
+            paper reserves that spacing before scaling the copies. Crop marks
+            reserve at least 5 mm margins and 10 mm gaps.
           </p>
 
           <span className={styles.formula}>
-            expanded width = source width × columns &nbsp;&nbsp; expanded height
-            = source height × rows
+            expanded width = copy width × columns + 2 × margin + (columns − 1) ×
+            gap
+            <br />
+            expanded height = copy height × rows + 2 × margin + (rows − 1) × gap
           </span>
 
           <span className={styles.formula}>
-            same-paper scale = best proportional fit in the original or rotated
+            fixed-paper scale = best proportional fit in the original or rotated
             sheet orientation
           </span>
         </article>
@@ -69,12 +73,18 @@ export function Help({ view }: { view: View }) {
         <article className={styles.contentSection}>
           <h2>Examples</h2>
           <ul>
-            <li>4-up (2×2) on expanded paper doubles both dimensions.</li>
-            <li>4-up on the source page uses four copies at 50% scale.</li>
+            <li>
+              4-up (2×2) on expanded paper at 100%, without spacing, doubles
+              both dimensions.
+            </li>
+            <li>
+              4-up on the source page with automatic sizing and no spacing uses
+              four copies at 50% scale.
+            </li>
             <li>8-up uses a four-column by two-row arrangement.</li>
             <li>
-              Rectangular layouts rotate the output sheet when that avoids
-              unused space.
+              Preset rectangular grids transpose for landscape source pages.
+              Custom grids retain your chosen rows and columns.
             </li>
             <li>Non-standard page dimensions are enlarged proportionally.</li>
             <li>
@@ -82,6 +92,21 @@ export function Help({ view }: { view: View }) {
               annotations and form controls are not copied.
             </li>
           </ul>
+        </article>
+        <article className={styles.contentSection}>
+          <h2>Batch conversion</h2>
+          <p>
+            Choose batch PDFs or drop multiple files, select a page number for
+            each, then choose Convert batch. Up to 20 files and 100 MB of input
+            are accepted; each file is limited to 50 MB. Results are limited to
+            100 MB combined. Failed files are listed individually. Save
+            completed PDFs separately or download the ZIP. Changing settings
+            requires running the batch again.
+          </p>
+          <p>
+            Show measurements overlays copy dimensions, minimum margins and cell
+            gaps on the preview only. Print the saved PDF at actual size.
+          </p>
         </article>
       </section>
 

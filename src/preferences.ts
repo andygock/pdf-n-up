@@ -32,12 +32,14 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     rows = layout.rows as number;
   if (columns * rows > 100 || layout.copies !== columns * rows) return null;
   if (
-    !["expand", "same", "a4", "a3", "custom"].includes(String(data.paperMode))
+    typeof data.paperMode !== "string" ||
+    !["expand", "same", "a4", "a3", "custom"].includes(data.paperMode)
   )
     return null;
   if (
     data.scaleMode !== undefined &&
-    !["fit", "percent", "dimensions"].includes(String(data.scaleMode))
+    (typeof data.scaleMode !== "string" ||
+      !["fit", "percent", "dimensions"].includes(data.scaleMode))
   )
     return null;
   if (layout.custom !== undefined && typeof layout.custom !== "boolean")
