@@ -127,6 +127,7 @@ export default function App() {
               </ConversionOptions>
             </div>
             <ConversionFeedback
+              recovery={conversion.recovery}
               source={source}
               output={output}
               options={options}
@@ -144,7 +145,11 @@ export default function App() {
               />
             )}
             {batch.entries.length > 0 ? (
-              <BatchPanel batch={batch} options={options} disabled={processing} />
+              <BatchPanel
+                batch={batch}
+                options={options}
+                disabled={processing}
+              />
             ) : batch.message ? (
               <p className={styles.batchMessage} role="status">
                 {batch.message}

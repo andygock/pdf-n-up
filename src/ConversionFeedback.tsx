@@ -6,6 +6,7 @@ import type { useConversion } from "./useConversion.ts";
 
 type ConversionFeedbackProps = Pick<
   ReturnType<typeof useConversion>,
+  | "recovery"
   | "source"
   | "output"
   | "options"
@@ -16,6 +17,7 @@ type ConversionFeedbackProps = Pick<
   | "changeOptions"
 >;
 export function ConversionFeedback({
+  recovery,
   source,
   output,
   options,
@@ -58,7 +60,32 @@ export function ConversionFeedback({
               </div>
             )}
           </div>
-          {failed && source && options.paperMode !== "same" && (
+          {recovery && (
+            <>
+              <button
+                className={`${ui.button} ${ui.compact}`}
+                type="button"
+                disabled={processing}
+                onClick={() => void changeOptions(recovery.fit)}
+              >
+                Use maximum fitting scale (
+                {Number(recovery.maximumScale.toFixed(2))}%)
+              </button>
+              {recovery.fewer && (
+                <button
+                  className={`${ui.button} ${ui.compact}`}
+                  type="button"
+                  disabled={processing}
+                  onClick={() => {
+                    if (recovery.fewer) void changeOptions(recovery.fewer);
+                  }}
+                >
+                  Reduce to {recovery.fewer.layout.copies} copies per sheet
+                </button>
+              )}
+            </>
+          )}
+          {failed && !recovery && source && options.paperMode !== "same" && (
             <button
               className={`${ui.button} ${ui.compact}`}
               id="useSourceSizeButton"

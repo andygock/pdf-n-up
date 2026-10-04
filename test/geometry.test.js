@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   getCopyBoxes,
   getCropMarkLines,
+  getFitRecovery,
   getOutputGeometry,
   getResolvedLayout,
   getRotatedDrawOptions,
@@ -305,5 +306,30 @@ test("automatic packing maximises copies without shrinking artwork", () => {
   assert.equal(
     getOutputGeometry({ ...options, width: 1, height: 1 }).layout.copies,
     100,
+  );
+});
+
+test("fit recovery offers a valid maximum scale and a smaller exact-size grid", () => {
+  const options = {
+    width: 200,
+    height: 300,
+    layout: LAYOUTS[16],
+    paperMode: "a4",
+    scaleMode: "percent",
+    scalePercent: 100,
+  };
+  const recovery = getFitRecovery(options);
+  assert.ok(recovery.maximumScale > 0 && recovery.maximumScale < 100);
+  assert.ok(getOutputGeometry({ ...options, ...recovery.fit }).scale < 1);
+  assert.ok(recovery.fewer.layout.copies < 16);
+  assert.equal(getOutputGeometry({ ...options, ...recovery.fewer }).scale, 1);
+  assert.equal(
+    getFitRecovery({
+      ...options,
+      scaleMode: "dimensions",
+      copyWidthMm: 10,
+      copyHeightMm: 500,
+    }),
+    null,
   );
 });

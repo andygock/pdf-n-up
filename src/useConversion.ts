@@ -8,6 +8,7 @@ import {
 import {
   assertCompatibleOutputSize,
   getCopyBoxes,
+  getFitRecovery,
   getOutputGeometry,
   getResolvedLayout,
   getSpacing,
@@ -370,8 +371,17 @@ export function useConversion(
       // the actionable error instead of leaving stale output dimensions.
     }
   }
+  let recovery: ReturnType<typeof getFitRecovery> = null;
+  if (state.failed && state.source) {
+    try {
+      recovery = getFitRecovery({ ...state.source, ...state.options });
+    } catch {
+      /* Keep the original validation error. */
+    }
+  }
   return {
     ...state,
+    recovery,
     details,
     rememberSettings,
     setRememberSettings: (enabled: boolean) => {

@@ -475,3 +475,48 @@ export const linkCopyDimensions = (
           ((dimension.copyHeightMm ?? 50) * source.width) / source.height,
         copyHeightMm: dimension.copyHeightMm ?? 50,
       };
+
+export const getFitRecovery = (
+  options: ConversionOptions & { width: number; height: number },
+) => {
+  try {
+    getOutputGeometry(options);
+    return null;
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !error.message.includes("requested size do not fit")
+    )
+      return null;
+  }
+  const layout = options.autoLayout
+    ? { rows: 1, columns: 1, copies: 1, custom: true }
+    : options.layout;
+  const fit = {
+    ...options,
+    layout,
+    autoLayout: false,
+    scaleMode: "fit" as const,
+  };
+  const maximum = getOutputGeometry(fit);
+  let fewer: Layout | undefined;
+  for (let rows = 1; rows <= 20; rows++) {
+    for (let columns = 1; columns <= 20; columns++) {
+      const copies = rows * columns;
+      if (copies >= layout.copies || (fewer && copies <= fewer.copies))
+        continue;
+      const candidate = { copies, rows, columns, custom: true };
+      try {
+        getOutputGeometry({ ...options, autoLayout: false, layout: candidate });
+        fewer = candidate;
+      } catch {
+        /* Try a smaller grid. */
+      }
+    }
+  }
+  return {
+    maximumScale: maximum.scale * 100,
+    fit: { autoLayout: false, layout, scaleMode: "fit" as const },
+    fewer: fewer ? { autoLayout: false, layout: fewer } : null,
+  };
+};
