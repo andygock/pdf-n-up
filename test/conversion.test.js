@@ -168,3 +168,56 @@ test("a bounded complex content fixture can be converted repeatedly", {
     assert.ok(result.bytes.length < 1_000_000);
   }
 });
+
+test("page transparency groups preserve indirect colour spaces across repeated conversions", async () => {
+  const { engine } = await load(
+    await fixture((page, doc) => {
+      page.drawRectangle({ width: 70, height: 70, opacity: 0.5 });
+      page.drawRectangle({ x: 30, y: 30, width: 70, height: 70, opacity: 0.5 });
+      const colourSpace = doc.context.register(
+        doc.context.obj(["CalRGB", { WhitePoint: [0.9505, 1, 1.089] }]),
+      );
+      const group = doc.context.register(
+        doc.context.obj({
+          Type: "Group",
+          S: "Transparency",
+          CS: colourSpace,
+          I: true,
+          K: true,
+        }),
+      );
+      page.node.set(pdfLib.PDFName.of("Group"), group);
+    }),
+  );
+  for (const layout of [LAYOUTS[4], LAYOUTS[2]]) {
+    const result = await engine.generate({ ...options, layout });
+    const document = await pdfLib.PDFDocument.load(result.bytes);
+    const forms = document.context
+      .enumerateIndirectObjects()
+      .filter(
+        ([, object]) =>
+          object instanceof pdfLib.PDFRawStream &&
+          object.dict.get(pdfLib.PDFName.of("Subtype"))?.toString() === "/Form",
+      );
+    assert.equal(forms.length, 1);
+    const group = forms[0][1].dict.lookup(
+      pdfLib.PDFName.of("Group"),
+      pdfLib.PDFDict,
+    );
+    assert.equal(
+      group.lookup(pdfLib.PDFName.of("S")).toString(),
+      "/Transparency",
+    );
+    assert.equal(group.lookup(pdfLib.PDFName.of("I")).toString(), "true");
+    assert.equal(group.lookup(pdfLib.PDFName.of("K")).toString(), "true");
+    const colourSpace = group.lookup(pdfLib.PDFName.of("CS"), pdfLib.PDFArray);
+    assert.equal(colourSpace.lookup(0).toString(), "/CalRGB");
+    assert.equal(
+      colourSpace
+        .lookup(1, pdfLib.PDFDict)
+        .lookup(pdfLib.PDFName.of("WhitePoint"), pdfLib.PDFArray)
+        .size(),
+      3,
+    );
+  }
+});

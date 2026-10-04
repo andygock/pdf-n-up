@@ -114,6 +114,21 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           right: x + width,
           top: y + height,
         });
+        const group = source.page.node.get(pdfLib.PDFName.of("Group"));
+        if (group) {
+          // pdf-lib omits page transparency groups when creating Form XObjects.
+          // Materialise the form before restoring the group, copying indirect
+          // colour-space references into the destination document as well.
+          await embedded.embed();
+          const form = output.context.lookup(embedded.ref, pdfLib.PDFStream);
+          form.dict.set(
+            pdfLib.PDFName.of("Group"),
+            pdfLib.PDFObjectCopier.for(
+              source.document.context,
+              output.context,
+            ).copy(group),
+          );
+        }
         const margin = ((options.marginMm ?? 0) * 72) / 25.4;
         const gutter = ((options.gutterMm ?? 0) * 72) / 25.4;
         const cellWidth =
