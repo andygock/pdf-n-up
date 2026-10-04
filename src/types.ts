@@ -20,6 +20,7 @@ export interface ConversionOptions {
   paperMode: PaperMode;
   marginMm?: number;
   gutterMm?: number;
+  cropMarks?: boolean;
   paperWidthMm?: number;
   paperHeightMm?: number;
 }

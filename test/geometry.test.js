@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getCopyBoxes,
+  getCropMarkLines,
   getOutputGeometry,
   getResolvedLayout,
   getRotatedDrawOptions,
@@ -149,4 +151,34 @@ test("fixed paper sizes and custom dimensions choose the best orientation", () =
       getOutputGeometry({ ...source, paperMode: "custom", paperWidthMm: 0 }),
     /Custom paper/,
   );
+});
+
+test("crop marks remain inside the sheet and outside every copy", () => {
+  const options = {
+    width: 100,
+    height: 200,
+    layout: LAYOUTS[4],
+    paperMode: "expand",
+    cropMarks: true,
+  };
+  const sheet = getOutputGeometry(options);
+  const boxes = getCopyBoxes(options);
+  assert.equal(sheet.scale, 1);
+  for (const box of boxes)
+    for (const line of getCropMarkLines(box))
+      for (const point of [line.start, line.end]) {
+        assert.ok(
+          point.x >= 0 &&
+            point.y >= 0 &&
+            point.x <= sheet.outputWidth &&
+            point.y <= sheet.outputHeight,
+        );
+        for (const other of boxes)
+          assert.ok(
+            point.x < other.x ||
+              point.x > other.x + other.width ||
+              point.y < other.y ||
+              point.y > other.y + other.height,
+          );
+      }
 });

@@ -94,6 +94,7 @@ export const getOutputGeometry = ({
   paperMode,
   marginMm = 0,
   gutterMm = 0,
+  cropMarks = false,
   paperWidthMm = 210,
   paperHeightMm = 297,
 }: ConversionOptions & { width: number; height: number }) => {
@@ -116,8 +117,7 @@ export const getOutputGeometry = ({
   ) {
     throw new Error("Margins and gutters must be between 0 and 100 mm.");
   }
-  const margin = (marginMm * 72) / 25.4;
-  const gutter = (gutterMm * 72) / 25.4;
+  const { margin, gutter } = getSpacing({ marginMm, gutterMm, cropMarks });
   const { columns, rows } = getResolvedLayout(layout, width, height);
 
   if (paperMode === "expand") {
@@ -251,4 +251,59 @@ export const makeOutputFilename = (inputName: string, copies: number) => {
     : cleanedName;
 
   return `${basename}_${copies}up.pdf`;
+};
+
+// Reserve 1 mm clearance plus 3 mm marks, with spare room at sheet edges.
+export const getSpacing = (
+  options: Pick<ConversionOptions, "marginMm" | "gutterMm" | "cropMarks">,
+) => ({
+  margin:
+    (Math.max(options.marginMm ?? 0, options.cropMarks ? 5 : 0) * 72) / 25.4,
+  gutter:
+    (Math.max(options.gutterMm ?? 0, options.cropMarks ? 10 : 0) * 72) / 25.4,
+});
+
+export const getCopyBoxes = (
+  options: ConversionOptions & { width: number; height: number },
+) => {
+  const geometry = getOutputGeometry(options);
+  const { columns, rows, copies } = getResolvedLayout(
+    options.layout,
+    options.width,
+    options.height,
+  );
+  const { margin, gutter } = getSpacing(options);
+  const cellWidth =
+    (geometry.outputWidth - 2 * margin - (columns - 1) * gutter) / columns;
+  const cellHeight =
+    (geometry.outputHeight - 2 * margin - (rows - 1) * gutter) / rows;
+  const width = options.width * geometry.scale;
+  const height = options.height * geometry.scale;
+  return Array.from({ length: copies }, (_, index) => ({
+    x:
+      margin +
+      (index % columns) * (cellWidth + gutter) +
+      (cellWidth - width) / 2,
+    y:
+      margin +
+      (rows - 1 - Math.floor(index / columns)) * (cellHeight + gutter) +
+      (cellHeight - height) / 2,
+    width,
+    height,
+  }));
+};
+
+export const getCropMarkLines = (box: PageBox) => {
+  const clearance = 72 / 25.4;
+  const reach = 4 * clearance;
+  return [box.x, box.x + box.width].flatMap((x) =>
+    [box.y, box.y + box.height].flatMap((y) => {
+      const dx = x === box.x ? -1 : 1;
+      const dy = y === box.y ? -1 : 1;
+      return [
+        { start: { x: x + dx * clearance, y }, end: { x: x + dx * reach, y } },
+        { start: { x, y: y + dy * clearance }, end: { x, y: y + dy * reach } },
+      ];
+    }),
+  );
 };

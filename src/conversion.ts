@@ -2,6 +2,8 @@ import type * as PDFLib from "pdf-lib";
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import {
   assertCompatibleOutputSize,
+  getCopyBoxes,
+  getCropMarkLines,
   getOutputGeometry,
   getResolvedLayout,
   getRotatedDrawOptions,
@@ -88,7 +90,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         ...options,
       });
       assertCompatibleOutputSize({ outputWidth, outputHeight });
-      const { columns, rows, copies } = getResolvedLayout(
+      const { copies } = getResolvedLayout(
         options.layout,
         source.width,
         source.height,
@@ -129,20 +131,10 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
             ).copy(group),
           );
         }
-        const margin = ((options.marginMm ?? 0) * 72) / 25.4;
-        const gutter = ((options.gutterMm ?? 0) * 72) / 25.4;
-        const cellWidth =
-          (outputWidth - 2 * margin - (columns - 1) * gutter) / columns;
-        const cellHeight =
-          (outputHeight - 2 * margin - (rows - 1) * gutter) / rows;
-        const xOffset = (cellWidth - source.width * scale) / 2;
-        const yOffset = (cellHeight - source.height * scale) / 2;
-        for (let index = 0; index < copies; index += 1) {
-          const column = index % columns;
-          const row = rows - 1 - Math.floor(index / columns);
+        for (const box of getCopyBoxes({ ...source, ...options })) {
           const draw = getRotatedDrawOptions({
-            left: margin + column * (cellWidth + gutter) + xOffset,
-            bottom: margin + row * (cellHeight + gutter) + yOffset,
+            left: box.x,
+            bottom: box.y,
             sourceWidth: width,
             sourceHeight: height,
             // Embedded streams retain source units; output pages use points.
@@ -156,6 +148,16 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
             yScale: draw.yScale,
             rotate: pdfLib.degrees(draw.degrees),
           });
+        }
+      }
+      if (options.cropMarks) {
+        for (const box of getCopyBoxes({ ...source, ...options })) {
+          for (const line of getCropMarkLines(box))
+            outputPage.drawLine({
+              ...line,
+              thickness: 0.25,
+              color: pdfLib.rgb(0, 0, 0),
+            });
         }
       }
       const bytes = await output.save({

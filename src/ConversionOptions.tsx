@@ -136,6 +136,22 @@ export function ConversionOptions({
       </fieldset>
       <fieldset className={`${styles.optionGroup} ${styles.spacingOptions}`}>
         <legend>Spacing (mm)</legend>
+        <label>
+          <input
+            type="checkbox"
+            checked={options.cropMarks ?? false}
+            disabled={processing}
+            onChange={(event) =>
+              void changeOptions({ cropMarks: event.target.checked })
+            }
+          />
+          Crop marks
+        </label>
+        {options.cropMarks && (
+          <small>
+            Reserves at least 5 mm margins and 10 mm gaps for cutting guides.
+          </small>
+        )}
         <label htmlFor="marginMm">
           Margin
           <SpacingInput

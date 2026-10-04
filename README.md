@@ -26,6 +26,7 @@ Demo: <https://pdfnup.gock.net/>
 - Generates the result entirely in browser memory, using the browser's PDF viewer
   when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
+- Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork
 - Offers A4, A3 and custom output paper dimensions with automatic best-fit orientation
 - Supports outer margins and gaps between copies, measured in millimetres
 - Offers conversion cancellation, document clearing and PDF.js preview retry
