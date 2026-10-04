@@ -219,6 +219,71 @@ export function ConversionOptions({
           />
         </label>
       </fieldset>
+      <fieldset className={styles.spacingOptions}>
+        <legend>Copy size</legend>
+        <label htmlFor="scaleMode">
+          Sizing
+          <select
+            id="scaleMode"
+            disabled={processing}
+            value={options.scaleMode ?? "fit"}
+            onChange={(event) =>
+              void changeOptions({
+                scaleMode: event.target.value as Options["scaleMode"],
+              })
+            }
+          >
+            <option value="fit">Automatic</option>
+            <option value="percent">Exact percentage</option>
+            <option value="dimensions">Exact dimensions</option>
+          </select>
+        </label>
+        {options.scaleMode === "percent" && (
+          <label htmlFor="scalePercent">
+            Scale (%)
+            <SpacingInput
+              id="scalePercent"
+              disabled={processing}
+              min={0.1}
+              max={10000}
+              value={options.scalePercent ?? 100}
+              onCommit={(scalePercent) => void changeOptions({ scalePercent })}
+            />
+          </label>
+        )}
+        {options.scaleMode === "dimensions" && (
+          <>
+            <label htmlFor="copyWidthMm">
+              Width (mm)
+              <SpacingInput
+                id="copyWidthMm"
+                disabled={processing}
+                min={0.1}
+                max={5080}
+                value={options.copyWidthMm ?? 90}
+                onCommit={(copyWidthMm) => void changeOptions({ copyWidthMm })}
+              />
+            </label>
+            <label htmlFor="copyHeightMm">
+              Height (mm)
+              <SpacingInput
+                id="copyHeightMm"
+                disabled={processing}
+                min={0.1}
+                max={5080}
+                value={options.copyHeightMm ?? 50}
+                onCommit={(copyHeightMm) =>
+                  void changeOptions({ copyHeightMm })
+                }
+              />
+            </label>
+            <small>
+              Dimensions must retain the source proportions. Artwork is never
+              stretched.
+            </small>
+          </>
+        )}
+      </fieldset>
     </section>
   );
 }

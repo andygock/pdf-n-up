@@ -21,6 +21,10 @@ export interface ConversionOptions {
   paperMode: PaperMode;
   marginMm?: number;
   gutterMm?: number;
+  scaleMode?: "fit" | "percent" | "dimensions";
+  scalePercent?: number;
+  copyWidthMm?: number;
+  copyHeightMm?: number;
   cropMarks?: boolean;
   paperWidthMm?: number;
   paperHeightMm?: number;

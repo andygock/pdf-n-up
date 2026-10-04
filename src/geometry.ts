@@ -95,6 +95,10 @@ export const getOutputGeometry = ({
   marginMm = 0,
   gutterMm = 0,
   cropMarks = false,
+  scaleMode = "fit",
+  scalePercent = 100,
+  copyWidthMm = 90,
+  copyHeightMm = 50,
   paperWidthMm = 210,
   paperHeightMm = 297,
 }: ConversionOptions & { width: number; height: number }) => {
@@ -120,11 +124,45 @@ export const getOutputGeometry = ({
   const { margin, gutter } = getSpacing({ marginMm, gutterMm, cropMarks });
   const { columns, rows } = getResolvedLayout(layout, width, height);
 
+  if (!["fit", "percent", "dimensions"].includes(scaleMode))
+    throw new Error("Invalid copy sizing mode.");
+  let requestedScale: number | undefined;
+  if (scaleMode === "percent") {
+    if (
+      !Number.isFinite(scalePercent) ||
+      scalePercent <= 0 ||
+      scalePercent > 10000
+    )
+      throw new Error(
+        "Copy scale must be greater than zero and at most 10,000%.",
+      );
+    requestedScale = scalePercent / 100;
+  } else if (scaleMode === "dimensions") {
+    if (
+      ![copyWidthMm, copyHeightMm].every(
+        (value) => Number.isFinite(value) && value > 0 && value <= 5080,
+      )
+    )
+      throw new Error(
+        "Copy dimensions must be greater than zero and at most 5,080 mm.",
+      );
+    requestedScale = (copyWidthMm * 72) / 25.4 / width;
+    if (Math.abs((height * requestedScale * 25.4) / 72 - copyHeightMm) > 0.1)
+      throw new Error(
+        "Copy dimensions must match the source proportions (within 0.1 mm). Adjust width or height to avoid distortion.",
+      );
+  }
   if (paperMode === "expand") {
     return {
-      outputWidth: width * columns + 2 * margin + (columns - 1) * gutter,
-      outputHeight: height * rows + 2 * margin + (rows - 1) * gutter,
-      scale: 1,
+      outputWidth:
+        width * (requestedScale ?? 1) * columns +
+        2 * margin +
+        (columns - 1) * gutter,
+      outputHeight:
+        height * (requestedScale ?? 1) * rows +
+        2 * margin +
+        (rows - 1) * gutter,
+      scale: requestedScale ?? 1,
     };
   }
 
@@ -169,6 +207,13 @@ export const getOutputGeometry = ({
     throw new Error(
       "Margins and gutters leave no space for copies. Reduce the spacing or expand the paper.",
     );
+  if (requestedScale !== undefined) {
+    if (requestedScale > best.scale + 1e-9)
+      throw new Error(
+        `Copies at the requested size do not fit. Maximum scale is ${(best.scale * 100).toFixed(2)}%. Choose larger paper, fewer copies or less spacing.`,
+      );
+    return { ...best, scale: requestedScale };
+  }
   return best;
 };
 

@@ -208,3 +208,40 @@ test("custom grids retain their axes and reject excessive or fractional counts",
     );
   }
 });
+
+test("exact sizing preserves proportions and refuses to shrink oversized copies", () => {
+  const base = {
+    width: 100,
+    height: 200,
+    layout: LAYOUTS[4],
+    paperMode: "same",
+    scaleMode: "percent",
+    scalePercent: 25,
+  };
+  assert.equal(getOutputGeometry(base).scale, 0.25);
+  assert.throws(
+    () => getOutputGeometry({ ...base, scalePercent: 100 }),
+    /do not fit/,
+  );
+  assert.equal(
+    getOutputGeometry({ ...base, paperMode: "expand", scalePercent: 200 })
+      .outputWidth,
+    400,
+  );
+  const dimensions = {
+    ...base,
+    paperMode: "expand",
+    scaleMode: "dimensions",
+    copyWidthMm: 25.4,
+    copyHeightMm: 50.8,
+  };
+  closeTo(getOutputGeometry(dimensions).scale, 0.72);
+  assert.throws(
+    () => getOutputGeometry({ ...dimensions, copyHeightMm: 40 }),
+    /proportions/,
+  );
+  assert.throws(
+    () => getOutputGeometry({ ...base, scalePercent: 0 }),
+    /Copy scale/,
+  );
+});
