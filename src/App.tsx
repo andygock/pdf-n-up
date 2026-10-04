@@ -37,8 +37,10 @@ export default function App() {
     if (processing) return;
     const selected = Array.from(files ?? []);
     if (!selected.length) return;
-    if (selected.length > 1) batch.selectFiles(selected);
-    else {
+    if (selected.length > 1) {
+      clearDocument();
+      batch.selectFiles(selected);
+    } else {
       batch.clear();
       await selectSingleFile(selected);
     }

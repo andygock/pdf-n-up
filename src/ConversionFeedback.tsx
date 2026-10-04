@@ -27,6 +27,12 @@ export function ConversionFeedback({
   details,
   changeOptions,
 }: ConversionFeedbackProps) {
+  const sequenceFitFailure =
+    failed &&
+    options.mode === "sequence" &&
+    /requested size do not fit|does not fit its cell at the requested size/.test(
+      status.message,
+    );
   return (
     <>
       {(source || processing || status.type === "error") && (
@@ -85,17 +91,33 @@ export function ConversionFeedback({
               )}
             </>
           )}
-          {failed && !recovery && source && options.paperMode !== "same" && (
+          {sequenceFitFailure && (
             <button
               className={`${ui.button} ${ui.compact}`}
-              id="useSourceSizeButton"
-              disabled={processing}
-              onClick={() => void changeOptions({ paperMode: "same" })}
               type="button"
+              disabled={processing}
+              onClick={() =>
+                void changeOptions({ autoLayout: false, scaleMode: "fit" })
+              }
             >
-              Use source-page size
+              Fit each page to its cell
             </button>
           )}
+          {failed &&
+            !recovery &&
+            !sequenceFitFailure &&
+            source &&
+            options.paperMode !== "same" && (
+              <button
+                className={`${ui.button} ${ui.compact}`}
+                id="useSourceSizeButton"
+                disabled={processing}
+                onClick={() => void changeOptions({ paperMode: "same" })}
+                type="button"
+              >
+                Use source-page size
+              </button>
+            )}
           {source && (
             <Modal
               title="Document details"

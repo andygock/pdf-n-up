@@ -30,7 +30,8 @@ export function PageOptions({
   }, [options.pageRange]);
   const applyRange = () => {
     try {
-      parsePageRange(range, source?.pageCount ?? 100_000);
+      if (range.trim() || source)
+        parsePageRange(range, source?.pageCount ?? Number.MAX_SAFE_INTEGER);
       setError("");
       void changeOptions({ pageRange: range });
     } catch (cause) {

@@ -6,9 +6,11 @@ import { act, createElement, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import App from "../src/App.tsx";
 import { createArchive } from "../src/archive.ts";
+import { ConversionFeedback } from "../src/ConversionFeedback.tsx";
 import { createConversionEngine } from "../src/conversion.ts";
 import { LAYOUTS } from "../src/geometry.ts";
 import { Modal } from "../src/Modal.tsx";
+import { PageOptions } from "../src/PageOptions.tsx";
 import { Preview } from "../src/Preview.tsx";
 import { SpacingInput } from "../src/SpacingInput.tsx";
 import { useBatch } from "../src/useBatch.ts";
@@ -499,6 +501,14 @@ test("dropping converts and replaces PDFs with a save action in native mode", as
       /replacement_4up.pdf/,
     );
     await assert.rejects(fetch(firstUrl));
+    const batchFiles = [await file(), await file()];
+    await act(() => window.dispatchEvent(drag("drop", batchFiles)));
+    assert.equal(root.container.querySelector("iframe"), null);
+    assert.equal(
+      root.container.querySelectorAll('[aria-label="Batch conversion"] li')
+        .length,
+      2,
+    );
   } finally {
     await act(() => root.unmount());
     window.history.replaceState(null, "", "/");
@@ -845,5 +855,90 @@ test("rounded linked dimensions never feed display rounding back into settings",
     assert.deepEqual(commits, []);
   } finally {
     await act(() => root.unmount());
+  }
+});
+
+test("batch page ranges can return to all pages before a source is loaded", async () => {
+  const patches = [];
+  let root;
+  await act(() => {
+    root = create(
+      createElement(PageOptions, {
+        source: null,
+        sourceFile: null,
+        options: {
+          layout: LAYOUTS[4],
+          paperMode: "a4",
+          mode: "sequence",
+          pageRange: "1-2",
+        },
+        processing: false,
+        changeOptions: async (patch) => {
+          patches.push(patch);
+        },
+        selectPage: async () => {},
+      }),
+    );
+  });
+  try {
+    const dialog = root.container.querySelector("dialog");
+    dialog.showModal = () => {
+      dialog.open = true;
+    };
+    await act(() =>
+      root.container.querySelector('[aria-haspopup="dialog"]').click(),
+    );
+    const input = root.container.querySelector("#pageRange");
+    await act(() => {
+      Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      ).set.call(input, "");
+      input.dispatchEvent(new window.Event("input", { bubbles: true }));
+    });
+    await act(() =>
+      [...dialog.querySelectorAll("button")]
+        .find((button) => button.textContent === "Apply page range")
+        .click(),
+    );
+    assert.deepEqual(patches, [{ pageRange: "" }]);
+    assert.equal(dialog.querySelector('[role="alert"]'), null);
+  } finally {
+    await act(() => root.unmount());
+  }
+});
+
+test("sequential fit failures offer a working automatic sizing action", async () => {
+  const app = await mountConversion();
+  let root;
+  try {
+    const source = await pdfLib.PDFDocument.create();
+    source.addPage([100, 100]);
+    source.addPage([100, 500]);
+    await act(async () =>
+      app.value.selectFiles([new File([await source.save()], "mixed.pdf")]),
+    );
+    await act(() =>
+      app.value.changeOptions({
+        mode: "sequence",
+        paperMode: "a4",
+        scaleMode: "percent",
+        scalePercent: 100,
+      }),
+    );
+    assert.equal(app.value.failed, true);
+    await act(() => {
+      root = create(createElement(ConversionFeedback, app.value));
+    });
+    const button = [...root.container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Fit each page to its cell",
+    );
+    assert.ok(button);
+    await act(() => button.click());
+    assert.equal(app.value.failed, false);
+    assert.equal(app.value.output.sheets[0].boxes.length, 2);
+  } finally {
+    if (root) await act(() => root.unmount());
+    await app.close();
   }
 });
