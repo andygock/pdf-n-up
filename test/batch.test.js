@@ -107,3 +107,42 @@ test("ZIP entries have unique safe names and preserve all PDF bytes", async () =
   }
   assert.throws(() => createArchive([]), /between 1 and 20/);
 });
+
+test("batch exact sizing links dimensions to each selected source page", async () => {
+  const input = await fixture("linked.pdf");
+  const entries = [1, 2].map((pageNumber, id) => ({
+    id,
+    file: input,
+    pageNumber,
+    status: "queued",
+  }));
+  for (const dimensionAxis of ["width", "height"]) {
+    const results = new Map();
+    await processBatch(
+      entries,
+      {
+        ...DEFAULT_OPTIONS,
+        scaleMode: "dimensions",
+        dimensionAxis,
+        copyWidthMm: 30,
+        copyHeightMm: 50,
+      },
+      new AbortController().signal,
+      (id, patch) => results.set(id, { ...results.get(id), ...patch }),
+      factory,
+    );
+    for (const [id, ratio] of [
+      [0, 0.5],
+      [1, 0.75],
+    ]) {
+      assert.equal(results.get(id).status, "ready");
+      const box = results.get(id).output.sheets[0].boxes[0];
+      assert.ok(Math.abs(box.width / box.height - ratio) < 1e-9);
+      const fixed = dimensionAxis === "width" ? box.width : box.height;
+      assert.ok(
+        Math.abs((fixed * 25.4) / 72 - (dimensionAxis === "width" ? 30 : 50)) <
+          1e-9,
+      );
+    }
+  }
+});

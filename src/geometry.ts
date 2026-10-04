@@ -520,3 +520,24 @@ export const getFitRecovery = (
     fewer: fewer ? { autoLayout: false, layout: fewer } : null,
   };
 };
+
+export const resolveCopyDimensions = (
+  options: ConversionOptions,
+  source: { width: number; height: number },
+): ConversionOptions => {
+  if (options.scaleMode !== "dimensions") return options;
+  if (
+    options.dimensionAxis !== undefined &&
+    !["width", "height"].includes(options.dimensionAxis)
+  )
+    throw new Error("Choose width or height as the fixed copy dimension.");
+  return {
+    ...options,
+    ...linkCopyDimensions(
+      source,
+      options.dimensionAxis === "height"
+        ? { copyHeightMm: options.copyHeightMm ?? 50 }
+        : { copyWidthMm: options.copyWidthMm ?? 90 },
+    ),
+  };
+};

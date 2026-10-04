@@ -25,6 +25,7 @@ export const DEFAULT_OPTIONS: ConversionOptions = {
   paperHeightMm: 297,
   scaleMode: "fit",
   scalePercent: 100,
+  dimensionAxis: "width",
   copyWidthMm: 90,
   copyHeightMm: 50,
 };
@@ -114,6 +115,12 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
   result.pageOrder = data.pageOrder === "columns" ? "columns" : "rows";
   // Page ranges belong to the current document and are never persisted.
   result.cropMarks = data.cropMarks === true;
+  if (
+    data.dimensionAxis !== undefined &&
+    !["width", "height"].includes(data.dimensionAxis as string)
+  )
+    return null;
+  result.dimensionAxis = data.dimensionAxis === "height" ? "height" : "width";
   result.scaleMode = data.scaleMode as ConversionOptions["scaleMode"];
   return result;
 }

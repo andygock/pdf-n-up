@@ -63,8 +63,8 @@ in remembered settings. Batch mode applies the range to each document.
 With automatic sizing and expanded paper, copies remain at 100%. Fixed paper
 (source-page size, A4, A3 or custom millimetre dimensions) uses the best-fit sheet
 orientation and uniformly scales and centres each copy within its cell. Exact
-percentage or dimension modes retain the requested size. Dimension inputs must
-match the source proportions within 0.1 mm; artwork is never stretched. Requests
+percentage or dimension modes retain the requested size. Editing a copy dimension fixes that axis and calculates the other from each
+source page, including in batches; artwork is never stretched. Requests
 that cannot fit fixed paper are rejected with the maximum available scale.
 
 For example:

@@ -1,7 +1,7 @@
 import {
   getOutputGeometry,
   getSpacing,
-  linkCopyDimensions,
+  resolveCopyDimensions,
 } from "./geometry.ts";
 import type { ConversionOptions, Layout, PageBox } from "./types.ts";
 
@@ -85,15 +85,7 @@ export function fitPageToCell(
   const width = rotated ? source.height : source.width;
   const height = rotated ? source.width : source.height;
   const maximum = Math.min(cell.width / width, cell.height / height);
-  const sizing =
-    options.scaleMode === "dimensions"
-      ? {
-          ...options,
-          ...linkCopyDimensions(source, {
-            copyWidthMm: options.copyWidthMm ?? 90,
-          }),
-        }
-      : options;
+  const sizing = resolveCopyDimensions(options, source);
   const scale =
     (!options.scaleMode || options.scaleMode === "fit") && !options.autoLayout
       ? maximum

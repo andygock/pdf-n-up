@@ -10,7 +10,7 @@ import {
   getFitRecovery,
   getOutputGeometry,
   getResolvedLayout,
-  linkCopyDimensions,
+  resolveCopyDimensions,
 } from "./geometry.ts";
 import {
   DEFAULT_OPTIONS,
@@ -226,15 +226,7 @@ export function useConversion(
       update({
         source,
         sourceFile: file,
-        options:
-          current.current.options.scaleMode === "dimensions"
-            ? {
-                ...current.current.options,
-                ...linkCopyDimensions(source, {
-                  copyWidthMm: current.current.options.copyWidthMm ?? 90,
-                }),
-              }
-            : current.current.options,
+        options: resolveCopyDimensions(current.current.options, source),
       });
       await generate(token);
     } catch (error) {
@@ -258,15 +250,7 @@ export function useConversion(
       if (token !== operation.current) return;
       update({
         source,
-        options:
-          current.current.options.scaleMode === "dimensions"
-            ? {
-                ...current.current.options,
-                ...linkCopyDimensions(source, {
-                  copyWidthMm: current.current.options.copyWidthMm ?? 90,
-                }),
-              }
-            : current.current.options,
+        options: resolveCopyDimensions(current.current.options, source),
       });
       await generate(token);
     } catch (error) {
@@ -279,19 +263,12 @@ export function useConversion(
 
   const changeOptions = async (patch: Partial<ConversionOptions>) => {
     if (current.current.processing) return;
-    const options = { ...current.current.options, ...patch };
+    let options = { ...current.current.options, ...patch };
+    if (patch.copyHeightMm !== undefined && patch.copyWidthMm === undefined)
+      options.dimensionAxis = "height";
+    else if (patch.copyWidthMm !== undefined) options.dimensionAxis = "width";
     const source = current.current.source;
-    if (source && options.scaleMode === "dimensions") {
-      Object.assign(
-        options,
-        linkCopyDimensions(
-          source,
-          patch.copyHeightMm !== undefined && patch.copyWidthMm === undefined
-            ? { copyHeightMm: patch.copyHeightMm }
-            : { copyWidthMm: options.copyWidthMm ?? 90 },
-        ),
-      );
-    }
+    if (source) options = resolveCopyDimensions(options, source);
     update({ options });
     resetOutput();
     // Controlled inputs and conversion use the same options; browser-restored

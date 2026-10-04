@@ -8,8 +8,8 @@ import {
   getRotatedDrawOptions,
   getSpacing,
   getVisiblePageGeometry,
-  linkCopyDimensions,
   makeOutputFilename,
+  resolveCopyDimensions,
 } from "./geometry.ts";
 import {
   fitPageToCell,
@@ -135,15 +135,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       const reference = sequence
         ? selectPage(original.document, original, selectedPages[0], false)
         : original;
-      const layoutOptions =
-        sequence && options.scaleMode === "dimensions"
-          ? {
-              ...options,
-              ...linkCopyDimensions(reference, {
-                copyWidthMm: options.copyWidthMm ?? 90,
-              }),
-            }
-          : options;
+      const layoutOptions = resolveCopyDimensions(options, reference);
       const geometry = getOutputGeometry({ ...reference, ...layoutOptions });
       const { outputWidth, outputHeight, scale, layout, rotation } = geometry;
       assertCompatibleOutputSize(geometry);

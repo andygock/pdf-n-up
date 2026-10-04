@@ -204,7 +204,9 @@ export function ConversionOptions({
                   </label>
                 </div>
                 <p className={styles.hint}>
-                  Width and height stay linked to the source proportions.
+                  {options.dimensionAxis === "height" ? "Height" : "Width"}{" "}
+                  stays fixed; the other dimension follows each source page's
+                  proportions.
                 </p>
               </>
             ) : null}

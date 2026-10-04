@@ -766,8 +766,8 @@ test("exact dimensions stay linked across edits and source changes", async () =>
     await act(() => app.value.changeOptions({ copyHeightMm: 80 }));
     assert.equal(app.value.options.copyWidthMm, 40);
     await act(async () => app.value.selectFiles([await file(200, 100)]));
-    assert.equal(app.value.options.copyWidthMm, 40);
-    assert.equal(app.value.options.copyHeightMm, 20);
+    assert.equal(app.value.options.copyWidthMm, 160);
+    assert.equal(app.value.options.copyHeightMm, 80);
     assert.equal(app.value.failed, false);
   } finally {
     await app.close();
@@ -823,5 +823,27 @@ test("source thumbnail files are retained only for the active document", async (
     assert.equal(app.value.sourceFile, null);
   } finally {
     await app.close();
+  }
+});
+
+test("rounded linked dimensions never feed display rounding back into settings", async () => {
+  let root;
+  const commits = [];
+  await act(() => {
+    root = create(
+      createElement(SpacingInput, {
+        id: "linked-rounding",
+        value: 100 / 3,
+        disabled: false,
+        onCommit: (value) => commits.push(value),
+      }),
+    );
+  });
+  try {
+    assert.equal(root.container.querySelector("input").value, "33.3333");
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    assert.deepEqual(commits, []);
+  } finally {
+    await act(() => root.unmount());
   }
 });

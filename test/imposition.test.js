@@ -139,3 +139,20 @@ test("quantity creates partial or filled final sheets and embeds repeated conten
   assert.equal(single.sheets.length, 1);
   assert.equal(single.sheets[0].boxes.length, 4);
 });
+
+test("sequential exact height remains fixed across different page proportions", async () => {
+  const engine = await makeEngine([
+    [100, 100],
+    [100, 500],
+  ]);
+  const result = await engine.generate({
+    ...options,
+    scaleMode: "dimensions",
+    dimensionAxis: "height",
+    copyHeightMm: 50,
+  });
+  const boxes = result.sheets[0].boxes;
+  assert.ok(Math.abs((boxes[0].height * 25.4) / 72 - 50) < 1e-9);
+  assert.ok(Math.abs((boxes[1].height * 25.4) / 72 - 50) < 1e-9);
+  assert.ok(Math.abs((boxes[1].width * 25.4) / 72 - 10) < 1e-9);
+});

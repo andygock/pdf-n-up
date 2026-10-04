@@ -61,6 +61,7 @@ export interface ConversionOptions {
   gutterMm?: number;
   scaleMode?: "fit" | "percent" | "dimensions";
   scalePercent?: number;
+  dimensionAxis?: "width" | "height";
   copyWidthMm?: number;
   copyHeightMm?: number;
   cropMarks?: boolean;

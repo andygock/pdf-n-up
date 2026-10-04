@@ -20,8 +20,9 @@ export function SpacingInput({
   value,
   onCommit,
 }: SpacingInputProps) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
+  const displayValue = Number(value.toFixed(4));
+  const [draft, setDraft] = useState(String(displayValue));
+  useEffect(() => setDraft(String(displayValue)), [displayValue]);
   const number = Number(draft);
   const valid =
     draft.trim() !== "" &&
@@ -31,13 +32,14 @@ export function SpacingInput({
     (step !== 1 || Number.isInteger(number));
 
   useEffect(() => {
-    if (disabled || !valid || number === value) return;
+    // Rounded linked values are display-only; do not feed them back into sizing.
+    if (disabled || !valid || number === displayValue) return;
 
     // Allow multi-digit edits and keep pending drafts until conversion is idle.
     // Avoid blur commits: they can disable the next control before its click.
     const timer = setTimeout(() => onCommit(number), 350);
     return () => clearTimeout(timer);
-  }, [number, valid, disabled, value, onCommit]);
+  }, [number, valid, disabled, displayValue, onCommit]);
 
   return (
     <input
