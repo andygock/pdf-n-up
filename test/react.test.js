@@ -13,6 +13,7 @@ import { WorkerLostError } from "../src/worker-client.ts";
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const listeners = new Map();
 globalThis.window = {
+  location: { hash: "" },
   matchMedia: () => ({
     matches: true,
     addEventListener() {},
@@ -347,7 +348,7 @@ test("native PDF preview follows regenerated output and clears without retaining
   }
 });
 
-test("native PDF viewer replaces the separate Download control", async (t) => {
+test("the empty state has no inactive preview or download controls", async (t) => {
   t.mock.getter(globalThis, "navigator", () => ({ pdfViewerEnabled: true }));
   let root;
   await act(() => {
@@ -359,17 +360,14 @@ test("native PDF viewer replaces the separate Download control", async (t) => {
       0,
     );
     assert.equal(root.root.findAllByProps({ id: "downloadHelp" }).length, 0);
-    assert.equal(root.root.findByType(Preview).props.nativeViewer, true);
-    assert.match(
-      root.root.findByProps({ className: "preview-note" }).children.join(""),
-      /Save button in the PDF viewer/,
-    );
+    assert.equal(root.root.findAllByType(Preview).length, 0);
+    assert.equal(root.root.findAllByProps({ id: "statusBox" }).length, 0);
   } finally {
     await act(() => root.unmount());
   }
 });
 
-test("React preserves navigation, default options and mobile drawer accessibility", async () => {
+test("footer navigation preserves conversion options without a sidebar", async () => {
   let root;
   await act(() => {
     root = create(createElement(App));
@@ -385,27 +383,144 @@ test("React preserves navigation, default options and mobile drawer accessibilit
         .checked,
       true,
     );
-    assert.equal(byId("openOutputButton").props.disabled, true);
-    assert.equal(byId("sidebar").props.inert, true);
-    await act(() => byId("mobileMenuButton").props.onClick());
-    assert.equal(byId("mobileMenuButton").props["aria-expanded"], true);
-    assert.equal(byId("sidebar").props.inert, false);
-    await act(() =>
-      root.root.findByProps({ "data-view": "privacy" }).props.onClick(),
+    assert.equal(
+      root.root.findAllByProps({ id: "openOutputButton" }).length,
+      0,
     );
+    assert.equal(root.root.findAllByProps({ id: "sidebar" }).length, 0);
+    assert.equal(
+      root.root.findAllByProps({ id: "mobileMenuButton" }).length,
+      0,
+    );
+    const follow = async (view) => {
+      window.location.hash = root.root.findByProps({
+        "data-view": view,
+      }).props.href;
+      await act(() => listeners.get("hashchange")());
+    };
+    await follow("privacy");
     assert.equal(byId("view-privacy").props.className, "view");
     assert.equal(byId("view-convert").props.className, "view hidden");
     assert.equal(byId("pageTitle").children.join(""), "Privacy");
-    assert.equal(byId("sidebar").props.inert, true);
-    await act(() =>
-      root.root.findByProps({ "data-view": "guide" }).props.onClick(),
-    );
+    await follow("guide");
     assert.equal(byId("pageTitle").children.join(""), "How it works");
-    await act(() =>
-      root.root.findByProps({ "data-view": "convert" }).props.onClick(),
-    );
+    await follow("convert");
     assert.equal(byId("view-convert").props.className, "view");
   } finally {
+    window.location.hash = "";
     await act(() => root.unmount());
+  }
+});
+
+test("viewport drops validate files and keep the overlay stable across child elements", async () => {
+  let root;
+  await act(() => {
+    root = create(createElement(App));
+  });
+  const drag = (types = ["Files"], files = []) => ({
+    dataTransfer: { types, files },
+    preventDefault() {
+      this.prevented = true;
+    },
+    stopPropagation() {},
+  });
+  const overlay = () => root.root.findAllByProps({ className: "drop-overlay" });
+  try {
+    await act(() => listeners.get("dragenter")(drag(["text/plain"])));
+    assert.equal(overlay().length, 0);
+    await act(() => listeners.get("dragenter")(drag()));
+    await act(() => listeners.get("dragenter")(drag()));
+    await act(() => listeners.get("dragleave")(drag()));
+    assert.equal(overlay().length, 1);
+    const over = drag();
+    await act(() => listeners.get("dragover")(over));
+    assert.equal(over.prevented, true);
+    assert.equal(over.dataTransfer.dropEffect, "copy");
+    const drop = drag(["Files"], [new File(["not a PDF"], "wrong.pdf")]);
+    await act(() => listeners.get("drop")(drop));
+    assert.equal(drop.prevented, true);
+    assert.equal(overlay().length, 0);
+    assert.equal(
+      root.root.findByProps({ id: "statusTitle" }).children.join(""),
+      "File rejected",
+    );
+    await act(() => listeners.get("dragenter")(drag()));
+    await act(() => listeners.get("blur")());
+    assert.equal(overlay().length, 0);
+  } finally {
+    window.location.hash = "";
+    await act(() => root.unmount());
+    assert.equal(listeners.has("drop"), false);
+  }
+});
+
+test("dropping anywhere converts once, replaces the PDF and returns from help", async (t) => {
+  t.mock.getter(globalThis, "navigator", () => ({ pdfViewerEnabled: true }));
+  const previousWorker = globalThis.Worker;
+  const workers = [];
+  globalThis.Worker = class {
+    engine = makeWorker();
+    active = true;
+    constructor() {
+      workers.push(this);
+    }
+    async postMessage({ id, method, payload }) {
+      const result = await this.engine.request(method, payload);
+      if (this.active) this.onmessage({ data: { id, result } });
+    }
+    terminate() {
+      this.active = false;
+    }
+  };
+  let root;
+  window.location.hash = "#view-privacy";
+  await act(() => {
+    root = create(createElement(App));
+  });
+  const drop = (input) =>
+    listeners.get("drop")({
+      dataTransfer: { files: [input] },
+      preventDefault() {},
+      stopPropagation() {},
+    });
+  try {
+    await act(async () => drop(await file()));
+    assert.equal(
+      root.root.findByProps({ id: "view-convert" }).props.className,
+      "view",
+    );
+    assert.equal(
+      root.root.findByProps({ id: "dropTitle" }).children.join(""),
+      "handout.pdf",
+    );
+    assert.equal(
+      root.root.findByProps({ id: "selectFileButton" }).children.join(""),
+      "Replace PDF",
+    );
+    assert.equal(workers.length, 1);
+    assert.equal(workers[0].engine.loads, 1);
+    const first = root.root.findByType(Preview).props.output;
+    assert.equal(root.root.findByType(Preview).props.nativeViewer, true);
+    assert.equal(
+      root.root.findAllByProps({ id: "downloadOutputButton" }).length,
+      0,
+    );
+    const replacement = new File(
+      [await (await file()).arrayBuffer()],
+      "replacement.pdf",
+    );
+    await act(() => drop(replacement));
+    assert.equal(workers.length, 2);
+    assert.equal(workers[1].engine.loads, 1);
+    assert.equal(
+      root.root.findByType(Preview).props.output.filename,
+      "replacement_4up.pdf",
+    );
+    await assert.rejects(fetch(first.url));
+  } finally {
+    window.location.hash = "";
+    await act(() => root.unmount());
+    if (previousWorker === undefined) delete globalThis.Worker;
+    else globalThis.Worker = previousWorker;
   }
 });
