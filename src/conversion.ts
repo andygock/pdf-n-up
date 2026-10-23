@@ -181,6 +181,55 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         : getCopyBoxes({ ...reference, ...layoutOptions });
       const embeddedPages = new Map<number, PDFLib.PDFEmbeddedPage | null>();
       const pageInfo = new Map<number, SourceMetadata>();
+      const entries = [...new Set(pageNumbers)].flatMap((pageNumber) => {
+        const metadata = selectPage(
+          original.document,
+          original,
+          pageNumber,
+          false,
+        );
+        pageInfo.set(pageNumber, metadata);
+        const page = original.document.getPage(pageNumber - 1);
+        // Missing /Contents is valid for a blank PDF page. Avoid asking pdf-lib
+        // to embed it: there is no visual content to repeat.
+        const contents = page.node.Contents();
+        if (
+          !contents ||
+          (contents instanceof pdfLib.PDFArray && contents.size() === 0)
+        ) {
+          embeddedPages.set(pageNumber, null);
+          return [];
+        }
+        return [{ pageNumber, page, cropBox: metadata.cropBox }];
+      });
+      // One embedding call shares pdf-lib's resource copier across source pages,
+      // so common fonts and images are copied only once into the output.
+      const embedded = await output.embedPages(
+        entries.map(({ page }) => page),
+        entries.map(({ cropBox: { x, y, width, height } }) => ({
+          left: x,
+          bottom: y,
+          right: x + width,
+          top: y + height,
+        })),
+      );
+      const groupCopier = pdfLib.PDFObjectCopier.for(
+        original.document.context,
+        output.context,
+      );
+      for (const [index, entry] of entries.entries()) {
+        const formPage = embedded[index];
+        const group = entry.page.node.get(pdfLib.PDFName.of("Group"));
+        if (group) {
+          // pdf-lib omits page transparency groups when creating Form XObjects.
+          // Materialise the form before restoring the group, copying indirect
+          // colour-space references into the destination document as well.
+          await formPage.embed();
+          const form = output.context.lookup(formPage.ref, pdfLib.PDFStream);
+          form.dict.set(pdfLib.PDFName.of("Group"), groupCopier.copy(group));
+        }
+        embeddedPages.set(entry.pageNumber, formPage);
+      }
       for (let offset = 0; offset < pageNumbers.length; offset += copies) {
         const outputPage = output.addPage([outputWidth, outputHeight]);
         const sheet: OutputSheet = {
@@ -198,16 +247,9 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           slot++
         ) {
           const pageNumber = pageNumbers[offset + slot];
-          let metadata = pageInfo.get(pageNumber);
-          if (!metadata) {
-            metadata = selectPage(
-              original.document,
-              original,
-              pageNumber,
-              false,
-            );
-            pageInfo.set(pageNumber, metadata);
-          }
+          const metadata = pageInfo.get(pageNumber);
+          if (!metadata)
+            throw new Error("Selected page metadata is unavailable.");
           for (const warning of metadata.warnings) warnings.add(warning);
           let placement: ReturnType<typeof fitPageToCell>;
           try {
@@ -219,44 +261,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
               `Source page ${pageNumber}: ${error instanceof Error ? error.message : String(error)}`,
             );
           }
-          const page = original.document.getPage(pageNumber - 1);
-          const { x, y, width, height } = metadata.cropBox;
-          if (!embeddedPages.has(pageNumber)) {
-            // Missing /Contents is valid for a blank PDF page. Avoid asking pdf-lib
-            // to embed it: there is no visual content to repeat.
-            const contents = page.node.Contents();
-            const blank =
-              !contents ||
-              (contents instanceof pdfLib.PDFArray && contents.size() === 0);
-            let embedded: PDFLib.PDFEmbeddedPage | null = null;
-            if (!blank) {
-              embedded = await output.embedPage(page, {
-                left: x,
-                bottom: y,
-                right: x + width,
-                top: y + height,
-              });
-              const group = page.node.get(pdfLib.PDFName.of("Group"));
-              if (group) {
-                // pdf-lib omits page transparency groups when creating Form XObjects.
-                // Materialise the form before restoring the group, copying indirect
-                // colour-space references into the destination document as well.
-                await embedded.embed();
-                const form = output.context.lookup(
-                  embedded.ref,
-                  pdfLib.PDFStream,
-                );
-                form.dict.set(
-                  pdfLib.PDFName.of("Group"),
-                  pdfLib.PDFObjectCopier.for(
-                    original.document.context,
-                    output.context,
-                  ).copy(group),
-                );
-              }
-            }
-            embeddedPages.set(pageNumber, embedded);
-          }
+          const { width, height } = metadata.cropBox;
           const embedded = embeddedPages.get(pageNumber);
           if (embedded) {
             const draw = getRotatedDrawOptions({

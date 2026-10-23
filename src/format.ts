@@ -43,7 +43,7 @@ export const pageTitles = {
 };
 
 // Remove metadata written by versions that kept a recent-conversion history.
-// No new application state is written to persistent browser storage.
+// Document metadata and conversion history are never written to browser storage.
 export const removeLegacyPersistedState = () => {
   try {
     localStorage.removeItem(LEGACY_STORAGE_KEY);

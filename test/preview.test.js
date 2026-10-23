@@ -51,7 +51,7 @@ const library = ({
   pageWidth = 200,
   pageHeight = 400,
 } = {}) => {
-  const stats = { destroyed: 0, cancelled: 0 };
+  const stats = { destroyed: 0, cancelled: 0, cleaned: 0 };
   const page = {
     getViewport: ({ scale }) => ({
       width: pageWidth * scale,
@@ -63,7 +63,9 @@ const library = ({
         stats.cancelled++;
       },
     }),
-    cleanup() {},
+    cleanup() {
+      stats.cleaned++;
+    },
   };
   return {
     stats,
@@ -268,6 +270,7 @@ test("resizing and hiding reuse the document, while replacement and disposal rel
 
 test("sheet navigation reuses the parsed PDF and requests the selected page", async () => {
   const pages = [];
+  const cleaned = [];
   let parses = 0,
     destroys = 0;
   const lib = {
@@ -286,6 +289,7 @@ test("sheet navigation reuses the parsed PDF and requests the selected page", as
                 height: 300 * scale,
               }),
               render: () => ({ promise: Promise.resolve(), cancel() {} }),
+              cleanup: () => cleaned.push(number),
             };
           },
         }),
@@ -298,8 +302,31 @@ test("sheet navigation reuses the parsed PDF and requests the selected page", as
   controller.update({ ...currentOutput, previewPage: 2 }, true);
   await controller.render();
   assert.equal(pages.at(-1), 2);
+  assert.ok(cleaned.includes(1));
+  assert.ok(cleaned.includes(2));
   assert.equal(parses, 1);
   assert.equal(destroys, 0);
   controller.cancel();
   assert.equal(destroys, 1);
+});
+
+test("cancelled drawing releases page resources only after the render settles", async () => {
+  const pending = deferred();
+  const lib = library({ renderPromise: pending.promise });
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => lib,
+  });
+  controller.update(currentOutput, true);
+  const rendering = controller.render();
+  await new Promise((resolve) => setImmediate(resolve));
+  controller.update(currentOutput, false);
+  await rendering;
+  assert.equal(lib.stats.cancelled, 1);
+  assert.equal(lib.stats.cleaned, 0);
+  pending.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(lib.stats.cleaned, 1);
+  assert.equal(elements.pdfPreview.draws, 0);
+  assert.equal(lib.stats.destroyed, 0);
+  controller.cancel();
 });

@@ -121,40 +121,46 @@ export const createPreviewController = (
       }
       if (!current()) return;
       const page = await pdfDocument.getPage(renderedOutput.previewPage ?? 1);
-      if (!current()) return;
-      const base = page.getViewport({ scale: 1 });
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const scale = Math.min(
-        1.5,
-        size.width / base.width,
-        size.height / base.height,
-        Math.sqrt(4_000_000 / (base.width * base.height)) / ratio,
-      );
-      const viewport = page.getViewport({ scale: scale * ratio });
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.ceil(viewport.width));
-      canvas.height = Math.max(1, Math.ceil(viewport.height));
-      const context = canvas.getContext("2d", { alpha: false });
-      if (!context) throw new Error("Canvas rendering is unavailable.");
-      renderTask = page.render({ canvas, canvasContext: context, viewport });
-      await renderTask.promise;
-      if (!current()) return;
-      const target = elements.pdfPreview;
-      target.width = canvas.width;
-      target.height = canvas.height;
-      target.style.width = `${viewport.width / ratio}px`;
-      target.style.height = `${viewport.height / ratio}px`;
-      const targetContext = target.getContext("2d", { alpha: false });
-      if (!targetContext) throw new Error("Canvas rendering is unavailable.");
-      targetContext.drawImage(canvas, 0, 0);
-      if (renderedOutput.measurements)
-        drawMeasurements(
-          targetContext,
-          canvas.width,
-          canvas.height,
-          renderedOutput.measurements,
+      try {
+        if (!current()) return;
+        const base = page.getViewport({ scale: 1 });
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const scale = Math.min(
+          1.5,
+          size.width / base.width,
+          size.height / base.height,
+          Math.sqrt(4_000_000 / (base.width * base.height)) / ratio,
         );
-      target.hidden = false;
+        const viewport = page.getViewport({ scale: scale * ratio });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.ceil(viewport.width));
+        canvas.height = Math.max(1, Math.ceil(viewport.height));
+        const context = canvas.getContext("2d", { alpha: false });
+        if (!context) throw new Error("Canvas rendering is unavailable.");
+        renderTask = page.render({ canvas, canvasContext: context, viewport });
+        await renderTask.promise;
+        if (!current()) return;
+        const target = elements.pdfPreview;
+        target.width = canvas.width;
+        target.height = canvas.height;
+        target.style.width = `${viewport.width / ratio}px`;
+        target.style.height = `${viewport.height / ratio}px`;
+        const targetContext = target.getContext("2d", { alpha: false });
+        if (!targetContext) throw new Error("Canvas rendering is unavailable.");
+        targetContext.drawImage(canvas, 0, 0);
+        if (renderedOutput.measurements)
+          drawMeasurements(
+            targetContext,
+            canvas.width,
+            canvas.height,
+            renderedOutput.measurements,
+          );
+        target.hidden = false;
+      } finally {
+        // The work promise settles only after drawing completes or cancellation
+        // rejects it. PDF.js defers cleanup if a newer render still uses this page.
+        page.cleanup();
+      }
     };
     try {
       // One deadline covers module import, worker startup, parsing and drawing.

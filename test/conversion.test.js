@@ -284,3 +284,59 @@ test("custom grids, fixed paper, exact dimensions and crop marks combine in real
     await task.destroy();
   }
 });
+
+test("sequential pages share fonts and images while preserving blanks and repeated selections", async () => {
+  const source = await pdfLib.PDFDocument.create();
+  const font = await source.embedFont(pdfLib.StandardFonts.Helvetica);
+  const image = await source.embedPng(
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  );
+  for (let index = 0; index < 20; index++) {
+    const page = source.addPage([100, 200]);
+    page.drawText(`Page ${index + 1}`, { font, size: 10 });
+    page.drawImage(image, { x: 10, y: 10, width: 20, height: 20 });
+  }
+  source.addPage([100, 200]);
+  const { engine } = await load(await source.save());
+  const result = await engine.generate({
+    ...options,
+    mode: "sequence",
+    pageRange: "1-21, 1",
+  });
+  const document = await pdfLib.PDFDocument.load(result.bytes);
+  const objects = document.context.enumerateIndirectObjects();
+  const fonts = objects.filter(
+    ([, object]) =>
+      object instanceof pdfLib.PDFDict &&
+      object.get(pdfLib.PDFName.of("Type")) === pdfLib.PDFName.of("Font"),
+  );
+  const streams = objects.filter(
+    ([, object]) => object instanceof pdfLib.PDFRawStream,
+  );
+  const forms = streams.filter(
+    ([, object]) =>
+      object.dict.get(pdfLib.PDFName.of("Subtype")) ===
+      pdfLib.PDFName.of("Form"),
+  );
+  assert.equal(fonts.length, 1);
+  assert.equal(forms.length, 20);
+  const imageRefs = forms.map(([, form]) => {
+    const resources = form.dict.lookup(
+      pdfLib.PDFName.of("Resources"),
+      pdfLib.PDFDict,
+    );
+    return resources
+      .lookup(pdfLib.PDFName.of("XObject"), pdfLib.PDFDict)
+      .values()[0]
+      .toString();
+  });
+  assert.equal(new Set(imageRefs).size, 1);
+  assert.deepEqual(
+    result.sheets.flatMap((sheet) => sheet.sourcePages),
+    [...Array.from({ length: 21 }, (_, index) => index + 1), 1],
+  );
+  assert.equal(document.getPageCount(), 6);
+});

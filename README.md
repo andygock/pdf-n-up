@@ -60,7 +60,10 @@ in remembered settings. Batch mode applies the range to each document.
 
 ## How the layout works
 
-With automatic sizing and expanded paper, copies remain at 100%. Fixed paper
+In repeat mode, automatic sizing on expanded paper keeps copies at 100%.
+In sequential mode, the first selected page determines the cell dimensions;
+each selected page scales proportionally to fit its cell. Use exact percentage
+sizing to preserve a specified scale across mixed page sizes. Fixed paper
 (source-page size, A4, A3 or custom millimetre dimensions) uses the best-fit sheet
 orientation and uniformly scales and centres each copy within its cell. Exact
 percentage or dimension modes retain the requested size. Editing a copy dimension fixes that axis and calculates the other from each
@@ -132,7 +135,8 @@ pnpm check
 ```
 
 This verifies PDF.js asset handling, TypeScript, tests, Biome linting and formatting, CSS linting
-and the production build. Useful individual commands are:
+and the production build. Browser code and Node build tooling have separate TypeScript
+checks; tooling declarations target Node.js 22. Useful individual commands are:
 
 ```sh
 pnpm test
@@ -154,7 +158,7 @@ serves these resources directly from `node_modules`; no generated files are
 written into `public/`. Vite also bundles pdf-lib into the conversion worker.
 
 Biome replaces ESLint and Prettier for JavaScript, TypeScript, JSX and JSON.
-Stylelint checks the original CSS, which is kept unchanged.
+Stylelint checks plain CSS and CSS Modules.
 
 The repository enforces a seven-day `minimumReleaseAge` in `pnpm-workspace.yaml`.
 Do not bypass it for dependency updates. Both PDF libraries are represented in
@@ -225,7 +229,8 @@ canvases are capped at approximately four million pixels; source images above
 16 megapixels may be omitted. Open the generated PDF in a PDF reader to check it
 before printing. Save PDF is available in both preview modes. The PDF.js preview
 retains its parsed document across resizing and temporary hiding to avoid
-repeated parsing; replacement, clearing, disposal or a preview failure releases it.
+repeated parsing. Page render resources are cleaned up after drawing or settled
+cancellation; replacement, clearing, disposal or a preview failure releases the document.
 
 These are recovery measures, not a hard memory sandbox. Browsers do not expose
 a per-worker heap limit, and a highly compressed or pathological PDF can still
@@ -256,7 +261,7 @@ exhaust memory before a deadline or output-size check takes effect.
 - `public/` — site icons
 - `test/` — Node, React and PDF integration tests
 - `build/pdfjs-assets.ts` — development asset serving and production asset emission
-- `vite.config.ts`, `tsconfig.json` — build and strict TypeScript configuration
+- `vite.config.ts`, `tsconfig.json`, `tsconfig.node.json` — build and separate strict browser/tooling TypeScript configuration
 
 Keep component styles beside their component and use the shared CSS variables for
 common colours, spacing, typography and radii. Component tests load CSS Modules

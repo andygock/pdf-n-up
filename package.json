@@ -15,14 +15,14 @@
     "format:check": "biome format .",
     "check": "pnpm typecheck && pnpm test && pnpm biome:check && pnpm lint:css && pnpm build",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "biome:check": "biome check ."
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "5.3.0",
-    "fflate": "0.8.2",
+    "fflate": "0.8.3",
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.2.108",
     "react": "19.3.0",
@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
-    "@types/node": "26.6.3",
+    "@types/node": "22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
@@ -39,6 +39,6 @@
     "stylelint-config-standard": "40.0.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vite": "8.3.1"
+    "vite": "8.3.3"
   }
 }
