@@ -28,7 +28,19 @@ export const createPreviewController = (
   {
     loadLibrary = loadPdfjs,
     timeoutMs = 20_000,
-  }: { loadLibrary?: () => Promise<PdfjsLibrary>; timeoutMs?: number } = {},
+    onPageRendered,
+  }: {
+    loadLibrary?: () => Promise<PdfjsLibrary>;
+    timeoutMs?: number;
+    onPageRendered?: (
+      page: {
+        width: number;
+        height: number;
+        displayWidth: number;
+        displayHeight: number;
+      } | null,
+    ) => void;
+  } = {},
 ) => {
   let output: PdfOutput | null = null;
   let active = false;
@@ -102,6 +114,7 @@ export const createPreviewController = (
     elements.previewError.hidden = true;
     elements.retryPreviewButton.hidden = true;
     elements.pdfPreview.hidden = true;
+    onPageRendered?.(null);
 
     // A detached canvas prevents cancelled work from overwriting a newer render.
     const work = async () => {
@@ -156,6 +169,12 @@ export const createPreviewController = (
             renderedOutput.measurements,
           );
         target.hidden = false;
+        onPageRendered?.({
+          width: base.width,
+          height: base.height,
+          displayWidth: viewport.width / ratio,
+          displayHeight: viewport.height / ratio,
+        });
       } finally {
         // The work promise settles only after drawing completes or cancellation
         // rejects it. PDF.js defers cleanup if a newer render still uses this page.
@@ -204,6 +223,7 @@ export const createPreviewController = (
       elements.pdfPreview.width = 0;
       elements.pdfPreview.height = 0;
       elements.pdfPreview.hidden = true;
+      onPageRendered?.(null);
       elements.previewError.hidden = true;
       elements.retryPreviewButton.hidden = true;
     }

@@ -73,24 +73,45 @@ export function ConversionOptions({
 
       <fieldset className={styles.optionGroup}>
         <legend>Output paper</legend>
-        <select
-          className={`${ui.control} ${styles.select}`}
-          aria-label="Output paper"
-          title="Expanded paper fits your copies. Fixed paper uses the best-fit orientation."
-          disabled={processing}
-          value={options.paperMode}
-          onChange={(event) =>
-            void changeOptions({
-              paperMode: event.target.value as Options["paperMode"],
-            })
-          }
-        >
-          <option value="expand">Expand paper</option>
-          <option value="same">Same as source</option>
-          <option value="a4">A4 · 210 × 297 mm</option>
-          <option value="a3">A3 · 297 × 420 mm</option>
-          <option value="custom">Custom dimensions</option>
-        </select>
+        <div className={styles.paperControls}>
+          <select
+            className={`${ui.control} ${styles.select}`}
+            aria-label="Output paper"
+            title="Expanded paper fits your copies. Fixed paper uses the best-fit orientation."
+            disabled={processing}
+            value={options.paperMode}
+            onChange={(event) =>
+              void changeOptions({
+                paperMode: event.target.value as Options["paperMode"],
+              })
+            }
+          >
+            <option value="expand">Expand paper</option>
+            <option value="same">Same as source</option>
+            <option value="a4">A4 · 210 × 297 mm</option>
+            <option value="a3">A3 · 297 × 420 mm</option>
+            <option value="custom">Custom dimensions</option>
+          </select>
+          <select
+            className={`${ui.control} ${styles.select}`}
+            aria-label="Output rotation"
+            title="Rotate the entire output sheet, including the saved PDF"
+            disabled={processing}
+            value={options.outputRotation ?? 0}
+            onChange={(event) =>
+              void changeOptions({
+                outputRotation: Number(
+                  event.target.value,
+                ) as Options["outputRotation"],
+              })
+            }
+          >
+            <option value={0}>↻ 0°</option>
+            <option value={90}>↻ 90°</option>
+            <option value={180}>↻ 180°</option>
+            <option value={270}>↺ 90°</option>
+          </select>
+        </div>
         {options.paperMode === "custom" ? (
           <Modal
             title="Paper dimensions"

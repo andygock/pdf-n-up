@@ -40,6 +40,88 @@ test("valid blank pages with absent or empty Contents convert successfully", asy
   }
 });
 
+test("output rotation preserves artwork and aligns all sheet measurements with the displayed PDF", async () => {
+  const { engine } = await load(
+    await fixture((page) => page.drawText("Rotate me")),
+  );
+  const settings = {
+    ...options,
+    quantity: 5,
+    marginTopMm: 3,
+    marginRightMm: 4,
+    marginBottomMm: 5,
+    marginLeftMm: 6,
+    gapHorizontalMm: 7,
+    gapVerticalMm: 8,
+    cropMarks: true,
+  };
+  const original = await engine.generate(settings);
+  const margins = original.sheets[0].edges;
+  const expectedEdges = [
+    [margins.top, margins.right, margins.bottom, margins.left],
+    [margins.left, margins.top, margins.right, margins.bottom],
+    [margins.bottom, margins.left, margins.top, margins.right],
+    [margins.right, margins.bottom, margins.left, margins.top],
+  ];
+  for (const rotation of [0, 90, 180, 270]) {
+    const result = await engine.generate({
+      ...settings,
+      outputRotation: rotation,
+    });
+    const saved = await pdfLib.PDFDocument.load(result.bytes);
+    assert.equal(saved.getPageCount(), 2);
+    const task = getDocument({ data: result.bytes.slice() });
+    try {
+      const document = await task.promise;
+      for (const [index, sheet] of result.sheets.entries()) {
+        assert.equal(saved.getPage(index).getRotation().angle, rotation);
+        const page = await document.getPage(index + 1);
+        const viewport = page.getViewport({ scale: 1 });
+        assert.equal(sheet.outputWidth, viewport.width);
+        assert.equal(sheet.outputHeight, viewport.height);
+        assert.deepEqual(sheet.scales, original.sheets[index].scales);
+        assert.deepEqual(sheet.sourcePages, original.sheets[index].sourcePages);
+        for (const [slot, box] of sheet.boxes.entries()) {
+          const source = original.sheets[index].boxes[slot];
+          const [a, b, c, d, e, f] = viewport.transform;
+          const transform = (x, y) => [a * x + c * y + e, b * x + d * y + f];
+          const rect = [
+            ...transform(source.x, source.y),
+            ...transform(source.x + source.width, source.y + source.height),
+          ];
+          const expected = {
+            x: Math.min(rect[0], rect[2]),
+            y: viewport.height - Math.max(rect[1], rect[3]),
+            width: Math.abs(rect[2] - rect[0]),
+            height: Math.abs(rect[3] - rect[1]),
+          };
+          for (const key of ["x", "y", "width", "height"])
+            assert.ok(Math.abs(box[key] - expected[key]) < 1e-8);
+        }
+        const { top, right, bottom, left, horizontal, vertical } = sheet.edges;
+        assert.deepEqual(
+          [top, right, bottom, left],
+          expectedEdges[rotation / 90],
+        );
+        assert.equal(
+          horizontal,
+          rotation % 180 ? margins.vertical : margins.horizontal,
+        );
+        assert.equal(
+          vertical,
+          rotation % 180 ? margins.horizontal : margins.vertical,
+        );
+      }
+    } finally {
+      await task.destroy();
+    }
+  }
+  await assert.rejects(
+    engine.generate({ ...settings, outputRotation: 45 }),
+    /output rotation/,
+  );
+});
+
 test("CropBox clipping, UserUnit and rotation survive actual PDF serialisation", async () => {
   for (const rotation of [0, 90, 180, 270]) {
     const { engine, metadata } = await load(

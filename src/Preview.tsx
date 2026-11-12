@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Preview.module.css";
 import { createPreviewController } from "./preview";
+import { Ruler, type RulerPage } from "./Ruler.tsx";
 import type { PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
 
@@ -9,7 +10,9 @@ export interface PreviewProps {
   active: boolean;
   nativeViewer?: boolean;
   showMeasurements?: boolean;
+  showRuler?: boolean;
   pageNumber?: number;
+  rulerFooter?: HTMLElement | null;
 }
 
 export function Preview({
@@ -17,7 +20,9 @@ export function Preview({
   active,
   nativeViewer = false,
   showMeasurements = false,
+  showRuler = false,
   pageNumber = 1,
+  rulerFooter,
 }: PreviewProps) {
   const canvasOutput = useMemo(
     () =>
@@ -32,8 +37,15 @@ export function Preview({
         : null,
     [output, showMeasurements, pageNumber],
   );
-  if (!nativeViewer || showMeasurements)
-    return <CanvasPreview output={canvasOutput} active={active} />;
+  if (!nativeViewer || showMeasurements || showRuler)
+    return (
+      <CanvasPreview
+        output={canvasOutput}
+        active={active}
+        showRuler={showRuler}
+        rulerFooter={rulerFooter}
+      />
+    );
 
   return (
     <div className={styles.nativePreviewViewport} id="previewViewport">
@@ -57,7 +69,16 @@ export function Preview({
   );
 }
 
-function CanvasPreview({ output, active }: PreviewProps) {
+function CanvasPreview({
+  output,
+  active,
+  showRuler,
+  rulerFooter,
+}: PreviewProps) {
+  const [rendered, setRendered] = useState<{
+    page: RulerPage | null;
+    ready: boolean;
+  }>({ page: null, ready: false });
   const previewViewport = useRef<HTMLDivElement>(null);
   const previewLoading = useRef<HTMLDivElement>(null);
   const pdfPreview = useRef<HTMLCanvasElement>(null);
@@ -76,13 +97,22 @@ function CanvasPreview({ output, active }: PreviewProps) {
       !retryPreviewButton.current
     )
       return;
-    const current = createPreviewController({
-      previewViewport: previewViewport.current,
-      previewLoading: previewLoading.current,
-      pdfPreview: pdfPreview.current,
-      previewError: previewError.current,
-      retryPreviewButton: retryPreviewButton.current,
-    });
+    const current = createPreviewController(
+      {
+        previewViewport: previewViewport.current,
+        previewLoading: previewLoading.current,
+        pdfPreview: pdfPreview.current,
+        previewError: previewError.current,
+        retryPreviewButton: retryPreviewButton.current,
+      },
+      {
+        onPageRendered: (page) =>
+          setRendered((previous) => ({
+            page: page ?? previous.page,
+            ready: page !== null,
+          })),
+      },
+    );
     controller.current = current;
     const observer = new ResizeObserver(current.schedule);
     observer.observe(previewViewport.current);
@@ -99,7 +129,7 @@ function CanvasPreview({ output, active }: PreviewProps) {
 
   return (
     <div
-      className={styles.previewViewport}
+      className={`${styles.previewViewport} ${showRuler ? styles.withRuler : ""}`}
       id="previewViewport"
       ref={previewViewport}
     >
@@ -118,6 +148,14 @@ function CanvasPreview({ output, active }: PreviewProps) {
         aria-label="Preview of the generated PDF"
         ref={pdfPreview}
       />
+      {showRuler && rendered.page && output && active && (
+        <Ruler
+          key={`${output.url}:${output.previewPage}`}
+          page={rendered.page}
+          hidden={!rendered.ready}
+          statusContainer={rulerFooter}
+        />
+      )}
       <p
         hidden
         className={styles.previewError}

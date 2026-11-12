@@ -127,6 +127,30 @@ test("React recovers from oversized output using the retained source", async () 
   }
 });
 
+test("rotating output regenerates the saved PDF and updates displayed dimensions", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const uprightSize = app.value.details.outputSize;
+    const originalUrl = app.value.output.url;
+    await act(() => app.value.changeOptions({ outputRotation: 90 }));
+    const saved = await pdfLib.PDFDocument.load(
+      await app.value.output.blob.arrayBuffer(),
+    );
+    assert.equal(saved.getPage(0).getRotation().angle, 90);
+    assert.equal(app.value.output.measurements.outputWidth, 400);
+    assert.equal(app.value.output.measurements.outputHeight, 200);
+    assert.notEqual(app.value.details.outputSize, uprightSize);
+    await assert.rejects(fetch(originalUrl));
+    await act(() => app.value.resetSettings());
+    assert.equal(app.value.options.outputRotation, 0);
+    assert.equal(app.value.details.outputSize, uprightSize);
+    assert.equal(app.worker.loads, 1);
+  } finally {
+    await app.close();
+  }
+});
+
 test("React validates file selection and preserves output on multiple-file rejection", async () => {
   const app = await mountConversion();
   try {

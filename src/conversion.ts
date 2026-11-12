@@ -18,6 +18,7 @@ import {
   MAX_OUTPUT_SHEETS,
   parsePageRange,
 } from "./imposition.ts";
+import { rotateOutputSheet } from "./output-rotation.ts";
 import type {
   ConversionOptions,
   ConversionResult,
@@ -118,6 +119,11 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
     async generate(options: ConversionOptions): Promise<ConversionResult> {
       if (!source) throw new Error("Select a PDF before converting.");
       const original = source;
+      const outputRotation = options.outputRotation ?? 0;
+      if (![0, 90, 180, 270].includes(outputRotation))
+        throw new Error(
+          "Choose an output rotation of 0, 90, 180 or 270 degrees.",
+        );
       if (
         options.mode !== undefined &&
         !["repeat", "sequence"].includes(options.mode)
@@ -293,7 +299,8 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           sheet.scales.push(placement.scale);
           sheet.sourcePages.push(pageNumber);
         }
-        sheets.push(sheet);
+        outputPage.setRotation(pdfLib.degrees(outputRotation));
+        sheets.push(rotateOutputSheet(sheet, outputRotation));
       }
       const bytes = await output.save({
         useObjectStreams: true,

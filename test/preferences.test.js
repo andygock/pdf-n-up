@@ -13,10 +13,12 @@ test("preferences round-trip only allowed settings and reset removes storage", (
   savePreferences({
     ...DEFAULT_OPTIONS,
     paperMode: "a4",
+    outputRotation: 270,
     name: "private.pdf",
     bytes: [1, 2],
   });
   assert.equal(readPreferences().paperMode, "a4");
+  assert.equal(readPreferences().outputRotation, 270);
   assert.ok(!localStorage.getItem(PREFERENCES_KEY).includes("private"));
   assert.ok(!localStorage.getItem(PREFERENCES_KEY).includes("bytes"));
   savePreferences(null);
@@ -27,6 +29,7 @@ test("malformed and out-of-range preferences fall back safely", () => {
     "{",
     "null",
     JSON.stringify({ ...DEFAULT_OPTIONS, marginMm: -1 }),
+    JSON.stringify({ ...DEFAULT_OPTIONS, outputRotation: 45 }),
     JSON.stringify({
       ...DEFAULT_OPTIONS,
       layout: { rows: 20, columns: 20, copies: 400 },

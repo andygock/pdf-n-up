@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatBytes } from "./format.ts";
 import styles from "./OutputPanel.module.css";
 import { Preview } from "./Preview.tsx";
@@ -13,6 +13,9 @@ interface OutputPanelProps {
 }
 export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
   const [showMeasurements, setShowMeasurements] = useState(false);
+  const modeName = useId();
+  const [showRuler, setShowRuler] = useState(false);
+  const [rulerFooter, setRulerFooter] = useState<HTMLDivElement | null>(null);
   const [selection, setSelection] = useState<{ url?: string; page: number }>({
     page: 1,
   });
@@ -52,7 +55,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           )}
         </div>
         <div className={styles.outputActions}>
-          {pageCount > 1 && (!nativeViewer || showMeasurements) && (
+          {pageCount > 1 && (!nativeViewer || showRuler) && (
             <nav className={styles.outputActions} aria-label="Output sheets">
               <button
                 type="button"
@@ -80,10 +83,11 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
           {output?.measurements && (
             <label
               className={ui.checkbox}
-              title="Show measurements on the preview only"
+              title="Show copy dimensions and spacing in ruler mode"
             >
               <input
                 type="checkbox"
+                disabled={!showRuler}
                 checked={showMeasurements}
                 onChange={(event) => setShowMeasurements(event.target.checked)}
               />
@@ -91,6 +95,28 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
             </label>
           )}
 
+          <fieldset className={styles.modeSwitch} aria-label="Preview mode">
+            {[false, true].map((rulerMode) => (
+              <label
+                className={styles.modeChoice}
+                key={String(rulerMode)}
+                title={
+                  rulerMode
+                    ? "Measure the sheet with rulers and a draggable origin"
+                    : "View the generated PDF for saving and printing"
+                }
+              >
+                <input
+                  type="radio"
+                  name={modeName}
+                  checked={showRuler === rulerMode}
+                  disabled={!output}
+                  onChange={() => setShowRuler(rulerMode)}
+                />
+                <span>{rulerMode ? "Ruler mode" : "PDF output"}</span>
+              </label>
+            ))}
+          </fieldset>
           <button
             className={`${ui.button} ${ui.compact}`}
             id="openOutputButton"
@@ -115,16 +141,27 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
         output={output}
         active={active}
         nativeViewer={nativeViewer}
-        showMeasurements={showMeasurements}
+        showMeasurements={showRuler && showMeasurements}
+        showRuler={showRuler}
         pageNumber={pageNumber}
+        rulerFooter={rulerFooter}
       />
-      <p className={styles.previewNote}>
-        {nativeViewer && !showMeasurements
-          ? "Save or print using the PDF toolbar. "
-          : "Preview only: images above 16 megapixels may be omitted. Open the PDF to check before printing. "}
-        <strong>Print at 100% / actual size.</strong> Match the paper size above
-        and turn off any extra pages-per-sheet setting in your print dialogue.
-      </p>
+      <footer className={styles.previewNote}>
+        <div
+          ref={setRulerFooter}
+          className={styles.rulerFooter}
+          hidden={!showRuler}
+        />
+        <span title="Match the paper size above and turn off any extra pages-per-sheet setting in your print dialogue.">
+          {!showRuler &&
+            (nativeViewer
+              ? "Save or print using the PDF toolbar. "
+              : "Preview only: images above 16 megapixels may be omitted. Open the PDF to check before printing. ")}
+          <strong>Print at 100% / actual size.</strong>
+          {!showRuler &&
+            " Match the paper size above and turn off any extra pages-per-sheet setting in your print dialogue."}
+        </span>
+      </footer>
     </article>
   );
 }

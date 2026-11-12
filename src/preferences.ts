@@ -11,6 +11,7 @@ export const DEFAULT_OPTIONS: ConversionOptions = {
   pageOrder: "rows",
   autoLayout: false,
   rotateCopies: false,
+  outputRotation: 0,
   paperMode: "expand",
   marginTopMm: undefined,
   marginRightMm: undefined,
@@ -69,6 +70,13 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     },
     paperMode: data.paperMode as ConversionOptions["paperMode"],
   };
+  if (
+    data.outputRotation !== undefined &&
+    ![0, 90, 180, 270].includes(data.outputRotation as number)
+  )
+    return null;
+  result.outputRotation = (data.outputRotation ??
+    0) as ConversionOptions["outputRotation"];
   const ranges = {
     marginTopMm: [0, 100],
     marginRightMm: [0, 100],

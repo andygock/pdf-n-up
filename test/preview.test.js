@@ -93,6 +93,26 @@ const setup = (options = {}) => {
   return { elements, controller, currentOutput };
 };
 
+test("rendered page dimensions calibrate the ruler independently of display scale", async () => {
+  const notifications = [];
+  const lib = library({ pageWidth: 720, pageHeight: 1440 });
+  const { controller, currentOutput } = setup({
+    loadLibrary: async () => lib,
+    onPageRendered: (page) => notifications.push(page),
+  });
+  controller.update(currentOutput, true);
+  await controller.render();
+  assert.deepEqual(notifications.at(-1), {
+    width: 720,
+    height: 1440,
+    displayWidth: 200,
+    displayHeight: 400,
+  });
+  controller.update(null, true);
+  assert.equal(notifications.at(-1), null);
+  controller.cancel();
+});
+
 test("hidden views defer preview loading and render when visible again", async () => {
   let loads = 0;
   const { controller, elements, currentOutput } = setup({

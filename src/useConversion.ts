@@ -341,7 +341,10 @@ export function useConversion(
       details = {
         ...details,
         layout: `${layout.copies}-up (${layout.columns}\u00d7${layout.rows})`,
-        outputSize: formatPageSize(outputWidth, outputHeight),
+        outputSize:
+          (state.options.outputRotation ?? 0) % 180
+            ? formatPageSize(outputHeight, outputWidth)
+            : formatPageSize(outputWidth, outputHeight),
         scale: `${Number((scale * 100).toFixed(4))}%`,
       };
     } catch {

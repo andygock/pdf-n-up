@@ -10,7 +10,13 @@
 }
 
 .previewViewport {
+  position: relative;
   padding: 18px;
+}
+
+.previewViewport.withRuler {
+  padding-top: 42px;
+  padding-left: 42px;
 }
 
 .pdfViewer {
@@ -21,6 +27,7 @@
 }
 
 .pdfPreview {
+  grid-area: 1 / 1;
   display: block;
   max-width: 100%;
   max-height: 100%;
@@ -39,4 +46,141 @@
 
 .previewError {
   color: var(--warning);
+}
+
+.ruler {
+  z-index: 1;
+  grid-area: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: visible;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.rulerHalo,
+.rulerLine,
+.rulerEndpoint {
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.rulerHalo {
+  stroke: white;
+  stroke-width: 4;
+}
+
+.rulerLine {
+  stroke: #176b63;
+  stroke-width: 2;
+}
+
+.rulerEndpoint {
+  fill: #176b63;
+  stroke: white;
+  stroke-width: 1.5;
+}
+
+.rulerReadout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.rulerReadout output {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 15ch;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rulerReadout output > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rulerAction {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.rulerAction:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: default;
+  opacity: 0.5;
+}
+
+.rulerScales {
+  pointer-events: none;
+}
+
+.rulerHoverMarkers {
+  fill: #176b63;
+  pointer-events: none;
+}
+
+.rulerHoverMarkers line {
+  stroke: #176b63;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerScales rect,
+.rulerOrigin rect {
+  fill: var(--preview-background);
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerScales line {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerScales text,
+.rulerOrigin text {
+  fill: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.rulerOrigin {
+  cursor: move;
+  outline-offset: 2px;
+}
+
+.rulerOrigin circle {
+  fill: white;
+  stroke: #176b63;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerOrigin path,
+.rulerGuides line {
+  stroke: #176b63;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerGuides {
+  stroke-dasharray: 4 3;
+  pointer-events: none;
 }

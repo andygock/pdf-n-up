@@ -50,6 +50,7 @@ export interface ConversionOptions {
   pageOrder?: "rows" | "columns";
   autoLayout?: boolean;
   rotateCopies?: boolean;
+  outputRotation?: 0 | 90 | 180 | 270;
   paperMode: PaperMode;
   marginTopMm?: number;
   marginRightMm?: number;

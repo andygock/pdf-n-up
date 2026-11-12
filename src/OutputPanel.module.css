@@ -28,6 +28,53 @@
   gap: var(--space-2);
 }
 
+.modeSwitch {
+  display: flex;
+  min-width: 0;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-alt);
+}
+
+.modeChoice {
+  position: relative;
+  cursor: pointer;
+}
+
+.modeChoice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.modeChoice span {
+  display: block;
+  padding: 4px 10px;
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.modeChoice input:checked + span {
+  background: var(--primary);
+  color: var(--background);
+}
+
+.modeChoice input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+
+.modeChoice input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .outputPanel {
   display: flex;
   min-width: 0;
@@ -54,10 +101,26 @@
 }
 
 .previewNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin: 0;
   padding: 7px var(--space-5);
   color: var(--text-muted);
   font-size: var(--font-size-small);
+}
+
+.rulerFooter {
+  min-width: 0;
+  flex: 1;
+}
+
+.previewNote > span {
+  flex-shrink: 0;
+}
+
+.previewNote:has(.rulerFooter[hidden]) > span {
+  flex-shrink: 1;
 }
 
 @media (width <= 640px) {

@@ -54,6 +54,12 @@ export function Help({ view }: { view: View }) {
             is too small.
           </p>
           <p>
+            Output rotation turns the entire finished sheet by 90, 180 or 270
+            degrees, including the saved PDF. Copy size and spacing stay the
+            same. Rotate artwork in Layout details turns individual copies
+            within their cells.
+          </p>
+          <p>
             Outer margins and gaps between copies default to zero. Expanded
             paper adds the selected spacing without shrinking copies. Fixed
             paper reserves that spacing before scaling the copies. Crop marks
@@ -109,6 +115,17 @@ export function Help({ view }: { view: View }) {
           <p>
             Show measurements overlays copy dimensions, minimum margins and cell
             gaps on the preview only. Print the saved PDF at actual size.
+          </p>
+          <p>
+            Switch from PDF output to Ruler mode, then click and drag across the
+            preview to measure a distance in millimetres. Hold Shift to
+            constrain the line to 45-degree angles. Clear measurement or Escape
+            removes the line. Ruler measurements are not included in the saved
+            PDF. The top and left scales show millimetres. Drag the mm corner or
+            zero-point handle to move the origin; double-click either handle or
+            choose Reset origin to return zero to the top-left corner. Hover
+            over the sheet to see alignment marks on both scales and live X and
+            Y coordinates relative to the current origin.
           </p>
         </article>
       </section>
