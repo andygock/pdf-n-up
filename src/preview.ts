@@ -235,7 +235,7 @@ export const createPreviewController = (
       elements.retryPreviewButton.hidden = true;
       elements.previewLoading.hidden = false;
       elements.previewLoading.textContent =
-        "Select a PDF to see the output preview.";
+        "Select a PDF or image to see the output preview.";
     } else if (changed) {
       const size = visibleSize();
       lastSize = size

@@ -1,5 +1,6 @@
 import "./dom.js";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import * as pdfLib from "pdf-lib";
 import { act, createElement, useEffect } from "react";
@@ -464,7 +465,7 @@ test("viewport drag events validate files and reset the overlay", async () => {
   }
 });
 
-test("dropping converts and replaces PDFs with a save action in native mode", async () => {
+test("dropping converts PDFs and images with a save action and mixed batches", async () => {
   const previousWorker = globalThis.Worker;
   const workers = [];
   globalThis.Worker = class {
@@ -525,13 +526,36 @@ test("dropping converts and replaces PDFs with a save action in native mode", as
       /replacement_4up.pdf/,
     );
     await assert.rejects(fetch(firstUrl));
-    const batchFiles = [await file(), await file()];
+    const image = new File(
+      [await readFile(new URL("fixtures/red-alpha.png", import.meta.url))],
+      "image.png",
+    );
+    await drop(image);
+    assert.equal(
+      root.container.querySelector("#dropTitle").textContent,
+      "image.png",
+    );
+    assert.match(
+      root.container.querySelector("iframe").getAttribute("src"),
+      /image_4up.pdf/,
+    );
+    assert.equal(
+      root.container.querySelector("#downloadOutputButton").disabled,
+      false,
+    );
+    const batchFiles = [await file(), image];
     await act(() => window.dispatchEvent(drag("drop", batchFiles)));
     assert.equal(root.container.querySelector("iframe"), null);
     assert.equal(
       root.container.querySelectorAll('[aria-label="Batch conversion"] li')
         .length,
       2,
+    );
+    assert.equal(
+      root.container.querySelectorAll(
+        '[aria-label="Batch conversion"] li input',
+      ).length,
+      1,
     );
   } finally {
     await act(() => root.unmount());

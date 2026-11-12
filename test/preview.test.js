@@ -229,7 +229,7 @@ test("hiding the view cancels rendering and clearing output resets the preview",
   assert.equal(elements.pdfPreview.hidden, true);
   assert.equal(
     elements.previewLoading.textContent,
-    "Select a PDF to see the output preview.",
+    "Select a PDF or image to see the output preview.",
   );
   controller.cancel();
 });

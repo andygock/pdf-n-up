@@ -1,8 +1,9 @@
 import { withDeadline } from "./async.ts";
 import { detectPdfSignature, formatBytes, MAX_FILE_SIZE } from "./format.ts";
 import { readBlob } from "./read-blob.ts";
+import { getSourceFormat, hasImageSignature } from "./source-format.ts";
 
-export async function readPdfFile(file: File, signal: AbortSignal) {
+export async function readSourceFile(file: File, signal: AbortSignal) {
   if (!(file instanceof File))
     throw new Error("No readable file was selected.");
   if (!file.size) throw new Error("The selected file is empty.");
@@ -10,17 +11,33 @@ export async function readPdfFile(file: File, signal: AbortSignal) {
     throw new Error(
       `The selected file exceeds the ${formatBytes(MAX_FILE_SIZE)} limit.`,
     );
-  if (!file.name.toLowerCase().endsWith(".pdf"))
-    throw new Error("The selected file does not have a .pdf extension.");
+  const format = getSourceFormat(file.name);
+  if (!format)
+    throw new Error(
+      "Choose a file with a .pdf, .jpg, .jpeg or .png extension.",
+    );
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal.addEventListener("abort", abort, { once: true });
   try {
     signal.throwIfAborted();
     const read = async () => {
-      if (!(await detectPdfSignature(file, controller.signal)))
+      if (
+        format === "pdf" &&
+        !(await detectPdfSignature(file, controller.signal))
+      )
         throw new Error(
           "The selected file does not contain a valid PDF header.",
+        );
+      if (
+        format !== "pdf" &&
+        !hasImageSignature(
+          await readBlob(file.slice(0, 8), controller.signal),
+          format,
+        )
+      )
+        throw new Error(
+          "The selected file does not contain a valid image header.",
         );
       controller.signal.throwIfAborted();
       return readBlob(file, controller.signal);

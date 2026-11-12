@@ -17,7 +17,7 @@ import {
   readPreferences,
   savePreferences,
 } from "./preferences.ts";
-import { readPdfFile } from "./read-pdf-file.ts";
+import { readSourceFile } from "./read-source-file.ts";
 import type {
   ConversionOptions,
   OutputAction,
@@ -47,7 +47,7 @@ interface ConversionState {
 
 const ready: Status = {
   title: "Ready",
-  message: "Select a PDF to begin.",
+  message: "Select a PDF or image to begin.",
 };
 
 export function useConversion(
@@ -193,7 +193,7 @@ export function useConversion(
         status: {
           type: "error",
           title: "Multiple files rejected",
-          message: "Select exactly one PDF file.",
+          message: "Select exactly one PDF or image file.",
         },
       });
       return;
@@ -203,7 +203,7 @@ export function useConversion(
     update({
       processing: true,
       status: {
-        title: "Validating PDF",
+        title: "Validating file",
         message: "Checking the file structure and page count.",
         loading: true,
       },
@@ -212,10 +212,12 @@ export function useConversion(
       const file = selected[0];
       const controller = new AbortController();
       readingController.current = controller;
-      const bytes = await readPdfFile(file, controller.signal).finally(() => {
-        if (readingController.current === controller)
-          readingController.current = null;
-      });
+      const bytes = await readSourceFile(file, controller.signal).finally(
+        () => {
+          if (readingController.current === controller)
+            readingController.current = null;
+        },
+      );
       if (token !== operation.current) return;
       const source = await worker.request(
         "load",

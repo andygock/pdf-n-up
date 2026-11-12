@@ -62,7 +62,7 @@ export function Preview({
         <p className={styles.previewLoading} role="status">
           {output
             ? "Preview paused while hidden."
-            : "Select a PDF to see the output preview."}
+            : "Select a PDF or image to see the output preview."}
         </p>
       )}
     </div>
@@ -139,7 +139,7 @@ function CanvasPreview({
         role="status"
         ref={previewLoading}
       >
-        Select a PDF to see the output preview.
+        Select a PDF or image to see the output preview.
       </div>
       <canvas
         hidden

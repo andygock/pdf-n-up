@@ -14,9 +14,11 @@ export function Help({ view }: { view: View }) {
             <div className={styles.infoNumber}>01</div>
             <h2>Choose your pages</h2>
             <p>
-              Choose a PDF, then use Pages to repeat one page or arrange
-              sequential pages. Encrypted, password-protected and malformed
-              files are rejected.
+              Choose a PDF, JPEG or PNG, then use Pages to repeat one page or
+              arrange sequential pages. Encrypted, password-protected and
+              malformed files are rejected. Images become a single page at 96
+              pixels per inch; use copy dimensions to set their printed size.
+              Image resolution metadata is ignored.
             </p>
           </article>
 
@@ -105,12 +107,12 @@ export function Help({ view }: { view: View }) {
         <article className={styles.contentSection}>
           <h2>Batch conversion</h2>
           <p>
-            Choose batch PDFs or drop multiple files, select a page number for
-            each, then choose Convert batch. Up to 20 files and 100 MB of input
-            are accepted; each file is limited to 50 MB. Results are limited to
-            100 MB combined. Failed files are listed individually. Save
-            completed PDFs separately or download the ZIP. Changing settings
-            requires running the batch again.
+            Choose batch files or drop multiple PDFs and images, select a page
+            number for each PDF, then choose Convert batch. Up to 20 files and
+            100 MB of input are accepted; each file is limited to 50 MB. Results
+            are limited to 100 MB combined. Failed files are listed
+            individually. Save completed PDFs separately or download the ZIP.
+            Changing settings requires running the batch again.
           </p>
           <p>
             Show measurements overlays copy dimensions, minimum margins and cell

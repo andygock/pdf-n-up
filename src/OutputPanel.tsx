@@ -49,7 +49,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
               <p className={styles.panelSubtitle} id="outputSummary">
                 {output
                   ? `${output.filename} / ${formatBytes(output.size)}`
-                  : "Choose a PDF above to get started."}
+                  : "Choose a PDF or image above to get started."}
               </p>
             </>
           )}

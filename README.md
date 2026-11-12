@@ -1,7 +1,7 @@
 # PDF N-Up
 
 PDF N-Up is a small, client-side web app that arranges repeated copies of a
-single PDF page on one sheet, or imposes sequential pages across multiple sheets. It is useful for preparing print-ready sheets
+single PDF page or JPEG/PNG image on one sheet, or imposes sequential pages across multiple sheets. It is useful for preparing print-ready sheets
 while keeping the source page's visual content in PDF form rather than
 rasterising it.
 
@@ -13,13 +13,13 @@ Demo: <https://pdfnup.gock.net/>
 ## Features
 
 - Drag-and-drop or file-picker input
-- Validates that the source is a non-empty PDF and lets you select a page to repeat
+- Validates that the source is a non-empty PDF, JPEG or PNG and lets you select a page to repeat
 - Pages offers sequential N-up, page ranges and row/column reading order
 - Choose a repeat page visually with eight thumbnails at a time, loaded only while Pages is open
 - Repeat mode accepts a total quantity, leaving unused final cells blank or filling them with extra copies
 - Multi-sheet canvas previews include sheet navigation and per-sheet measurements
 - Rejects encrypted, password-protected, malformed files
-- Accepts PDF files up to 50 MB, subject to the browser's available memory
+- Accepts PDF, JPEG and PNG files up to 50 MB, subject to the browser's available memory
 - Supports 2-up (2×1), 4-up (2×2), 8-up (4×2), 9-up (3×3) and 16-up (4×4)
 - Supports custom grids with up to 20 rows or columns and 100 copies per sheet
 - Layout details can fit as many exact-sized copies as possible on fixed paper, considering both artwork orientations
@@ -33,7 +33,7 @@ Demo: <https://pdfnup.gock.net/>
 - Generates the result entirely in browser memory, using the browser's PDF viewer
   when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
-- Batch-convert up to 20 PDFs with per-file page selection, cancellation, individual downloads and one ZIP
+- Batch-convert up to 20 PDFs and images with per-file page selection, cancellation, individual downloads and one ZIP
 - Opt in to remember layout settings locally; Reset settings removes saved preferences
 - Toggle measurement overlays on the canvas preview without changing the saved PDF
 - Review sheet size, finished copy sizes, scale, capacity and totals beside Save PDF; varied sizes open in a modal
@@ -95,10 +95,17 @@ Batch input and combined results are each limited to 100 MB; the 50 MB per-file 
 The generated filename includes the selected layout. For example,
 `handout.pdf` becomes `handout_8up.pdf` for an 8-up conversion.
 
+## Image input
+
+JPEG and PNG images are embedded as a single PDF page at 96 pixels per inch,
+with transparency preserved for PNG. Image resolution metadata is ignored. Use
+the copy width/height controls to choose an exact printed size. Multiple files
+create separate PDFs in the existing batch/ZIP workflow.
+
 ## Use the app
 
 1. Open the app in a current browser.
-2. Select or drop a PDF and select the page to repeat.
+2. Select or drop a PDF, JPEG or PNG and select the page to repeat.
 3. The app validates, converts and displays the result in an embedded preview.
 4. Open the generated PDF in a new tab or choose Save PDF when needed.
    Built-in viewer controls may also offer saving and printing.
@@ -255,7 +262,7 @@ exhaust memory before a deadline or output-size check takes effect.
 - `src/archive.ts`, `src/archive-worker.ts`, `src/archive-client.ts` — local ZIP packaging in a terminable worker
 - `src/preferences.ts` — allowlisted, opt-in settings storage
 - `src/measurements.ts` — preview-only measurement drawing
-- `src/read-pdf-file.ts` — shared cancellable file validation and reading
+- `src/read-source-file.ts` — shared cancellable file validation and reading
 - `css/base.css` — shared CSS variables, document defaults and accessibility rules
 - `src/*.module.css` — scoped component styles with their responsive rules; `ui.module.css` shares button and panel styles
 - `public/` — site icons

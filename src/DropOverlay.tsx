@@ -6,10 +6,13 @@ export function DropOverlay({ hasSource }: { hasSource: boolean }) {
       <div>
         <strong>
           {hasSource
-            ? "Drop to replace your PDF or start a batch"
-            : "Drop one or more PDFs anywhere"}
+            ? "Drop to replace your file or start a batch"
+            : "Drop PDFs or images anywhere"}
         </strong>
-        <span>Multiple PDFs create a batch · up to 50 MB per file</span>
+        <span>
+          PDF, JPEG or PNG · Multiple files create a batch · up to 50 MB per
+          file
+        </span>
       </div>
     </div>
   );

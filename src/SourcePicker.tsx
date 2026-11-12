@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { formatBytes, formatPageSize } from "./format.ts";
 import styles from "./SourcePicker.module.css";
+import { SOURCE_ACCEPT } from "./source-format.ts";
 import type { SourceMetadata } from "./types.ts";
 import ui from "./ui.module.css";
 
@@ -29,7 +30,7 @@ export function SourcePicker({
     <section
       className={`${styles.sourceBar} ${dragging ? styles.dragging : ""} ${source ? styles.hasFile : ""} ${compact ? styles.compact : ""}`}
       id="dropZone"
-      aria-label="Source PDF"
+      aria-label="Source PDF or image"
     >
       <input
         id="fileInput"
@@ -42,7 +43,7 @@ export function SourcePicker({
         }}
         multiple
         type="file"
-        accept="application/pdf,.pdf"
+        accept={SOURCE_ACCEPT}
         hidden
       />
       <div className={styles.fileSymbol} aria-hidden="true">
@@ -50,12 +51,12 @@ export function SourcePicker({
       </div>
       <div className={styles.sourceCopy}>
         <h2 id="dropTitle" title={source?.name}>
-          {source?.name ?? "Drop one or more PDFs anywhere"}
+          {source?.name ?? "Drop PDFs or images anywhere"}
         </h2>
         <p id="dropDescription">
           {source
             ? `${formatBytes(source.size)} · ${formatPageSize(source.width, source.height)} · page ${source.pageNumber} of ${source.pageCount}`
-            : "Drop multiple PDFs to batch convert. Up to 20 files, 50 MB per file, 100 MB total."}
+            : "PDF, JPEG or PNG. Drop multiple files to batch convert. Up to 20 files, 50 MB per file, 100 MB total."}
         </p>
       </div>
       <div className={styles.documentActions}>
@@ -66,7 +67,7 @@ export function SourcePicker({
           onClick={() => fileInputRef.current?.click()}
           type="button"
         >
-          {source ? "Replace PDF" : "Choose PDFs"}
+          {source ? "Replace file" : "Choose files"}
         </button>
         {source && !processing && (
           <button

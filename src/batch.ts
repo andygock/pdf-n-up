@@ -1,4 +1,4 @@
-import { readPdfFile } from "./read-pdf-file.ts";
+import { readSourceFile } from "./read-source-file.ts";
 import type { ConversionOptions, ConversionResult } from "./types.ts";
 import { ConversionWorkerClient } from "./worker-client.ts";
 
@@ -29,7 +29,7 @@ export async function processBatch(
     signal.addEventListener("abort", abort, { once: true });
     report(entry.id, { status: "processing" });
     try {
-      const bytes = await readPdfFile(entry.file, signal);
+      const bytes = await readSourceFile(entry.file, signal);
       signal.throwIfAborted();
       let metadata = await worker.request(
         "load",

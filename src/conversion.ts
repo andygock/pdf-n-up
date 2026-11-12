@@ -19,6 +19,7 @@ import {
   parsePageRange,
 } from "./imposition.ts";
 import { rotateOutputSheet } from "./output-rotation.ts";
+import { getSourceFormat, hasImageSignature } from "./source-format.ts";
 import type {
   ConversionOptions,
   ConversionResult,
@@ -86,6 +87,42 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       { name, size }: FileMetadata,
     ): Promise<SourceMetadata> {
       source = null;
+      const format = getSourceFormat(name);
+      if (format === "png" || format === "jpeg") {
+        try {
+          if (!hasImageSignature(bytes, format))
+            throw new Error("Invalid image header.");
+          const document = await pdfLib.PDFDocument.create();
+          const image = await (format === "png"
+            ? document.embedPng(bytes)
+            : document.embedJpg(bytes));
+          // Raster files have no reliable physical page size. Use 96 pixels
+          // per inch; existing copy dimensions can override this print size.
+          const width = image.width * (72 / 96);
+          const height = image.height * (72 / 96);
+          if (
+            ![width, height].every(
+              (value) => Number.isFinite(value) && value > 0,
+            )
+          )
+            throw new Error("Invalid image dimensions.");
+          document.addPage([width, height]).drawImage(image, {
+            x: 0,
+            y: 0,
+            width,
+            height,
+          });
+          // The source is copied directly without saving it first. Materialise
+          // image streams before the page copier follows their references.
+          await image.embed();
+          return selectPage(document, { name, size }, 1);
+        } catch (error) {
+          throw new Error(
+            "The image could not be parsed. It may be damaged or unsupported.",
+            { cause: error },
+          );
+        }
+      }
       let document: PDFDocument;
       let pageCount: number;
       try {
@@ -117,7 +154,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
     },
 
     async generate(options: ConversionOptions): Promise<ConversionResult> {
-      if (!source) throw new Error("Select a PDF before converting.");
+      if (!source) throw new Error("Select a PDF or image before converting.");
       const original = source;
       const outputRotation = options.outputRotation ?? 0;
       if (![0, 90, 180, 270].includes(outputRotation))
@@ -164,10 +201,10 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         );
       const baseFilename = makeOutputFilename(
         sequence
-          ? `${original.name.replace(/\.pdf$/i, "")}_pages.pdf`
+          ? `${original.name.replace(/\.(?:pdf|jpe?g|png)$/i, "")}_pages.pdf`
           : original.pageCount > 1
-            ? `${original.name.replace(/\.pdf$/i, "")}_page${original.pageNumber}.pdf`
-            : original.name,
+            ? `${original.name.replace(/\.(?:pdf|jpe?g|png)$/i, "")}_page${original.pageNumber}.pdf`
+            : original.name.replace(/\.(?:jpe?g|png)$/i, ".pdf"),
         copies,
       );
       const filename =

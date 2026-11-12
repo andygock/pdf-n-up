@@ -61,7 +61,7 @@ export function useBatch() {
     }
     setArchive(null);
     setMessage(
-      "Choose a page for each PDF, then convert using the settings above.",
+      "Choose a page for each PDF; images use one page. Convert using the settings above.",
     );
     setEntries(
       files.map((file, id) => ({ id, file, pageNumber: 1, status: "queued" })),

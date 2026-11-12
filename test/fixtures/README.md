@@ -11,3 +11,8 @@ Image.new("RGB", (4, 4), (255, 0, 0)).save(
 
 Tests construct the surrounding PDFs in memory. Pillow is not needed to run
 the tests; the tiny encoded fixture exercises the shipped PDF.js decoder.
+
+`red.jpg` and `red-alpha.png` are generated 96 × 48 pixel red images,
+covered by the same licence. The PNG uses 50% alpha. They were generated with
+Pillow using `Image.new("RGB", (96, 48), (255, 0, 0))` and
+`Image.new("RGBA", (96, 48), (255, 0, 0, 128))`, respectively.

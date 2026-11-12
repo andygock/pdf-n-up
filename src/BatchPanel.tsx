@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./BatchPanel.module.css";
 import { SpacingInput } from "./SpacingInput.tsx";
+import { getSourceFormat, SOURCE_ACCEPT } from "./source-format.ts";
 import type { ConversionOptions } from "./types.ts";
 import ui from "./ui.module.css";
 import type { useBatch } from "./useBatch.ts";
@@ -30,20 +31,22 @@ export function BatchPanel({
         <span>Batch conversion</span>
         <span className={styles.summaryMeta}>
           {batch.entries.length
-            ? `${batch.entries.length} PDFs`
-            : "Multiple PDFs"}
+            ? `${batch.entries.length} files`
+            : "Multiple files"}
         </span>
       </summary>
       <div className={styles.header}>
         <div className={styles.heading}>
-          <p>Up to 20 PDFs · 100 MB total · 50 MB per file</p>
+          <p>
+            PDF, JPEG or PNG · Up to 20 files · 100 MB total · 50 MB per file
+          </p>
         </div>
         <div className={styles.actions}>
           <input
             ref={input}
             type="file"
             multiple
-            accept="application/pdf,.pdf"
+            accept={SOURCE_ACCEPT}
             hidden
             disabled={disabled}
             onChange={(event) => {
@@ -57,7 +60,7 @@ export function BatchPanel({
             disabled={disabled}
             onClick={() => input.current?.click()}
           >
-            Choose batch PDFs
+            Choose batch files
           </button>
           {batch.entries.length > 0 && (
             <>
@@ -108,21 +111,22 @@ export function BatchPanel({
           {batch.entries.map((entry) => (
             <li key={entry.id}>
               <strong>{entry.file.name}</strong>
-              {options.mode !== "sequence" && (
-                <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
-                  Page{" "}
-                  <SpacingInput
-                    key={`${entry.id}-${entry.file.name}`}
-                    id={`batchPage${entry.id}`}
-                    value={entry.pageNumber}
-                    min={1}
-                    max={100000}
-                    step={1}
-                    disabled={disabled}
-                    onCommit={(page) => batch.setPage(entry.id, page)}
-                  />
-                </label>
-              )}
+              {options.mode !== "sequence" &&
+                getSourceFormat(entry.file.name) === "pdf" && (
+                  <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
+                    Page{" "}
+                    <SpacingInput
+                      key={`${entry.id}-${entry.file.name}`}
+                      id={`batchPage${entry.id}`}
+                      value={entry.pageNumber}
+                      min={1}
+                      max={100000}
+                      step={1}
+                      disabled={disabled}
+                      onCommit={(page) => batch.setPage(entry.id, page)}
+                    />
+                  </label>
+                )}
               <span className={styles.status} data-status={entry.status}>
                 {entry.status}
               </span>
