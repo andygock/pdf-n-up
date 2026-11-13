@@ -21,7 +21,7 @@ interface ConversionOptionsProps {
 
   processing: boolean;
 
-  changeOptions: (patch: Partial<Options>) => Promise<void>;
+  changeOptions: (patch: Partial<Options>) => Promise<unknown>;
 }
 
 export function ConversionOptions({

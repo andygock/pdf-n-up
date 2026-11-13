@@ -71,7 +71,7 @@ function setInputValue(input, value) {
   input.dispatchEvent(new window.Event("input", { bubbles: true }));
 }
 
-test("page settings stay pending until Apply and run in options then source order", async () => {
+test("page settings stay pending until Apply and ignore inactive repeat-page drafts", async () => {
   let root;
   let props;
   const calls = [];
@@ -85,7 +85,9 @@ test("page settings stay pending until Apply and run in options then source orde
       calls.push(["options", patch]);
       props = { ...props, options: { ...props.options, ...patch } };
       root.update(props);
-      return true;
+      return new Promise((resolve) => {
+        finishPageSelection = resolve;
+      });
     },
     selectPage: (page) => {
       calls.push(["page", page]);
@@ -145,7 +147,6 @@ test("page settings stay pending until Apply and run in options then source orde
 
     assert.deepEqual(calls, [
       ["options", { mode: "sequence", pageRange: "2-4", pageOrder: "columns" }],
-      ["page", 2],
     ]);
     assert.equal(reopened.open, true);
     assert.equal(apply.disabled, true);

@@ -15,7 +15,7 @@ Demo: <https://pdfnup.gock.net/>
 - Drag-and-drop or file-picker input
 - Validates that the source is a non-empty PDF, JPEG or PNG and lets you select a page to repeat
 - Pages offers sequential N-up, page ranges and row/column reading order
-- Choose a repeat page visually with eight thumbnails at a time, loaded only while Pages is open
+- Choose a repeat page visually with eight thumbnails at a time, loaded only while Pages is open; Apply pages commits page settings together
 - Repeat mode accepts a total quantity, leaving unused final cells blank or filling them with extra copies
 - Multi-sheet canvas previews include sheet navigation and per-sheet measurements
 - Rejects encrypted, password-protected, malformed files
@@ -33,7 +33,7 @@ Demo: <https://pdfnup.gock.net/>
 - Generates the result entirely in browser memory, using the browser's PDF viewer
   when available and a bundled PDF.js canvas preview otherwise
 - Lets the user explicitly open or download the generated PDF
-- Batch-convert up to 20 PDFs and images with per-file page selection, cancellation, individual downloads and one ZIP
+- Batch-convert up to 20 PDFs and images with per-file page selection, removal, replacement, selective retry, cancellation, individual downloads and one ZIP
 - Opt in to remember layout settings locally; Reset settings removes saved preferences
 - Automatically show measurement overlays in ruler mode without changing the saved PDF
 - Review sheet size, finished copy sizes, scale, capacity and totals beside Save PDF; varied sizes open in a modal
@@ -79,6 +79,17 @@ of each box; they do not describe individual copies. Enable crop marks for cutti
 Ruler mode offers zoom, fit sheet, fit width and scrolling to inspect details,
 with direct sheet-number navigation. Measurements remain in physical millimetres
 and these preview controls do not alter the saved PDF.
+
+Use Measure mode to drag a distance or Pan mode to scroll the sheet on touchscreens.
+Keyboard users can focus the ruler, move with arrow keys (Shift moves 10 mm),
+press Space or Enter to set each endpoint, and adjust focused endpoints with arrows.
+Escape clears the measurement. The readout and controls wrap on smaller screens.
+
+Settings remain editable during generation. The previous successful preview stays
+visible until the latest settings finish; it is labelled as previous output and
+the app's save/open actions wait for an up-to-date result. Cancelling retains the
+source for retry. A rejected replacement preserves the current document. Replacing
+a document resets its page range and quantity while retaining layout preferences.
 
 ## How the layout works
 
@@ -244,12 +255,14 @@ Large or unusually complex PDFs may require several times their file size in
 working memory. The 50 MB validation limit is an upper bound, not a guarantee
 that every device can complete the conversion. Parsing and conversion each run
 in a dedicated worker with a 30-second deadline. Cancel terminates that worker
-and clears the document. A terminated worker's source must be selected again.
+and releases its parsed data. The source file stays in memory for Retry output;
+Clear releases the source and output. After validation, worker failures likewise
+retain the source for retry without another file selection.
 Generated PDFs above 100 MB are rejected after serialisation.
 
 Browsers supporting inline PDFs use their built-in PDF viewer. Its rendering
-limits and controls are managed by the browser. The viewer is removed while the
-converter is hidden and recreated when it becomes visible again.
+limits and controls are managed by the browser. The viewer remains mounted while
+the converter is hidden so guide navigation preserves its inspection state.
 
 Other browsers use the bundled PDF.js canvas preview, with an 8-second
 library-loading timeout and a 20-second overall deadline. It retries on request

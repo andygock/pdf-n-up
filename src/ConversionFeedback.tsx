@@ -108,6 +108,7 @@ export function ConversionFeedback({
             </button>
           )}
           {failed &&
+            status.title !== "File rejected" &&
             !recovery &&
             !sequenceFitFailure &&
             source &&

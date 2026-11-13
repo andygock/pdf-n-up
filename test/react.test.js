@@ -75,6 +75,141 @@ const file = async (width = 100, height = 200) => {
   });
 };
 
+test("edits during generation coalesce and keep the last valid preview", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const previous = app.value.output;
+    const request = app.worker.request.bind(app.worker);
+    const settings = [];
+    let release;
+    app.worker.request = async (method, payload) => {
+      if (method === "generate") {
+        settings.push(payload);
+        if (settings.length === 1)
+          await new Promise((resolve) => {
+            release = resolve;
+          });
+      }
+      return request(method, payload);
+    };
+    let first;
+    await act(async () => {
+      first = app.value.changeOptions({ marginMm: 3 });
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+    let second;
+    await act(() => {
+      second = app.value.changeOptions({ gutterMm: 7 });
+    });
+    assert.equal(app.value.output, previous);
+    assert.equal(app.value.outputCurrent, false);
+    assert.equal(app.value.options.gutterMm, 7);
+    await act(async () => {
+      release();
+      await Promise.all([first, second]);
+    });
+    assert.equal(settings.length, 2);
+    assert.equal(settings[1].marginMm, 3);
+    assert.equal(settings[1].gutterMm, 7);
+    assert.equal(app.value.outputCurrent, true);
+    assert.notEqual(app.value.output, previous);
+  } finally {
+    await app.close();
+  }
+});
+
+test("replacement is transactional and new documents reset job-specific values", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const source = app.value.sourceFile;
+    const output = app.value.output;
+    await act(() => app.value.selectFiles([new File(["bad"], "invalid.pdf")]));
+    assert.equal(app.value.sourceFile, source);
+    assert.equal(app.value.output, output);
+    assert.equal(app.value.outputCurrent, true);
+    await act(() =>
+      app.value.changeOptions({
+        quantity: 10,
+        pageRange: "1",
+        fillLastSheet: true,
+      }),
+    );
+    await act(async () => app.value.selectFiles([await file(200, 300)]));
+    assert.equal(app.value.options.quantity, undefined);
+    assert.equal(app.value.options.pageRange, "");
+    assert.equal(app.value.options.fillLastSheet, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("cancellation retains the source for retry and ignores late generation", async () => {
+  const app = await mountConversion();
+  try {
+    await act(async () => app.value.selectFiles([await file()]));
+    const source = app.value.sourceFile;
+    const previous = app.value.output;
+    const request = app.worker.request.bind(app.worker);
+    let release;
+    let delayed = true;
+    app.worker.request = async (method, payload) => {
+      if (method === "generate" && delayed) {
+        delayed = false;
+        await new Promise((resolve) => {
+          release = resolve;
+        });
+      }
+      return request(method, payload);
+    };
+    let pending;
+    await act(async () => {
+      pending = app.value.changeOptions({ marginMm: 5 });
+      await new Promise((resolve) => setImmediate(resolve));
+    });
+    await act(() => app.value.cancel());
+    assert.equal(app.value.sourceFile, source);
+    assert.equal(app.value.output, previous);
+    assert.equal(app.value.processing, false);
+    await act(() => app.value.retry());
+    const retried = app.value.output;
+    assert.equal(app.value.outputCurrent, true);
+    assert.equal(app.worker.loads, 2);
+    await act(async () => {
+      release();
+      await pending;
+    });
+    assert.equal(app.value.output, retried);
+  } finally {
+    await app.close();
+  }
+});
+
+test("page and layout options apply in one generation", async () => {
+  const app = await mountConversion();
+  try {
+    const doc = await pdfLib.PDFDocument.create();
+    doc.addPage([100, 200]);
+    doc.addPage([200, 300]);
+    await act(async () =>
+      app.value.selectFiles([new File([await doc.save()], "pages.pdf")]),
+    );
+    const request = app.worker.request.bind(app.worker);
+    let generations = 0;
+    app.worker.request = (method, payload) => {
+      if (method === "generate") generations++;
+      return request(method, payload);
+    };
+    await act(() => app.value.applyPages({ quantity: 10 }, 2));
+    assert.equal(app.value.source.pageNumber, 2);
+    assert.equal(app.value.output.sheets.length, 3);
+    assert.equal(generations, 1);
+  } finally {
+    await app.close();
+  }
+});
+
 test("React conversion retains the source and regenerates every layout and paper mode", async () => {
   const app = await mountConversion();
   try {
@@ -102,7 +237,8 @@ test("React conversion retains the source and regenerates every layout and paper
     assert.equal(app.value.status.title, "Conversion failed");
     assert.equal(app.value.details.outputSize, "Spacing does not fit");
     assert.ok(app.value.source);
-    assert.equal(app.value.output, null);
+    assert.ok(app.value.output);
+    assert.equal(app.value.outputCurrent, false);
     await act(() => app.value.changeOptions({ marginMm: 0, gutterMm: 0 }));
     assert.equal(app.value.status.title, "Output ready");
     const url = app.value.output.url;
@@ -206,7 +342,7 @@ test("cancelling a pending file read prevents late validation and worker request
   }
 });
 
-test("worker loss clears the React source and unlocks file selection", async () => {
+test("worker loss retains the React source and unlocks retry", async () => {
   const worker = makeWorker();
   const app = await mountConversion(worker);
   try {
@@ -216,8 +352,10 @@ test("worker loss clears the React source and unlocks file selection", async () 
     };
     await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
     assert.equal(app.value.status.message, "Worker stopped");
-    assert.equal(app.value.source, null);
-    assert.equal(app.value.output, null);
+    assert.ok(app.value.source);
+    assert.ok(app.value.sourceFile);
+    assert.ok(app.value.output);
+    assert.equal(app.value.outputCurrent, false);
     assert.equal(app.value.processing, false);
   } finally {
     await app.close();
@@ -352,7 +490,7 @@ test("fallback Download preserves PDF bytes and Open uses the PDF URL", async (t
   }
 });
 
-test("native preview hides, resumes, regenerates and clears its frame", async () => {
+test("native preview retains its frame while hidden and replaces it for new output", async () => {
   const app = await mountConversion();
   let root;
   const render = (active = true) =>
@@ -374,9 +512,10 @@ test("native preview hides, resumes, regenerates and clears its frame", async ()
       `${firstUrl}#filename=handout_4up.pdf&zoom=page-fit`,
     );
     await act(() => root.update(render(false)));
-    assert.equal(root.container.querySelector("iframe"), null);
+    const retainedFrame = root.container.querySelector("iframe");
+    assert.ok(retainedFrame);
     await act(() => root.update(render()));
-    assert.ok(root.container.querySelector("iframe"));
+    assert.equal(root.container.querySelector("iframe"), retainedFrame);
     await act(() => app.value.changeOptions({ layout: LAYOUTS[8] }));
     await act(() => root.update(render()));
     assert.match(
@@ -650,8 +789,9 @@ test("page selection regenerates output and preserves the loaded document", asyn
     assert.equal(app.value.output.filename, "pages_page2_4up.pdf");
     assert.equal(app.worker.loads, 1);
     await act(() => app.value.selectPage(3));
-    assert.equal(app.value.status.title, "Page selection failed");
-    assert.equal(app.value.output, null);
+    assert.equal(app.value.status.title, "Conversion failed");
+    assert.ok(app.value.output);
+    assert.equal(app.value.outputCurrent, false);
     await act(() => app.value.selectPage(1));
     assert.equal(app.value.source.pageNumber, 1);
     assert.equal(app.value.status.title, "Output ready");

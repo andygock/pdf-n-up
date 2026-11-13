@@ -7,6 +7,7 @@ import type { OutputAction, PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
 
 interface OutputPanelProps {
+  current?: boolean;
   documentKey?: File | null;
   output: PdfOutput | null;
   active: boolean;
@@ -17,6 +18,7 @@ export function OutputPanel({
   active,
   openOutput,
   documentKey,
+  current = true,
 }: OutputPanelProps) {
   const modeName = useId();
   const [showRuler, setShowRuler] = useState(false);
@@ -123,7 +125,7 @@ export function OutputPanel({
             className={`${ui.button} ${ui.compact}`}
             id="openOutputButton"
             type="button"
-            disabled={!output}
+            disabled={!output || !current}
             onClick={() => void openOutput("open")}
           >
             Open in tab ↗
@@ -131,7 +133,7 @@ export function OutputPanel({
           <button
             className={`${ui.button} ${ui.primary} ${ui.compact}`}
             id="downloadOutputButton"
-            disabled={!output}
+            disabled={!output || !current}
             onClick={() => void openOutput("save")}
             type="button"
           >
@@ -139,6 +141,14 @@ export function OutputPanel({
           </button>
         </div>
       </div>
+      <p
+        className={styles.previousOutput}
+        role="status"
+        aria-hidden={!output || current}
+        style={{ visibility: output && !current ? "visible" : "hidden" }}
+      >
+        Previous output — update or retry to save the current settings.
+      </p>
       <Preview
         output={output}
         active={active}

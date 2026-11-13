@@ -10,6 +10,8 @@ export interface BatchEntry {
   pageNumber: number;
   status: "queued" | "processing" | "ready" | "failed" | "cancelled";
   output?: ConversionResult;
+  // Source and page edits clear the output; this key permits reuse across runs.
+  outputSettings?: string;
   warnings?: string[];
   error?: string;
   replacementError?: string;
@@ -21,8 +23,9 @@ export async function processBatch(
   signal: AbortSignal,
   report: (id: number, patch: Partial<BatchEntry>) => void,
   createWorker = () => new ConversionWorkerClient(),
+  retainedBytes = 0,
 ) {
-  let total = 0;
+  let total = retainedBytes;
   for (const entry of entries) {
     if (signal.aborted) break;
     const worker = createWorker();

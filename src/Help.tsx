@@ -131,7 +131,9 @@ export function Help({ view }: { view: View }) {
             100 MB of input are accepted; each file is limited to 50 MB. Results
             are limited to 100 MB combined. Failed files are listed
             individually. Save completed PDFs separately or download the ZIP.
-            Changing settings requires running the batch again.
+            Changing settings marks previous results. Run the batch again to
+            apply them; only files needing an update are converted. Remove or
+            replace individual files without selecting the whole batch again.
           </p>
           <p>
             Ruler mode overlays copy dimensions, minimum margins and cell gaps
@@ -150,7 +152,10 @@ export function Help({ view }: { view: View }) {
             Fit width to inspect details, and scroll to pan across a zoomed
             sheet. Enter a sheet number to jump directly to that sheet. Zoom
             changes the preview only; physical measurements remain in
-            millimetres.
+            millimetres. Choose Pan to scroll the sheet on touchscreens. For
+            keyboard measurement, focus the ruler, move with arrows (Shift moves
+            10 mm), and press Space or Enter at each endpoint. Focus an endpoint
+            to adjust it with arrows.
           </p>
         </article>
       </section>
@@ -212,8 +217,9 @@ export function Help({ view }: { view: View }) {
             Parsed document data remains in browser memory until the PDF is
             replaced, cleared or the page is closed. Clear document releases the
             source, output and preview. Cancel processing stops the current
-            conversion and clears its document. Generated object URLs are
-            revoked when they are no longer required.
+            conversion and retains the source for retry. Invalid replacement
+            files leave the current document available. Generated object URLs
+            are revoked when they are no longer required.
           </p>
         </article>
       </section>

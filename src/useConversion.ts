@@ -42,6 +42,8 @@ interface ConversionState {
   output: PdfOutput | null;
   options: ConversionOptions;
   processing: boolean;
+  loading: boolean;
+  outputCurrent: boolean;
   failed: boolean;
   status: Status;
 }
@@ -57,12 +59,15 @@ export function useConversion(
   const [savedPreferences] = useState(readPreferences);
   const [rememberSettings, setRememberSettings] = useState(!!savedPreferences);
   const [preferenceError, setPreferenceError] = useState("");
+  const [settingsReset, setSettingsReset] = useState(0);
   const [state, setState] = useState<ConversionState>({
     source: null,
     sourceFile: null,
     output: null,
     options: savedPreferences ?? DEFAULT_OPTIONS,
     processing: false,
+    loading: false,
+    outputCurrent: false,
     failed: false,
     status: ready,
   });
@@ -80,7 +85,12 @@ export function useConversion(
     }
   }, [rememberSettings, state.options]);
   const current = useRef(state);
-  const [worker] = useState(createWorker);
+  const [initialWorker] = useState(createWorker);
+  const worker = useRef<ConversionWorkerClient | null>(initialWorker);
+  const stagedWorker = useRef<ConversionWorkerClient | null>(null);
+  const revision = useRef(0);
+  const desiredPage = useRef(1);
+  const running = useRef<Promise<boolean> | null>(null);
   const operation = useRef(0);
   const readingController = useRef<AbortController | null>(null);
   const update = useCallback((patch: Partial<ConversionState>) => {
@@ -90,19 +100,18 @@ export function useConversion(
 
   // Object URLs retain their backing Blob until explicitly revoked. Release
   // the previous output whenever it is replaced, cleared or unloaded.
-  const resetOutput = () => {
-    if (current.current.output) URL.revokeObjectURL(current.current.output.url);
-    update({ output: null, failed: false });
-  };
-
-  // Operation IDs prevent late reads or worker replies from changing a newer
-  // document. Cancellation also discards the worker's parsed source.
+  // Operation IDs isolate cancelled work; revisions coalesce edits within a job.
   const release = useCallback(() => {
-    operation.current += 1;
+    operation.current++;
+    revision.current++;
+    running.current = null;
     readingController.current?.abort();
-    worker.dispose();
+    stagedWorker.current?.dispose();
+    stagedWorker.current = null;
+    worker.current?.dispose();
+    worker.current = null;
     if (current.current.output) URL.revokeObjectURL(current.current.output.url);
-  }, [worker]);
+  }, []);
   const clearDocument = useCallback(() => {
     release();
     update({
@@ -110,6 +119,8 @@ export function useConversion(
       sourceFile: null,
       output: null,
       processing: false,
+      loading: false,
+      outputCurrent: false,
       failed: false,
       status: ready,
     });
@@ -129,8 +140,15 @@ export function useConversion(
     };
   }, [clearDocument, release]);
 
-  const showFailure = (error: unknown, title: string) => {
-    if (error instanceof WorkerLostError) clearDocument();
+  const showFailure = (
+    error: unknown,
+    title: string,
+    invalidateWorker = true,
+  ) => {
+    if (invalidateWorker && error instanceof WorkerLostError) {
+      worker.current?.dispose();
+      worker.current = null;
+    }
     update({
       failed: true,
       status: {
@@ -145,55 +163,123 @@ export function useConversion(
     });
   };
 
-  const generate = async (token: number) => {
-    resetOutput();
-    const { source, options } = current.current;
-    if (!source) return;
-    // Ordinary option errors keep the validated source available for recovery.
-    if (options.mode !== "sequence")
-      assertCompatibleOutputSize(
-        getOutputGeometry({
-          ...resolveSourceGeometry(source, options.sourceBox),
-          ...options,
-        }),
-      );
-    update({
-      status: {
-        title: "Creating output",
-        message:
-          "Arranging the page copies locally. Cancel to stop processing.",
-        loading: true,
-      },
-    });
-    const result = await worker.request("generate", options);
-    if (token !== operation.current) return;
-    const blob = new Blob([result.bytes], { type: "application/pdf" });
-    update({
-      source: { ...source, warnings: result.warnings },
-      output: {
-        blob,
-        sheets: result.sheets,
-        measurements: result.sheets[0],
-        url: URL.createObjectURL(blob),
-        filename: result.filename,
-        size: blob.size,
-      },
-      status: {
-        type: "success",
-        symbol: "✓",
-        title: "Output ready",
-        message: `${result.filename} is ready to open or download (${formatBytes(blob.size)}).`,
-        progress: 100,
-      },
-    });
-    // The React preview has independent cancellation and deadlines, so it
-    // never holds the conversion controls disabled while rendering.
+  const generateLatest = (): Promise<boolean> => {
+    if (running.current) return running.current;
+    if (!current.current.sourceFile || !current.current.source)
+      return Promise.resolve(true);
+    const token = operation.current;
+    update({ processing: true, failed: false });
+    const task = Promise.resolve()
+      .then(async () => {
+        while (token === operation.current) {
+          const version = revision.current;
+          try {
+            let source = current.current.source;
+            const file = current.current.sourceFile;
+            if (!source || !file) return false;
+            if (!worker.current) {
+              const controller = new AbortController();
+              readingController.current = controller;
+              const bytes = await readSourceFile(file, controller.signal);
+              if (token !== operation.current) return false;
+              readingController.current = null;
+              worker.current = createWorker();
+              source = await worker.current.request(
+                "load",
+                {
+                  bytes,
+                  metadata: { name: file.name, size: file.size },
+                },
+                [bytes.buffer],
+              );
+            }
+            if (token !== operation.current) return false;
+            const active = worker.current;
+            if (!active) return false;
+            if (source.pageNumber !== desiredPage.current)
+              source = await active.request("selectPage", desiredPage.current);
+            if (token !== operation.current) return false;
+            const options = resolveCopyDimensions(
+              current.current.options,
+              resolveSourceGeometry(source, current.current.options.sourceBox),
+            );
+            update({
+              source,
+              options,
+              status: {
+                title: "Updating output",
+                message:
+                  "Your previous preview remains visible while the latest settings are processed.",
+                loading: true,
+              },
+            });
+            // Ordinary option errors keep the validated source available for recovery.
+            if (options.mode !== "sequence")
+              assertCompatibleOutputSize(
+                getOutputGeometry({
+                  ...resolveSourceGeometry(source, options.sourceBox),
+                  ...options,
+                }),
+              );
+            const result = await active.request("generate", options);
+            if (token !== operation.current) return false;
+            if (version !== revision.current) continue;
+            const blob = new Blob([result.bytes], { type: "application/pdf" });
+            const previous = current.current.output;
+            update({
+              source: { ...source, warnings: result.warnings },
+              output: {
+                blob,
+                sheets: result.sheets,
+                measurements: result.sheets[0],
+                url: URL.createObjectURL(blob),
+                filename: result.filename,
+                size: blob.size,
+              },
+              outputCurrent: true,
+              failed: false,
+              status: {
+                type: "success",
+                symbol: "✓",
+                title: "Output ready",
+                message: `${result.filename} is ready to open or download (${formatBytes(blob.size)}).`,
+                progress: 100,
+              },
+            });
+            if (previous) URL.revokeObjectURL(previous.url);
+            // The React preview has independent cancellation and deadlines, so it
+            // never holds the conversion controls disabled while rendering.
+            return true;
+          } catch (error) {
+            if (token !== operation.current) return false;
+            if (error instanceof WorkerLostError) {
+              worker.current?.dispose();
+              worker.current = null;
+            }
+            if (version !== revision.current) continue;
+            showFailure(error, "Conversion failed");
+            return false;
+          }
+        }
+        return false;
+      })
+      .finally(() => {
+        if (token === operation.current) {
+          running.current = null;
+          update({ processing: false });
+        }
+      });
+    running.current = task;
+    return task;
   };
 
-  const selectFiles = async (files: FileList | File[] | null) => {
-    if (current.current.processing) return;
+  const selectFiles = async (
+    files: FileList | File[] | null,
+    resetJob = !!current.current.sourceFile,
+  ): Promise<boolean> => {
+    if (current.current.processing) return false;
     const selected = Array.from(files ?? []);
-    if (!selected.length) return;
+    if (!selected.length) return false;
     if (selected.length !== 1) {
       update({
         status: {
@@ -202,82 +288,104 @@ export function useConversion(
           message: "Select exactly one PDF or image file.",
         },
       });
-      return;
+      return false;
     }
-    clearDocument();
     const token = ++operation.current;
     update({
       processing: true,
+      loading: true,
+      failed: false,
       status: {
         title: "Validating file",
-        message: "Checking the file structure and page count.",
+        message:
+          "Your current document is kept until the replacement is valid.",
         loading: true,
       },
     });
+    let committed = false;
     try {
       const file = selected[0];
       const controller = new AbortController();
       readingController.current = controller;
-      const bytes = await readSourceFile(file, controller.signal).finally(
-        () => {
-          if (readingController.current === controller)
-            readingController.current = null;
-        },
-      );
-      if (token !== operation.current) return;
-      const source = await worker.request(
+      const bytes = await readSourceFile(file, controller.signal);
+      if (token !== operation.current) return false;
+      readingController.current = null;
+      const candidate = createWorker();
+      stagedWorker.current = candidate;
+      const source = await candidate.request(
         "load",
-        { bytes, metadata: { name: file.name, size: file.size } },
+        {
+          bytes,
+          metadata: { name: file.name, size: file.size },
+        },
         [bytes.buffer],
       );
-      if (token !== operation.current) return;
+      if (token !== operation.current) return false;
+      worker.current?.dispose();
+      worker.current = candidate;
+      stagedWorker.current = null;
+      desiredPage.current = 1;
+      revision.current++;
+      // Ranges and quantities belong to the replaced document, not layout preferences.
+      const options = resolveCopyDimensions(
+        {
+          ...current.current.options,
+          ...(resetJob
+            ? {
+                pageRange: "",
+                quantity: undefined,
+                fillLastSheet: false,
+              }
+            : {}),
+        },
+        resolveSourceGeometry(source, current.current.options.sourceBox),
+      );
+      const previous = current.current.output;
       update({
         source,
         sourceFile: file,
-        options: resolveCopyDimensions(
-          current.current.options,
-          resolveSourceGeometry(source, current.current.options.sourceBox),
-        ),
+        options,
+        output: null,
+        outputCurrent: false,
+        loading: false,
       });
-      await generate(token);
+      if (previous) URL.revokeObjectURL(previous.url);
+      committed = true;
+      await generateLatest();
+      return true;
     } catch (error) {
       if (token === operation.current)
         showFailure(
           error,
-          current.current.source ? "Conversion failed" : "File rejected",
+          committed ? "Conversion failed" : "File rejected",
+          committed,
         );
+      return committed;
     } finally {
-      if (token === operation.current) update({ processing: false });
+      if (token === operation.current) {
+        stagedWorker.current?.dispose();
+        stagedWorker.current = null;
+        readingController.current = null;
+        update({ processing: false, loading: false });
+      }
     }
   };
 
   const selectPage = async (pageNumber: number) => {
-    if (current.current.processing || !current.current.source) return;
-    if (current.current.source.pageNumber === pageNumber) return;
-    const token = ++operation.current;
-    resetOutput();
-    update({ processing: true });
-    try {
-      const source = await worker.request("selectPage", pageNumber);
-      if (token !== operation.current) return;
-      update({
-        source,
-        options: resolveCopyDimensions(
-          current.current.options,
-          resolveSourceGeometry(source, current.current.options.sourceBox),
-        ),
-      });
-      await generate(token);
-    } catch (error) {
-      if (token === operation.current)
-        showFailure(error, "Page selection failed");
-    } finally {
-      if (token === operation.current) update({ processing: false });
-    }
+    if (current.current.loading || !current.current.source) return false;
+    if (
+      current.current.source.pageNumber === pageNumber &&
+      desiredPage.current === pageNumber
+    )
+      return true;
+    desiredPage.current = pageNumber;
+    revision.current++;
+    update({ outputCurrent: false });
+    return generateLatest();
   };
 
   const changeOptions = async (patch: Partial<ConversionOptions>) => {
-    if (current.current.processing) return;
+    if (current.current.loading) return false;
     let options = { ...current.current.options, ...patch };
     if (patch.copyHeightMm !== undefined && patch.copyWidthMm === undefined)
       options.dimensionAxis = "height";
@@ -288,25 +396,43 @@ export function useConversion(
         options,
         resolveSourceGeometry(source, options.sourceBox),
       );
-    update({ options });
-    resetOutput();
+    if (JSON.stringify(options) === JSON.stringify(current.current.options))
+      return source && desiredPage.current !== source.pageNumber
+        ? generateLatest()
+        : true;
+    revision.current++;
     // Controlled inputs and conversion use the same options; browser-restored
     // radio values cannot diverge from the applied layout.
-    if (!current.current.source) return;
-    const token = ++operation.current;
-    update({ processing: true });
-    try {
-      await generate(token);
-    } catch (error) {
-      if (token === operation.current) showFailure(error, "Conversion failed");
-    } finally {
-      if (token === operation.current) update({ processing: false });
-    }
+    update({ options, outputCurrent: false, failed: false });
+    return generateLatest();
+  };
+
+  const cancel = () => {
+    operation.current++;
+    revision.current++;
+    running.current = null;
+    readingController.current?.abort();
+    readingController.current = null;
+    stagedWorker.current?.dispose();
+    stagedWorker.current = null;
+    worker.current?.dispose();
+    worker.current = null;
+    update({
+      processing: false,
+      loading: false,
+      failed: false,
+      status: {
+        title: "Processing cancelled",
+        message: current.current.sourceFile
+          ? "Your source is retained. Retry when ready, or continue editing settings."
+          : "Choose a PDF or image to begin.",
+      },
+    });
   };
 
   const openOutput = async (action: OutputAction) => {
     const output = current.current.output;
-    if (!output) return;
+    if (!output || !current.current.outputCurrent) return;
     if (action === "save") {
       try {
         const result = await downloadPdf(output.blob, output.filename);
@@ -390,7 +516,12 @@ export function useConversion(
     };
   }
   let recovery: ReturnType<typeof getFitRecovery> = null;
-  if (state.failed && state.source && state.options.mode !== "sequence") {
+  if (
+    state.failed &&
+    state.status.title !== "File rejected" &&
+    state.source &&
+    state.options.mode !== "sequence"
+  ) {
     try {
       recovery = getFitRecovery({
         ...resolveSourceGeometry(state.source, state.options.sourceBox),
@@ -421,7 +552,9 @@ export function useConversion(
       setRememberSettings(enabled);
     },
     preferenceError,
+    settingsReset,
     resetSettings: async () => {
+      setSettingsReset((version) => version + 1);
       setRememberSettings(false);
       try {
         savePreferences(null);
@@ -437,8 +570,26 @@ export function useConversion(
     },
     selectFiles,
     selectPage,
+    applyPages: async (
+      patch: Partial<ConversionOptions>,
+      pageNumber?: number,
+    ) => {
+      if (current.current.loading) return false;
+      if (
+        pageNumber !== undefined &&
+        current.current.source &&
+        desiredPage.current !== pageNumber
+      ) {
+        desiredPage.current = pageNumber;
+        revision.current++;
+        update({ outputCurrent: false });
+      }
+      return changeOptions(patch);
+    },
     changeOptions,
     clearDocument,
+    cancel,
+    retry: generateLatest,
     openOutput,
   };
 }

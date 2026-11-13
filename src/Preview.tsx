@@ -49,7 +49,7 @@ export function Preview({
 
   return (
     <div className={styles.nativePreviewViewport} id="previewViewport">
-      {output && active ? (
+      {output ? (
         <iframe
           key={output.url}
           className={styles.pdfViewer}
@@ -60,9 +60,7 @@ export function Preview({
         />
       ) : (
         <p className={styles.previewLoading} role="status">
-          {output
-            ? "Preview paused while hidden."
-            : "Select a PDF or image to see the output preview."}
+          Select a PDF or image to see the output preview.
         </p>
       )}
     </div>
@@ -80,6 +78,7 @@ function CanvasPreview({
     ready: boolean;
   }>({ page: null, ready: false });
   const [zoom, setZoom] = useState(1);
+  const [rulerMode, setRulerMode] = useState<"measure" | "pan">("measure");
   const previewViewport = useRef<HTMLDivElement>(null);
   const previewLoading = useRef<HTMLDivElement>(null);
   const pdfPreview = useRef<HTMLCanvasElement>(null);
@@ -210,25 +209,29 @@ function CanvasPreview({
             page={rendered.page}
             hidden={!rendered.ready}
             statusContainer={rulerFooter}
+            mode={rulerMode}
+            onModeChange={setRulerMode}
           />
         )}
       </div>
-      <p
-        hidden
-        className={styles.previewError}
-        id="previewError"
-        ref={previewError}
-      />
-      <button
-        hidden
-        className={ui.button}
-        id="retryPreviewButton"
-        type="button"
-        ref={retryPreviewButton}
-        onClick={() => void controller.current?.render()}
-      >
-        Retry preview
-      </button>
+      <div className={styles.previewFailure}>
+        <p
+          hidden
+          className={styles.previewError}
+          id="previewError"
+          ref={previewError}
+        />
+        <button
+          hidden
+          className={ui.button}
+          id="retryPreviewButton"
+          type="button"
+          ref={retryPreviewButton}
+          onClick={() => void controller.current?.render()}
+        >
+          Retry preview
+        </button>
+      </div>
     </section>
   );
 }

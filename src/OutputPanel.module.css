@@ -21,6 +21,13 @@
   font-size: var(--font-size-small);
 }
 
+.previousOutput {
+  margin: 0;
+  padding: 6px var(--space-5);
+  color: var(--warning);
+  font-size: var(--font-size-small);
+}
+
 .sheetNumber {
   width: 4.5em;
   padding: 2px 4px;

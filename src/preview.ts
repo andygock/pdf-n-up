@@ -114,7 +114,6 @@ export const createPreviewController = (
     elements.previewLoading.textContent = "Rendering preview locally…";
     elements.previewError.hidden = true;
     elements.retryPreviewButton.hidden = true;
-    elements.pdfPreview.hidden = true;
     onPageRendered?.(null);
 
     // A detached canvas prevents cancelled work from overwriting a newer render.
@@ -223,9 +222,11 @@ export const createPreviewController = (
     if (changed) {
       if (output?.blob !== nextOutput?.blob) cancel();
       else cancelRender();
-      elements.pdfPreview.width = 0;
-      elements.pdfPreview.height = 0;
-      elements.pdfPreview.hidden = true;
+      if (!nextOutput) {
+        elements.pdfPreview.width = 0;
+        elements.pdfPreview.height = 0;
+        elements.pdfPreview.hidden = true;
+      }
       onPageRendered?.(null);
       elements.previewError.hidden = true;
       elements.retryPreviewButton.hidden = true;

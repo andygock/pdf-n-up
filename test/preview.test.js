@@ -93,6 +93,38 @@ const setup = (options = {}) => {
   return { elements, controller, currentOutput };
 };
 
+test("replacement rendering keeps the previous canvas visible until drawing completes", async () => {
+  const pending = deferred();
+  const completed = deferred();
+  let replacing = false;
+  const first = library();
+  const second = library({ renderPromise: pending.promise });
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => (replacing ? second : first),
+    onPageRendered: (page) => {
+      if (replacing && page) completed.resolve();
+    },
+  });
+  try {
+    controller.update(currentOutput, true);
+    await controller.render();
+    assert.equal(elements.pdfPreview.hidden, false);
+    const width = elements.pdfPreview.width;
+    replacing = true;
+    controller.update(output(), true);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(elements.previewLoading.hidden, false);
+    assert.equal(elements.pdfPreview.hidden, false);
+    assert.equal(elements.pdfPreview.width, width);
+    pending.resolve();
+    await completed.promise;
+    assert.equal(elements.pdfPreview.hidden, false);
+  } finally {
+    pending.resolve();
+    controller.cancel();
+  }
+});
+
 test("rendered page dimensions calibrate the ruler independently of display scale", async () => {
   const notifications = [];
   const lib = library({ pageWidth: 720, pageHeight: 1440 });

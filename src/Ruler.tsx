@@ -27,10 +27,14 @@ export function Ruler({
   page,
   hidden = false,
   statusContainer,
+  mode: modeProp,
+  onModeChange,
 }: {
   page: RulerPage;
   hidden?: boolean;
   statusContainer?: HTMLElement | null;
+  mode?: "measure" | "pan";
+  onModeChange?: (mode: "measure" | "pan") => void;
 }) {
   const [origin, setOrigin] = useState<RulerPoint>({ x: 0, y: 0 });
   const [pointer, setPointer] = useState<RulerPoint | null>(null);
@@ -39,7 +43,9 @@ export function Ruler({
     y: 0,
   });
   const [keyboardCursorVisible, setKeyboardCursorVisible] = useState(false);
-  const [mode, setMode] = useState<"measure" | "pan">("measure");
+  const [localMode, setLocalMode] = useState<"measure" | "pan">("measure");
+  const mode = modeProp ?? localMode;
+  const setMode = onModeChange ?? setLocalMode;
   const [line, setLine] = useState<{
     start: RulerPoint;
     end: RulerPoint;

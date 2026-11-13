@@ -65,7 +65,9 @@ export function SpacingInput({
           if (event.key === "Enter") {
             setTouched(true);
             if (!disabled && valid && number !== displayValue) onCommit(number);
-          } else if (event.key === "Escape") {
+          } else if (event.key === "Escape" && draft !== String(displayValue)) {
+            event.preventDefault();
+            event.stopPropagation();
             setDraft(String(displayValue));
             setTouched(false);
           }

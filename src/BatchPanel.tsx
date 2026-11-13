@@ -39,7 +39,7 @@ export function BatchPanel({
         <span>Batch conversion</span>
         <span className={styles.summaryMeta}>
           {batch.entries.length
-            ? `${batch.entries.length} files`
+            ? `${batch.entries.length} ${batch.entries.length === 1 ? "file" : "files"}`
             : "Multiple files"}
         </span>
       </summary>
@@ -81,7 +81,7 @@ export function BatchPanel({
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file && replacementId.current !== null)
-                batch.replaceFile(replacementId.current, file);
+                void batch.replaceFile(replacementId.current, file);
               replacementId.current = null;
               event.target.value = "";
             }}
@@ -121,6 +121,16 @@ export function BatchPanel({
               >
                 Save ZIP
               </button>
+              {batch.canRebuildArchive(options) && (
+                <button
+                  type="button"
+                  className={`${ui.button} ${ui.compact}`}
+                  disabled={disabled}
+                  onClick={() => void batch.rebuildArchive(options)}
+                >
+                  {batch.archiveError ? "Retry ZIP" : "Build ZIP"}
+                </button>
+              )}
             </>
           )}
         </div>
@@ -132,14 +142,15 @@ export function BatchPanel({
       )}
       {batch.processing && (
         <label className={styles.progress}>
-          {completed} of {batch.entries.length} files complete
+          {completed} of {batch.entries.length}{" "}
+          {batch.entries.length === 1 ? "file" : "files"} complete
           <progress value={completed} max={batch.entries.length} />
         </label>
       )}
       {batch.isStale(options) && (
         <p className={styles.stale}>
-          Settings have changed. These results use the settings from the last
-          run. Convert the batch again to apply your changes.
+          Some results use different settings. Convert the batch again to apply
+          the current settings to every file.
         </p>
       )}
       {batch.entries.length > 0 && (
@@ -163,8 +174,19 @@ export function BatchPanel({
                 type="button"
                 className={`${ui.button} ${ui.compact}`}
                 disabled={disabled}
+                data-batch-remove
                 aria-label={`Remove ${entry.file.name}`}
-                onClick={() => batch.remove(entry.id)}
+                onClick={(event) => {
+                  const row = event.currentTarget.closest("li");
+                  const neighbour =
+                    row?.nextElementSibling ?? row?.previousElementSibling;
+                  const next =
+                    neighbour?.querySelector<HTMLButtonElement>(
+                      "[data-batch-remove]",
+                    ) ?? document.getElementById("selectFileButton");
+                  next?.focus({ preventScroll: true });
+                  batch.remove(entry.id);
+                }}
               >
                 Remove
               </button>
@@ -187,11 +209,23 @@ export function BatchPanel({
               <span className={styles.status} data-status={entry.status}>
                 {entry.status}
               </span>
+              {(entry.status === "failed" || entry.status === "cancelled") && (
+                <button
+                  type="button"
+                  className={`${ui.button} ${ui.compact}`}
+                  disabled={disabled}
+                  aria-label={`Retry ${entry.file.name}`}
+                  onClick={() => void batch.run(options, entry.id)}
+                >
+                  Retry
+                </button>
+              )}
               {entry.output && (
                 <button
                   type="button"
                   className={`${ui.button} ${ui.compact}`}
                   onClick={() => void batch.save(entry.id)}
+                  aria-label={`Save ${entry.output.filename}`}
                 >
                   Save PDF
                 </button>

@@ -51,10 +51,11 @@ function sameOptionDraft(draft: PageDraft, options: ConversionOptions) {
     draft.mode === (options.mode ?? "repeat") &&
     draft.pageRange === (options.pageRange ?? "") &&
     draft.pageOrder === (options.pageOrder ?? "rows") &&
-    (draft.quantity === undefined ||
-      (draft.quantity.trim() !== "" && quantity === options.quantity)) &&
-    (draft.quantity !== undefined || options.quantity === undefined) &&
-    draft.fillLastSheet === (options.fillLastSheet ?? false)
+    (draft.mode === "sequence" ||
+      ((draft.quantity === undefined ||
+        (draft.quantity.trim() !== "" && quantity === options.quantity)) &&
+        (draft.quantity !== undefined || options.quantity === undefined) &&
+        draft.fillLastSheet === (options.fillLastSheet ?? false)))
   );
 }
 
@@ -66,7 +67,8 @@ function sameDraft(
   const page = Number(draft.sourcePage.trim());
   return (
     sameOptionDraft(draft, options) &&
-    (sourcePage === undefined ||
+    (draft.mode === "sequence" ||
+      sourcePage === undefined ||
       (draft.sourcePage.trim() !== "" && page === sourcePage))
   );
 }
@@ -88,6 +90,7 @@ export function PageOptions({
   processing,
   changeOptions,
   selectPage,
+  applyPages,
 }: {
   source: SourceMetadata | null;
   sourceFile: File | null;
@@ -95,6 +98,10 @@ export function PageOptions({
   processing: boolean;
   changeOptions: (patch: Partial<ConversionOptions>) => Promise<unknown>;
   selectPage: (page: number) => Promise<unknown>;
+  applyPages?: (
+    patch: Partial<ConversionOptions>,
+    page?: number,
+  ) => Promise<unknown>;
 }) {
   const [draft, setDraft] = useState(() => createDraft(options, source));
   const [error, setError] = useState("");
@@ -152,7 +159,7 @@ export function PageOptions({
           source?.pageCount ?? Number.MAX_SAFE_INTEGER,
         );
 
-      if (draft.quantity !== undefined) {
+      if (draft.mode !== "sequence" && draft.quantity !== undefined) {
         const quantity = Number(draft.quantity.trim());
         if (
           draft.quantity.trim() === "" ||
@@ -163,7 +170,7 @@ export function PageOptions({
           throw new Error("Choose a whole number of copies from 1 to 10,000.");
       }
 
-      if (source) {
+      if (source && draft.mode !== "sequence") {
         if (
           draft.sourcePage.trim() === "" ||
           !Number.isInteger(sourcePageNumber) ||
@@ -183,20 +190,35 @@ export function PageOptions({
         draft.quantity === undefined
           ? undefined
           : Number(draft.quantity.trim());
-      if (quantity !== options.quantity) patch.quantity = quantity;
-      if (draft.fillLastSheet !== (options.fillLastSheet ?? false))
+      if (draft.mode !== "sequence" && quantity !== options.quantity)
+        patch.quantity = quantity;
+      if (
+        draft.mode !== "sequence" &&
+        draft.fillLastSheet !== (options.fillLastSheet ?? false)
+      )
         patch.fillLastSheet = draft.fillLastSheet;
 
       setApplying(true);
       setError("");
-      if (Object.keys(patch).length && (await changeOptions(patch)) === false)
-        throw new Error("The page settings could not be applied.");
-      if (
-        source &&
-        sourcePageNumber !== source.pageNumber &&
-        (await selectPage(sourcePageNumber)) === false
-      )
-        throw new Error("The selected source page could not be applied.");
+      if (applyPages) {
+        if (
+          (await applyPages(
+            patch,
+            source && draft.mode !== "sequence" ? sourcePageNumber : undefined,
+          )) === false
+        )
+          throw new Error("The page settings could not be applied.");
+      } else {
+        if (Object.keys(patch).length && (await changeOptions(patch)) === false)
+          throw new Error("The page settings could not be applied.");
+        if (
+          source &&
+          draft.mode !== "sequence" &&
+          sourcePageNumber !== source.pageNumber &&
+          (await selectPage(sourcePageNumber)) === false
+        )
+          throw new Error("The selected source page could not be applied.");
+      }
 
       close();
     } catch (cause) {
@@ -219,8 +241,18 @@ export function PageOptions({
 
   return (
     <Modal
-      title={`${title}${hasPendingChanges ? " · changes pending" : ""}`}
-      triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+      title={title}
+      trigger={(open) => (
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          className={`${ui.button} ${ui.compact} ${ui.quiet}`}
+          onClick={open}
+        >
+          {title}
+          {hasPendingChanges ? " · changes pending" : ""}
+        </button>
+      )}
     >
       {(close) => (
         <div className={styles.advancedFields}>
@@ -316,20 +348,23 @@ export function PageOptions({
           ) : (
             <p>Repeats the selected source page in every cell.</p>
           )}
-          {source && source.pageCount > 1 && sourceFile && (
-            <SourcePagePicker
-              file={sourceFile}
-              pageCount={source.pageCount}
-              pageNumber={thumbnailPageNumber}
-              disabled={processing || applying}
-              firstPage={firstPage}
-              onFirstPageChange={setFirstPage}
-              onSelect={(page) => {
-                setDraft({ ...draft, sourcePage: String(page) });
-                setError("");
-              }}
-            />
-          )}
+          {draft.mode !== "sequence" &&
+            source &&
+            source.pageCount > 1 &&
+            sourceFile && (
+              <SourcePagePicker
+                file={sourceFile}
+                pageCount={source.pageCount}
+                pageNumber={thumbnailPageNumber}
+                disabled={processing || applying}
+                firstPage={firstPage}
+                onFirstPageChange={setFirstPage}
+                onSelect={(page) => {
+                  setDraft({ ...draft, sourcePage: String(page) });
+                  setError("");
+                }}
+              />
+            )}
           {draft.mode !== "sequence" && (
             <>
               <label className={ui.checkbox}>
@@ -395,9 +430,11 @@ export function PageOptions({
             to 10,000 selected pages and 1,000 output sheets per PDF.
           </p>
           <p role="status">
-            {hasPendingChanges
-              ? "Page changes are pending. Apply pages to update the PDF, or discard changes."
-              : "No page changes are pending."}
+            {applying
+              ? "Applying page settings…"
+              : hasPendingChanges
+                ? "Page changes are pending. Apply pages to update the PDF, or discard changes."
+                : "No page changes are pending."}
           </p>
           {error && (
             <p id="pageOptionsError" role="alert">

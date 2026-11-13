@@ -38,11 +38,21 @@ export default function App() {
     const selected = Array.from(files ?? []);
     if (!selected.length) return;
     if (selected.length > 1) {
-      clearDocument();
-      batch.selectFiles(selected);
+      if (batch.selectFiles(selected)) {
+        const replacing = !!source;
+        clearDocument();
+        if (replacing)
+          await changeOptions({
+            pageRange: "",
+            quantity: undefined,
+            fillLastSheet: false,
+          });
+      }
     } else {
-      batch.clear();
-      await selectSingleFile(selected);
+      if (
+        await selectSingleFile(selected, !!source || batch.entries.length > 0)
+      )
+        batch.clear();
     }
   };
   const { view, setView, headingRef, mainRef } = useView();
@@ -57,7 +67,13 @@ export default function App() {
             processing={processing}
             dragging={dragging}
             onSelectFiles={selectFiles}
-            onClear={batch.processing ? batch.cancel : clearDocument}
+            onClear={
+              batch.processing
+                ? batch.cancel
+                : converting
+                  ? conversion.cancel
+                  : clearDocument
+            }
             compact
           />
         )}
@@ -77,29 +93,37 @@ export default function App() {
                 processing={processing}
                 dragging={dragging}
                 onSelectFiles={selectFiles}
-                onClear={batch.processing ? batch.cancel : clearDocument}
+                onClear={
+                  batch.processing
+                    ? batch.cancel
+                    : converting
+                      ? conversion.cancel
+                      : clearDocument
+                }
               />
             )}
             <div className={`${ui.panel} ${styles.settingsPanel}`}>
               <ConversionOptions
                 options={options}
-                processing={processing}
+                processing={conversion.loading || batch.processing}
                 changeOptions={changeOptions}
               >
                 <PageOptions
+                  key={conversion.settingsReset}
                   source={source}
                   sourceFile={conversion.sourceFile}
                   options={options}
-                  processing={processing}
+                  processing={conversion.loading || batch.processing}
                   changeOptions={changeOptions}
                   selectPage={conversion.selectPage}
+                  applyPages={conversion.applyPages}
                 />
                 <div className={styles.preferences}>
                   <label className={ui.checkbox}>
                     <input
                       type="checkbox"
                       checked={conversion.rememberSettings}
-                      disabled={processing}
+                      disabled={conversion.loading || batch.processing}
                       onChange={(event) =>
                         conversion.setRememberSettings(event.target.checked)
                       }
@@ -108,7 +132,7 @@ export default function App() {
                   </label>
                   <button
                     type="button"
-                    disabled={processing}
+                    disabled={conversion.loading || batch.processing}
                     className={`${ui.button} ${ui.compact} ${ui.quiet}`}
                     onClick={() => void conversion.resetSettings()}
                   >
@@ -138,10 +162,20 @@ export default function App() {
             {(source || converting) && (
               <OutputPanel
                 documentKey={conversion.sourceFile}
+                current={conversion.outputCurrent}
                 output={output}
                 active={view === "convert"}
                 openOutput={openOutput}
               />
+            )}
+            {source && !conversion.outputCurrent && !processing && (
+              <button
+                type="button"
+                className={ui.button}
+                onClick={() => void conversion.retry()}
+              >
+                Retry output
+              </button>
             )}
             {batch.entries.length > 0 ? (
               <BatchPanel
