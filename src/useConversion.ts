@@ -11,6 +11,7 @@ import {
   getOutputGeometry,
   getResolvedLayout,
   resolveCopyDimensions,
+  resolveSourceGeometry,
 } from "./geometry.ts";
 import {
   DEFAULT_OPTIONS,
@@ -150,7 +151,12 @@ export function useConversion(
     if (!source) return;
     // Ordinary option errors keep the validated source available for recovery.
     if (options.mode !== "sequence")
-      assertCompatibleOutputSize(getOutputGeometry({ ...source, ...options }));
+      assertCompatibleOutputSize(
+        getOutputGeometry({
+          ...resolveSourceGeometry(source, options.sourceBox),
+          ...options,
+        }),
+      );
     update({
       status: {
         title: "Creating output",
@@ -228,7 +234,10 @@ export function useConversion(
       update({
         source,
         sourceFile: file,
-        options: resolveCopyDimensions(current.current.options, source),
+        options: resolveCopyDimensions(
+          current.current.options,
+          resolveSourceGeometry(source, current.current.options.sourceBox),
+        ),
       });
       await generate(token);
     } catch (error) {
@@ -252,7 +261,10 @@ export function useConversion(
       if (token !== operation.current) return;
       update({
         source,
-        options: resolveCopyDimensions(current.current.options, source),
+        options: resolveCopyDimensions(
+          current.current.options,
+          resolveSourceGeometry(source, current.current.options.sourceBox),
+        ),
       });
       await generate(token);
     } catch (error) {
@@ -270,7 +282,11 @@ export function useConversion(
       options.dimensionAxis = "height";
     else if (patch.copyWidthMm !== undefined) options.dimensionAxis = "width";
     const source = current.current.source;
-    if (source) options = resolveCopyDimensions(options, source);
+    if (source)
+      options = resolveCopyDimensions(
+        options,
+        resolveSourceGeometry(source, options.sourceBox),
+      );
     update({ options });
     resetOutput();
     // Controlled inputs and conversion use the same options; browser-restored
@@ -332,12 +348,16 @@ export function useConversion(
 
   let details = { outputSize: "Spacing does not fit", scale: "—", layout: "" };
   if (state.source) {
-    const { width, height } = state.source;
+    const selectedSource = resolveSourceGeometry(
+      state.source,
+      state.options.sourceBox,
+    );
+    const { width, height } = selectedSource;
     const layout = getResolvedLayout(state.options.layout, width, height);
     details.layout = `${layout.copies}-up (${layout.columns}×${layout.rows})`;
     try {
       const { outputWidth, outputHeight, scale, layout } = getOutputGeometry({
-        ...state.source,
+        ...selectedSource,
         ...state.options,
       });
       details = {
@@ -371,7 +391,10 @@ export function useConversion(
   let recovery: ReturnType<typeof getFitRecovery> = null;
   if (state.failed && state.source && state.options.mode !== "sequence") {
     try {
-      recovery = getFitRecovery({ ...state.source, ...state.options });
+      recovery = getFitRecovery({
+        ...resolveSourceGeometry(state.source, state.options.sourceBox),
+        ...state.options,
+      });
     } catch {
       /* Keep the original validation error. */
     }

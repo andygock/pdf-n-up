@@ -1,46 +1,74 @@
 import { useEffect, useState } from "react";
+
 import styles from "./ConversionOptions.module.css";
+
 import { parsePageRange } from "./imposition.ts";
+
 import { Modal } from "./Modal.tsx";
+
 import { SourcePagePicker } from "./SourcePagePicker.tsx";
+
 import { SpacingInput } from "./SpacingInput.tsx";
+
 import type { ConversionOptions, SourceMetadata } from "./types.ts";
+
 import ui from "./ui.module.css";
 
 export function PageOptions({
   source,
+
   sourceFile,
+
   options,
+
   processing,
+
   changeOptions,
+
   selectPage,
 }: {
   source: SourceMetadata | null;
+
   sourceFile: File | null;
+
   options: ConversionOptions;
+
   processing: boolean;
+
   changeOptions: (patch: Partial<ConversionOptions>) => Promise<void>;
+
   selectPage: (page: number) => Promise<void>;
 }) {
   const [range, setRange] = useState(options.pageRange ?? "");
+
   const [error, setError] = useState("");
+
   useEffect(() => {
     setRange(options.pageRange ?? "");
+
     setError("");
   }, [options.pageRange]);
+
   const applyRange = () => {
     try {
       if (range.trim() || source)
         parsePageRange(range, source?.pageCount ?? Number.MAX_SAFE_INTEGER);
+
       setError("");
+
       void changeOptions({ pageRange: range });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
+
   return (
     <Modal
-      title={options.mode === "sequence" ? "Pages: sequential" : "Pages"}
+      title={
+        options.mode === "sequence"
+          ? `Pages: ${options.pageRange?.trim() ? `${options.pageRange.trim().slice(0, 32)}${options.pageRange.trim().length > 32 ? "…" : ""}` : "all"}`
+          : `Pages: repeat${source ? ` ${source.pageNumber}` : ""}${options.quantity ? ` · ${options.quantity} copies` : ""}`
+      }
       triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
     >
       {() => (

@@ -247,9 +247,26 @@ test("preview limits pixel density and the canvas area for large pages", async (
   await controller.render();
   assert.equal(elements.pdfPreview.width, 2000);
   assert.equal(elements.pdfPreview.height, 2000);
-  assert.equal(elements.pdfPreview.style.width, "1000px");
+  assert.equal(elements.pdfPreview.style.width, "10000px");
   controller.cancel();
   globalThis.window.devicePixelRatio = 1;
+});
+
+test("zoom rerenders the page while preserving the page coordinate dimensions", async () => {
+  const pages = [];
+  const { controller, elements, currentOutput } = setup({
+    loadLibrary: async () => library({ pageWidth: 200, pageHeight: 400 }),
+    onPageRendered: (page) => pages.push(page),
+  });
+  controller.update(currentOutput, true);
+  await controller.render();
+  controller.setZoom(2);
+  await controller.render();
+  assert.equal(elements.pdfPreview.style.width, "400px");
+  assert.equal(elements.pdfPreview.style.height, "800px");
+  assert.equal(pages.at(-1).width, 200);
+  assert.equal(pages.at(-1).height, 400);
+  controller.cancel();
 });
 
 test("resizing and hiding reuse the document, while replacement and disposal release it", async () => {

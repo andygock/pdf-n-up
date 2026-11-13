@@ -79,6 +79,7 @@ function CanvasPreview({
     page: RulerPage | null;
     ready: boolean;
   }>({ page: null, ready: false });
+  const [zoom, setZoom] = useState(1);
   const previewViewport = useRef<HTMLDivElement>(null);
   const previewLoading = useRef<HTMLDivElement>(null);
   const pdfPreview = useRef<HTMLCanvasElement>(null);
@@ -126,12 +127,16 @@ function CanvasPreview({
   }, []);
 
   useEffect(() => controller.current?.update(output, active), [output, active]);
+  useEffect(() => controller.current?.setZoom(zoom), [zoom]);
 
   return (
-    <div
+    <section
       className={`${styles.previewViewport} ${showRuler ? styles.withRuler : ""}`}
       id="previewViewport"
       ref={previewViewport}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard focus lets users scroll the sheet viewport to pan when zoomed.
+      tabIndex={0}
+      aria-label="Preview sheet. Scroll to pan when zoomed."
     >
       <div
         className={styles.previewLoading}
@@ -141,21 +146,73 @@ function CanvasPreview({
       >
         Select a PDF or image to see the output preview.
       </div>
-      <canvas
-        hidden
-        className={styles.pdfPreview}
-        id="pdfPreview"
-        aria-label="Preview of the generated PDF"
-        ref={pdfPreview}
-      />
-      {showRuler && rendered.page && output && active && (
-        <Ruler
-          key={`${output.url}:${output.previewPage}`}
-          page={rendered.page}
-          hidden={!rendered.ready}
-          statusContainer={rulerFooter}
-        />
+      {showRuler && rendered.page && (
+        <fieldset
+          className={styles.zoomControls}
+          aria-label="Preview zoom controls"
+        >
+          <button
+            type="button"
+            onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}
+            aria-label="Zoom out"
+          >
+            −
+          </button>
+          <span>{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            onClick={() => setZoom((value) => Math.min(3, value + 0.25))}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button type="button" onClick={() => setZoom(1)}>
+            Fit sheet
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const viewport = previewViewport.current;
+              const page = rendered.page;
+              if (viewport && page)
+                setZoom(
+                  Math.min(
+                    3,
+                    Math.max(
+                      0.5,
+                      (viewport.clientWidth - 60) / (page.displayWidth / zoom),
+                    ),
+                  ),
+                );
+            }}
+          >
+            Fit width
+          </button>
+        </fieldset>
       )}
+      <div
+        className={styles.previewStage}
+        style={{
+          width: rendered.page?.displayWidth ?? 0,
+          height: rendered.page?.displayHeight ?? 0,
+        }}
+      >
+        <canvas
+          hidden
+          className={styles.pdfPreview}
+          id="pdfPreview"
+          aria-label="Preview of the generated PDF"
+          ref={pdfPreview}
+        />
+        {showRuler && rendered.page && output && active && (
+          <Ruler
+            key={`${output.url}:${output.previewPage}`}
+            page={rendered.page}
+            hidden={!rendered.ready}
+            statusContainer={rulerFooter}
+          />
+        )}
+      </div>
       <p
         hidden
         className={styles.previewError}
@@ -172,6 +229,6 @@ function CanvasPreview({
       >
         Retry preview
       </button>
-    </div>
+    </section>
   );
 }

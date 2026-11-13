@@ -13,6 +13,7 @@ export interface Measurements {
   outputWidth: number;
   outputHeight: number;
   boxes: PageBox[];
+  bleedBoxes?: PageBox[];
   edges?: {
     top: number;
     right: number;
@@ -65,6 +66,8 @@ export interface ConversionOptions {
   dimensionAxis?: "width" | "height";
   copyWidthMm?: number;
   copyHeightMm?: number;
+  sourceBox?: "visible" | "trim";
+  bleedMm?: number;
   cropMarks?: boolean;
   cropMarkBehaviour?: "fit" | "expand";
   cropMarksToEdge?: boolean;
@@ -93,6 +96,10 @@ export interface FileMetadata {
 }
 
 export interface SourceMetadata extends VisiblePageGeometry, FileMetadata {
+  trimBox?: PageBox;
+  bleedBox?: PageBox;
+  trimWidth?: number;
+  trimHeight?: number;
   warnings: string[];
   pageCount: number;
   pageNumber: number;

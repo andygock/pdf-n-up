@@ -1,31 +1,46 @@
 import { type ReactNode, useState } from "react";
+
 import styles from "./ConversionOptions.module.css";
+
 import { CustomGrid } from "./CustomGrid.tsx";
+
 import { LAYOUTS } from "./geometry.ts";
+
 import { Modal } from "./Modal.tsx";
+
 import { SpacingInput } from "./SpacingInput.tsx";
+
 import type { ConversionOptions as Options } from "./types.ts";
+
 import ui from "./ui.module.css";
 
 interface ConversionOptionsProps {
   children?: ReactNode;
+
   options: Options;
+
   processing: boolean;
+
   changeOptions: (patch: Partial<Options>) => Promise<void>;
 }
 
 export function ConversionOptions({
   children,
+
   options,
+
   processing,
+
   changeOptions,
 }: ConversionOptionsProps) {
   const [markBehaviour, setMarkBehaviour] = useState(
     options.cropMarkBehaviour ?? "fit",
   );
+
   const [marksToEdge, setMarksToEdge] = useState(
     options.cropMarksToEdge ?? false,
   );
+
   return (
     <section
       className={styles.conversionOptions}
@@ -49,7 +64,9 @@ export function ConversionOptions({
                 onChange={() =>
                   void changeOptions({
                     layout,
+
                     autoLayout: false,
+
                     rotateCopies: false,
                   })
                 }
@@ -63,10 +80,12 @@ export function ConversionOptions({
                   <rect x="1" y="1" width="46" height="34" />
                   {Array.from({ length: layout.columns - 1 }, (_, column) => {
                     const x = 1 + ((column + 1) * 46) / layout.columns;
+
                     return <path key={`c${x}`} d={`M${x} 1v34`} />;
                   })}
                   {Array.from({ length: layout.rows - 1 }, (_, row) => {
                     const y = 1 + ((row + 1) * 34) / layout.rows;
+
                     return <path key={`r${y}`} d={`M1 ${y}h46`} />;
                   })}
                 </svg>
@@ -120,7 +139,7 @@ export function ConversionOptions({
         </div>
         {options.paperMode === "custom" ? (
           <Modal
-            title="Paper dimensions"
+            title={`Paper: ${options.paperWidthMm ?? 210} × ${options.paperHeightMm ?? 297} mm`}
             triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
           >
             <div className={styles.dimensionFields}>
@@ -178,7 +197,11 @@ export function ConversionOptions({
         </select>
         {options.scaleMode && options.scaleMode !== "fit" && (
           <Modal
-            title="Copy dimensions"
+            title={
+              options.scaleMode === "percent"
+                ? `Scale: ${options.scalePercent ?? 100}%`
+                : `Copy: ${options.dimensionAxis === "height" ? `${options.copyHeightMm ?? 50} mm high` : `${options.copyWidthMm ?? 90} mm wide`}`
+            }
             triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
           >
             {options.scaleMode === "percent" ? (
@@ -253,9 +276,13 @@ export function ConversionOptions({
               onCommit={(value) =>
                 void changeOptions({
                   marginMm: value,
+
                   marginTopMm: undefined,
+
                   marginRightMm: undefined,
+
                   marginBottomMm: undefined,
+
                   marginLeftMm: undefined,
                 })
               }
@@ -270,7 +297,9 @@ export function ConversionOptions({
               onCommit={(value) =>
                 void changeOptions({
                   gutterMm: value,
+
                   gapHorizontalMm: undefined,
+
                   gapVerticalMm: undefined,
                 })
               }
@@ -278,9 +307,32 @@ export function ConversionOptions({
           </label>
         </div>
       </fieldset>
+      {[
+        options.marginTopMm,
+        options.marginRightMm,
+        options.marginBottomMm,
+        options.marginLeftMm,
+        options.gapHorizontalMm,
+        options.gapVerticalMm,
+      ].some((value) => value !== undefined) && (
+        <p className={styles.hint}>
+          Margins (top / right / bottom / left):{" "}
+          {[
+            options.marginTopMm,
+            options.marginRightMm,
+            options.marginBottomMm,
+            options.marginLeftMm,
+          ]
+            .map((value) => value ?? options.marginMm ?? 0)
+            .join(" / ")}{" "}
+          mm. Gaps (horizontal / vertical):{" "}
+          {options.gapHorizontalMm ?? options.gutterMm ?? 0} /{" "}
+          {options.gapVerticalMm ?? options.gutterMm ?? 0} mm.
+        </p>
+      )}
       <div className={styles.toolbar}>
         <Modal
-          title="Spacing details"
+          title={`Spacing details${[options.marginTopMm, options.marginRightMm, options.marginBottomMm, options.marginLeftMm, options.gapHorizontalMm, options.gapVerticalMm].some((value) => value !== undefined) ? ": custom" : ""}`}
           triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
         >
           <p>
@@ -291,10 +343,15 @@ export function ConversionOptions({
             {(
               [
                 ["marginTopMm", "Top margin"],
+
                 ["marginRightMm", "Right margin"],
+
                 ["marginBottomMm", "Bottom margin"],
+
                 ["marginLeftMm", "Left margin"],
+
                 ["gapHorizontalMm", "Horizontal gap"],
+
                 ["gapVerticalMm", "Vertical gap"],
               ] as const
             ).map(([key, label]) => (
@@ -321,7 +378,13 @@ export function ConversionOptions({
           </p>
         </Modal>
         <Modal
-          title={options.autoLayout ? "Layout: auto" : "Layout details"}
+          title={
+            options.autoLayout
+              ? "Layout: auto"
+              : options.layout.custom
+                ? `Custom: ${options.layout.columns} × ${options.layout.rows}`
+                : "Layout details"
+          }
           triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
         >
           <div className={styles.advancedFields}>
@@ -333,10 +396,13 @@ export function ConversionOptions({
                 onChange={(event) =>
                   void changeOptions({
                     autoLayout: event.target.checked,
+
                     rotateCopies: false,
+
                     ...(event.target.checked && options.paperMode === "expand"
                       ? { paperMode: "a4" as const }
                       : {}),
+
                     ...(event.target.checked &&
                     (!options.scaleMode || options.scaleMode === "fit")
                       ? { scaleMode: "dimensions" as const }
@@ -391,9 +457,12 @@ export function ConversionOptions({
           trigger={(open) => {
             const configure = () => {
               setMarkBehaviour(options.cropMarkBehaviour ?? "fit");
+
               setMarksToEdge(options.cropMarksToEdge ?? false);
+
               open();
             };
+
             return (
               <>
                 <label className={ui.checkbox}>
@@ -483,9 +552,12 @@ export function ConversionOptions({
                 onClick={() => {
                   void changeOptions({
                     cropMarks: true,
+
                     cropMarkBehaviour: markBehaviour,
+
                     cropMarksToEdge: marksToEdge,
                   });
+
                   close();
                 }}
               >
@@ -493,6 +565,47 @@ export function ConversionOptions({
               </button>
             </div>
           )}
+        </Modal>
+        <Modal
+          title={`Bleed / trim: ${options.bleedMm ?? 0} mm${options.sourceBox === "trim" ? " · TrimBox" : ""}`}
+          triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
+        >
+          <label className={ui.field}>
+            Finished source area
+            <select
+              className={ui.control}
+              disabled={processing}
+              value={options.sourceBox ?? "visible"}
+              onChange={(event) =>
+                void changeOptions({
+                  sourceBox: event.target.value as Options["sourceBox"],
+                })
+              }
+            >
+              <option value="visible">Visible page (CropBox)</option>
+              <option value="trim">Source TrimBox</option>
+            </select>
+          </label>
+          <label className={ui.field} htmlFor="bleedMm">
+            Bleed per edge · mm
+            <SpacingInput
+              id="bleedMm"
+              disabled={processing}
+              value={options.bleedMm ?? 0}
+              max={20}
+              onCommit={(bleedMm) => void changeOptions({ bleedMm })}
+            />
+          </label>
+          <p>
+            Finished dimensions refer to the selected source area. Bleed uses
+            available source artwork beyond that area; missing artwork is never
+            invented. Margins and gaps reserve space for bleed. Crop marks
+            indicate the finished trim.
+          </p>
+          <p>
+            The PDF stores sheet-wide TrimBox and BleedBox envelopes. Each
+            copy’s trim is indicated by crop marks when enabled.
+          </p>
         </Modal>
         {children}
       </div>

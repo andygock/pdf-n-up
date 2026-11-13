@@ -2,6 +2,7 @@ import type {
   ConversionOptions,
   Layout,
   PageBox,
+  SourceMetadata,
   VisiblePageGeometry,
 } from "./types.ts";
 
@@ -405,8 +406,11 @@ export const makeOutputFilename = (inputName: string, copies: number) => {
   return `${basename}_${copies}up.pdf`;
 };
 
-// Reserve 1 mm clearance plus 3 mm marks, with spare room at sheet edges.
+// Reserve bleed around each finished copy, then clearance for crop marks.
 export const getSpacing = (options: Partial<ConversionOptions>) => {
+  const bleed = options.bleedMm ?? 0;
+  if (!Number.isFinite(bleed) || bleed < 0 || bleed > 20)
+    throw new Error("Bleed must be between 0 and 20 mm.");
   const edgeValues = [
     options.marginTopMm ?? options.marginMm ?? 0,
     options.marginRightMm ?? options.marginMm ?? 0,
@@ -423,7 +427,12 @@ export const getSpacing = (options: Partial<ConversionOptions>) => {
     throw new Error("Margins and gutters must be between 0 and 100 mm.");
   const [top, right, bottom, left, horizontal, vertical] = edgeValues.map(
     (value, index) =>
-      (Math.max(value, options.cropMarks ? (index < 4 ? 5 : 10) : 0) * 72) /
+      (Math.max(
+        value,
+        (index < 4 ? bleed : bleed * 2) +
+          (options.cropMarks ? (index < 4 ? 5 : 10) : 0),
+      ) *
+        72) /
       25.4,
   );
   return {
@@ -472,9 +481,11 @@ export const getCopyBoxes = (
 export const getCropMarkLines = (
   box: PageBox,
   sheet?: { outputWidth: number; outputHeight: number; boxes: PageBox[] },
+  bleedMm = 0,
 ) => {
   const clearance = 72 / 25.4;
-  const reach = 4 * clearance;
+  const startOffset = (bleedMm + 1) * clearance;
+  const reach = (bleedMm + 4) * clearance;
   return [box.x, box.x + box.width].flatMap((x) =>
     [box.y, box.y + box.height].flatMap((y) => {
       const dx = x === box.x ? -1 : 1;
@@ -503,8 +514,8 @@ export const getCropMarkLines = (
         }
       }
       return [
-        { start: { x: x + dx * clearance, y }, end: { x: endX, y } },
-        { start: { x, y: y + dy * clearance }, end: { x, y: endY } },
+        { start: { x: x + dx * startOffset, y }, end: { x: endX, y } },
+        { start: { x, y: y + dy * startOffset }, end: { x, y: endY } },
       ];
     }),
   );
@@ -590,4 +601,76 @@ export const resolveCopyDimensions = (
         : { copyWidthMm: options.copyWidthMm ?? 90 },
     ),
   };
+};
+
+// The visible page remains the default; trim selection changes only finished size.
+export const resolveSourceGeometry = <
+  T extends VisiblePageGeometry & Partial<SourceMetadata>,
+>(
+  source: T,
+  sourceBox: ConversionOptions["sourceBox"] = "visible",
+): T => {
+  if (!["visible", "trim"].includes(sourceBox))
+    throw new Error("Choose the visible page or TrimBox as the source area.");
+  if (sourceBox !== "trim" || !source.trimBox) return source;
+  return {
+    ...source,
+    ...getVisiblePageGeometry(
+      source.trimBox,
+      source.rotation,
+      source.cropBox,
+      source.userUnit,
+    ),
+  };
+};
+
+export const expandBox = (box: PageBox, amount: number): PageBox => ({
+  x: box.x - amount,
+  y: box.y - amount,
+  width: box.width + 2 * amount,
+  height: box.height + 2 * amount,
+});
+
+export const getArtworkBox = (
+  trim: PageBox,
+  available: PageBox,
+  amount: number,
+): PageBox => {
+  const x = Math.min(trim.x, Math.max(trim.x - amount, available.x));
+  const y = Math.min(trim.y, Math.max(trim.y - amount, available.y));
+  return {
+    x,
+    y,
+    width:
+      Math.max(
+        trim.x + trim.width,
+        Math.min(trim.x + trim.width + amount, available.x + available.width),
+      ) - x,
+    height:
+      Math.max(
+        trim.y + trim.height,
+        Math.min(trim.y + trim.height + amount, available.y + available.height),
+      ) - y,
+  };
+};
+
+export const getTrimOffset = (
+  trim: PageBox,
+  artwork: PageBox,
+  rotation: number,
+) => {
+  const left = trim.x - artwork.x,
+    bottom = trim.y - artwork.y;
+  const right = artwork.x + artwork.width - trim.x - trim.width;
+  const top = artwork.y + artwork.height - trim.y - trim.height;
+  switch (normaliseRotation(rotation)) {
+    case 90:
+      return { x: bottom, y: right };
+    case 180:
+      return { x: right, y: top };
+    case 270:
+      return { x: top, y: left };
+    default:
+      return { x: left, y: bottom };
+  }
 };

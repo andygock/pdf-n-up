@@ -48,6 +48,7 @@ export const createPreviewController = (
   let cancelPreview: (() => void) | undefined;
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   let lastSize = "";
+  let zoom = 1;
   let cached: {
     task: PDFDocumentLoadingTask;
     document: PDFDocumentProxy;
@@ -138,10 +139,12 @@ export const createPreviewController = (
         if (!current()) return;
         const base = page.getViewport({ scale: 1 });
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const displayScale = Math.min(
+          (size.width * zoom) / base.width,
+          (size.height * zoom) / base.height,
+        );
         const scale = Math.min(
-          1.5,
-          size.width / base.width,
-          size.height / base.height,
+          displayScale,
           Math.sqrt(4_000_000 / (base.width * base.height)) / ratio,
         );
         const viewport = page.getViewport({ scale: scale * ratio });
@@ -156,8 +159,8 @@ export const createPreviewController = (
         const target = elements.pdfPreview;
         target.width = canvas.width;
         target.height = canvas.height;
-        target.style.width = `${viewport.width / ratio}px`;
-        target.style.height = `${viewport.height / ratio}px`;
+        target.style.width = `${base.width * displayScale}px`;
+        target.style.height = `${base.height * displayScale}px`;
         const targetContext = target.getContext("2d", { alpha: false });
         if (!targetContext) throw new Error("Canvas rendering is unavailable.");
         targetContext.drawImage(canvas, 0, 0);
@@ -172,8 +175,8 @@ export const createPreviewController = (
         onPageRendered?.({
           width: base.width,
           height: base.height,
-          displayWidth: viewport.width / ratio,
-          displayHeight: viewport.height / ratio,
+          displayWidth: base.width * displayScale,
+          displayHeight: base.height * displayScale,
         });
       } finally {
         // The work promise settles only after drawing completes or cancellation
@@ -246,5 +249,13 @@ export const createPreviewController = (
     schedule();
   };
 
-  return { update, render, schedule, cancel };
+  const setZoom = (value: number) => {
+    const next = Math.max(0.5, Math.min(3, value));
+    if (next === zoom) return;
+    zoom = next;
+    lastSize = "";
+    schedule();
+  };
+
+  return { update, render, schedule, cancel, setZoom };
 };

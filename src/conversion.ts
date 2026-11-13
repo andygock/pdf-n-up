@@ -2,14 +2,18 @@ import type * as PDFLib from "pdf-lib";
 import type { PDFDocument, PDFPage } from "pdf-lib";
 import {
   assertCompatibleOutputSize,
+  expandBox,
+  getArtworkBox,
   getCopyBoxes,
   getCropMarkLines,
   getOutputGeometry,
   getRotatedDrawOptions,
   getSpacing,
+  getTrimOffset,
   getVisiblePageGeometry,
   makeOutputFilename,
   resolveCopyDimensions,
+  resolveSourceGeometry,
 } from "./geometry.ts";
 import {
   fitPageToCell,
@@ -25,6 +29,7 @@ import type {
   ConversionResult,
   FileMetadata,
   OutputSheet,
+  PageBox,
   SourceMetadata,
 } from "./types.ts";
 
@@ -59,6 +64,28 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       unit,
     );
     const warnings: string[] = [];
+    let trim = geometry;
+    let bleed = geometry;
+    try {
+      trim = getVisiblePageGeometry(
+        page.getTrimBox(),
+        geometry.rotation,
+        geometry.cropBox,
+        unit,
+      );
+      bleed = getVisiblePageGeometry(
+        page.getBleedBox(),
+        geometry.rotation,
+        page.getMediaBox(),
+        unit,
+      );
+    } catch {
+      trim = geometry;
+      bleed = geometry;
+      warnings.push(
+        "Invalid source TrimBox or BleedBox; using the visible page area instead.",
+      );
+    }
     if (
       page.node.Annots()?.size() ||
       document.catalog.has(pdfLib.PDFName.of("AcroForm"))
@@ -73,6 +100,10 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       pageCount: document.getPageCount(),
       pageNumber,
       ...geometry,
+      trimBox: trim.cropBox,
+      bleedBox: bleed.cropBox,
+      trimWidth: trim.width,
+      trimHeight: trim.height,
       warnings,
     };
     // Output compatibility belongs to generate(), so changing paper mode can
@@ -175,9 +206,13 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
       const selectedPages = sequence
         ? parsePageRange(options.pageRange ?? "", original.pageCount)
         : [original.pageNumber];
-      const reference = sequence
+      const visibleReference = sequence
         ? selectPage(original.document, original, selectedPages[0], false)
         : original;
+      const reference = resolveSourceGeometry(
+        visibleReference,
+        options.sourceBox,
+      );
       const layoutOptions = resolveCopyDimensions(options, reference);
       const geometry = getOutputGeometry({ ...reference, ...layoutOptions });
       const { outputWidth, outputHeight, scale, layout, rotation } = geometry;
@@ -224,14 +259,54 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
         : getCopyBoxes({ ...reference, ...layoutOptions });
       const embeddedPages = new Map<number, PDFLib.PDFEmbeddedPage | null>();
       const pageInfo = new Map<number, SourceMetadata>();
+      const artworkBoxes = new Map<number, PageBox>();
       const entries = [...new Set(pageNumbers)].flatMap((pageNumber) => {
-        const metadata = selectPage(
-          original.document,
-          original,
-          pageNumber,
-          false,
+        const metadata = resolveSourceGeometry(
+          selectPage(original.document, original, pageNumber, false),
+          options.sourceBox,
         );
         pageInfo.set(pageNumber, metadata);
+        let pageScale = scale;
+        if (sequence && options.bleedMm) {
+          try {
+            pageScale = fitPageToCell(
+              metadata,
+              cells[0],
+              options,
+              rotation,
+            ).scale;
+          } catch (error) {
+            throw new Error(
+              `Source page ${pageNumber}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        }
+        const requestedBleed =
+          ((options.bleedMm ?? 0) * 72) / 25.4 / pageScale / metadata.userUnit;
+        const artwork = getArtworkBox(
+          metadata.cropBox,
+          metadata.bleedBox ?? metadata.cropBox,
+          requestedBleed,
+        );
+        artworkBoxes.set(pageNumber, artwork);
+        if (
+          requestedBleed > 0 &&
+          (artwork.x > metadata.cropBox.x - requestedBleed + 1e-7 ||
+            artwork.y > metadata.cropBox.y - requestedBleed + 1e-7 ||
+            artwork.x + artwork.width <
+              metadata.cropBox.x +
+                metadata.cropBox.width +
+                requestedBleed -
+                1e-7 ||
+            artwork.y + artwork.height <
+              metadata.cropBox.y +
+                metadata.cropBox.height +
+                requestedBleed -
+                1e-7)
+        )
+          warnings.add(
+            `Source page ${pageNumber} has insufficient available bleed for the requested ${options.bleedMm} mm. Only existing artwork within its BleedBox and MediaBox is copied.`,
+          );
         const page = original.document.getPage(pageNumber - 1);
         // Missing /Contents is valid for a blank PDF page. Avoid asking pdf-lib
         // to embed it: there is no visual content to repeat.
@@ -243,7 +318,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           embeddedPages.set(pageNumber, null);
           return [];
         }
-        return [{ pageNumber, page, cropBox: metadata.cropBox }];
+        return [{ pageNumber, page, cropBox: artwork }];
       });
       // One embedding call shares pdf-lib's resource copier across source pages,
       // so common fonts and images are copied only once into the output.
@@ -280,6 +355,7 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           outputHeight,
           ...getSpacing(options),
           boxes: [],
+          ...(options.bleedMm ? { bleedBoxes: [] } : {}),
           scales: [],
           sourcePages: [],
           capacity: copies,
@@ -304,12 +380,22 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
               `Source page ${pageNumber}: ${error instanceof Error ? error.message : String(error)}`,
             );
           }
-          const { width, height } = metadata.cropBox;
+          const artwork = artworkBoxes.get(pageNumber) ?? metadata.cropBox;
+          const { width, height } = artwork;
+          const trimOffset = getTrimOffset(
+            metadata.cropBox,
+            artwork,
+            metadata.rotation + rotation,
+          );
           const embedded = embeddedPages.get(pageNumber);
           if (embedded) {
             const draw = getRotatedDrawOptions({
-              left: placement.box.x,
-              bottom: placement.box.y,
+              left:
+                placement.box.x -
+                trimOffset.x * placement.scale * metadata.userUnit,
+              bottom:
+                placement.box.y -
+                trimOffset.y * placement.scale * metadata.userUnit,
               sourceWidth: width,
               sourceHeight: height,
               // Embedded streams retain source units; output pages use points.
@@ -325,6 +411,9 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
             });
           }
           sheet.boxes.push(placement.box);
+          sheet.bleedBoxes?.push(
+            expandBox(placement.box, ((options.bleedMm ?? 0) * 72) / 25.4),
+          );
           sheet.scales.push(placement.scale);
           sheet.sourcePages.push(pageNumber);
         }
@@ -332,7 +421,10 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
           for (const box of sheet.boxes) {
             for (const line of getCropMarkLines(
               box,
-              options.cropMarksToEdge ? sheet : undefined,
+              options.cropMarksToEdge
+                ? { ...sheet, boxes: sheet.bleedBoxes ?? sheet.boxes }
+                : undefined,
+              options.bleedMm,
             ))
               outputPage.drawLine({
                 ...line,
@@ -340,6 +432,23 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
                 color: pdfLib.rgb(0, 0, 0),
               });
           }
+        }
+        if (options.sourceBox === "trim" || options.bleedMm) {
+          // A sheet has one PDF box of each kind: envelope all imposed copies.
+          const envelope = (boxes: PageBox[]) => {
+            const x = Math.min(...boxes.map((box) => box.x));
+            const y = Math.min(...boxes.map((box) => box.y));
+            return {
+              x,
+              y,
+              width: Math.max(...boxes.map((box) => box.x + box.width)) - x,
+              height: Math.max(...boxes.map((box) => box.y + box.height)) - y,
+            };
+          };
+          const trim = envelope(sheet.boxes);
+          const bleed = envelope(sheet.bleedBoxes ?? sheet.boxes);
+          outputPage.setTrimBox(trim.x, trim.y, trim.width, trim.height);
+          outputPage.setBleedBox(bleed.x, bleed.y, bleed.width, bleed.height);
         }
         outputPage.setRotation(pdfLib.degrees(outputRotation));
         sheets.push(rotateOutputSheet(sheet, outputRotation));

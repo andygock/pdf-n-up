@@ -1,4 +1,4 @@
-import type { OutputSheet } from "./types.ts";
+import type { OutputSheet, PageBox } from "./types.ts";
 
 // PDF /Rotate changes the displayed coordinate system. Keep preview overlays
 // and print dimensions in that same system while leaving PDF artwork intact.
@@ -9,6 +9,12 @@ export function rotateOutputSheet(
   let result = sheet;
   for (let angle = 0; angle < rotation; angle += 90) {
     const { outputWidth, outputHeight, edges } = result;
+    const rotate = (box: PageBox) => ({
+      x: box.y,
+      y: outputWidth - box.x - box.width,
+      width: box.height,
+      height: box.width,
+    });
     result = {
       ...result,
       outputWidth: outputHeight,
@@ -19,6 +25,7 @@ export function rotateOutputSheet(
         width: box.height,
         height: box.width,
       })),
+      bleedBoxes: result.bleedBoxes?.map(rotate),
       edges: edges && {
         top: edges.left,
         right: edges.top,

@@ -20,6 +20,17 @@
   font-size: var(--font-size-small);
 }
 
+.sheetNumber {
+  width: 4.5em;
+  padding: 2px 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
 .outputActions {
   display: flex;
   flex: 0 0 auto;

@@ -1,6 +1,8 @@
 import styles from "./ConversionFeedback.module.css";
 import { formatBytes, formatPageSize } from "./format.ts";
 import { Modal } from "./Modal.tsx";
+import { PrintWarningButton } from "./PrintWarningButton.tsx";
+import { printWarnings } from "./print-warnings.ts";
 import ui from "./ui.module.css";
 import type { useConversion } from "./useConversion.ts";
 
@@ -33,6 +35,8 @@ export function ConversionFeedback({
     /requested size do not fit|does not fit its cell at the requested size/.test(
       status.message,
     );
+  const warnings =
+    output && source ? printWarnings(output.sheets ?? [], source.name) : [];
   return (
     <>
       {(source || processing || status.type === "error") && (
@@ -118,28 +122,66 @@ export function ConversionFeedback({
                 Use source-page size
               </button>
             )}
-          {source && (
-            <Modal
-              title="Document details"
-              triggerClassName={styles.detailsButton}
-            >
-              <dl className={styles.summaryList} id="detailsList">
-                {[
-                  ["Filename", source.name],
-                  ["File size", formatBytes(source.size)],
-                  ["Source page", formatPageSize(source.width, source.height)],
-                  ["Output page", details.outputSize],
-                  ["Copy scale", details.scale],
-                  ["Layout", details.layout],
-                ].map(([label, value]) => (
-                  <div className={styles.summaryRow} key={label}>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Modal>
-          )}
+          <div className={styles.detailsActions}>
+            {warnings.length > 0 && (
+              <Modal
+                title="Check before printing"
+                trigger={(open) => (
+                  <PrintWarningButton
+                    sheets={output?.sheets ?? []}
+                    filename={source?.name ?? ""}
+                    className={styles.detailsButton}
+                    onClick={open}
+                  />
+                )}
+              >
+                <ul>
+                  {warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className={`${ui.button} ${ui.compact}`}
+                  disabled={processing}
+                  onClick={() =>
+                    void changeOptions({
+                      paperMode: "a4",
+                      scaleMode: "fit",
+                      autoLayout: false,
+                    })
+                  }
+                >
+                  Fit copies on A4
+                </button>
+              </Modal>
+            )}
+            {source && (
+              <Modal
+                title="Document details"
+                triggerClassName={styles.detailsButton}
+              >
+                <dl className={styles.summaryList} id="detailsList">
+                  {[
+                    ["Filename", source.name],
+                    ["File size", formatBytes(source.size)],
+                    [
+                      "Source page",
+                      formatPageSize(source.width, source.height),
+                    ],
+                    ["Output page", details.outputSize],
+                    ["Copy scale", details.scale],
+                    ["Layout", details.layout],
+                  ].map(([label, value]) => (
+                    <div className={styles.summaryRow} key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Modal>
+            )}
+          </div>
         </div>
       )}
       {!!source?.warnings.length && (

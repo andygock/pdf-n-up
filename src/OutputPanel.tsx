@@ -12,7 +12,6 @@ interface OutputPanelProps {
   openOutput: (action: OutputAction) => Promise<void>;
 }
 export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
-  const [showMeasurements, setShowMeasurements] = useState(false);
   const modeName = useId();
   const [showRuler, setShowRuler] = useState(false);
   const [rulerFooter, setRulerFooter] = useState<HTMLDivElement | null>(null);
@@ -67,7 +66,26 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
                 Previous
               </button>
               <span className={styles.panelSubtitle}>
-                Sheet {pageNumber} / {pageCount}
+                Sheet{" "}
+                <input
+                  className={styles.sheetNumber}
+                  aria-label="Go to sheet"
+                  type="number"
+                  min={1}
+                  max={pageCount}
+                  step={1}
+                  value={pageNumber}
+                  onChange={(event) => {
+                    const page = Number(event.currentTarget.value);
+                    if (
+                      Number.isInteger(page) &&
+                      page >= 1 &&
+                      page <= pageCount
+                    )
+                      setPageNumber(page);
+                  }}
+                />{" "}
+                / {pageCount}
               </span>
               <button
                 type="button"
@@ -80,21 +98,6 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
               </button>
             </nav>
           )}
-          {output?.measurements && (
-            <label
-              className={ui.checkbox}
-              title="Show copy dimensions and spacing in ruler mode"
-            >
-              <input
-                type="checkbox"
-                disabled={!showRuler}
-                checked={showMeasurements}
-                onChange={(event) => setShowMeasurements(event.target.checked)}
-              />
-              Measurements
-            </label>
-          )}
-
           <fieldset className={styles.modeSwitch} aria-label="Preview mode">
             {[false, true].map((rulerMode) => (
               <label
@@ -141,7 +144,7 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
         output={output}
         active={active}
         nativeViewer={nativeViewer}
-        showMeasurements={showRuler && showMeasurements}
+        showMeasurements={showRuler}
         showRuler={showRuler}
         pageNumber={pageNumber}
         rulerFooter={rulerFooter}

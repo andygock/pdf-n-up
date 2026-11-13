@@ -21,6 +21,8 @@ export const DEFAULT_OPTIONS: ConversionOptions = {
   gapVerticalMm: undefined,
   marginMm: 0,
   gutterMm: 0,
+  sourceBox: "visible",
+  bleedMm: 0,
   cropMarks: false,
   cropMarkBehaviour: "fit",
   cropMarksToEdge: false,
@@ -80,6 +82,7 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
   result.outputRotation = (data.outputRotation ??
     0) as ConversionOptions["outputRotation"];
   const ranges = {
+    bleedMm: [0, 20],
     marginTopMm: [0, 100],
     marginRightMm: [0, 100],
     marginBottomMm: [0, 100],
@@ -134,6 +137,12 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
     typeof data.cropMarksToEdge !== "boolean"
   )
     return null;
+  if (
+    data.sourceBox !== undefined &&
+    !["visible", "trim"].includes(data.sourceBox as string)
+  )
+    return null;
+  result.sourceBox = data.sourceBox === "trim" ? "trim" : "visible";
   result.cropMarks = data.cropMarks === true;
   result.cropMarkBehaviour =
     data.cropMarkBehaviour === "expand" ? "expand" : "fit";

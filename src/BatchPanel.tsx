@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./BatchPanel.module.css";
+import { Modal } from "./Modal.tsx";
+import { PrintWarningButton } from "./PrintWarningButton.tsx";
+import { printWarnings } from "./print-warnings.ts";
 import { SpacingInput } from "./SpacingInput.tsx";
 import { getSourceFormat, SOURCE_ACCEPT } from "./source-format.ts";
 import type { ConversionOptions } from "./types.ts";
@@ -139,6 +142,30 @@ export function BatchPanel({
                   Save PDF
                 </button>
               )}
+              {entry.output &&
+                printWarnings(entry.output.sheets ?? [], entry.file.name)
+                  .length > 0 && (
+                  <Modal
+                    title="Check before printing"
+                    trigger={(open) => (
+                      <PrintWarningButton
+                        sheets={entry.output?.sheets ?? []}
+                        filename={entry.file.name}
+                        className={`${ui.button} ${ui.compact} ${ui.quiet}`}
+                        onClick={open}
+                      />
+                    )}
+                  >
+                    <ul>
+                      {printWarnings(
+                        entry.output.sheets ?? [],
+                        entry.file.name,
+                      ).map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </Modal>
+                )}
               {entry.error && <p>{entry.error}</p>}
               {entry.warnings?.map((warning) => (
                 <p key={warning}>{warning}</p>

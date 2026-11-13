@@ -35,7 +35,7 @@ Demo: <https://pdfnup.gock.net/>
 - Lets the user explicitly open or download the generated PDF
 - Batch-convert up to 20 PDFs and images with per-file page selection, cancellation, individual downloads and one ZIP
 - Opt in to remember layout settings locally; Reset settings removes saved preferences
-- Toggle measurement overlays on the canvas preview without changing the saved PDF
+- Automatically show measurement overlays in ruler mode without changing the saved PDF
 - Review sheet size, finished copy sizes, scale, capacity and totals beside Save PDF; varied sizes open in a modal
 - Exact percentage or linked copy dimensions preserve proportions and report when the sheet is too small
 - Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork
@@ -59,6 +59,26 @@ page sizes fit proportionally in the same cells; exact sizing reports pages that
 cannot fit. Unused cells on the final sheet remain blank. Selection is limited
 to 10,000 pages and output to 1,000 sheets per PDF. Page ranges and quantities are never stored
 in remembered settings. Batch mode applies the range to each document.
+
+## Print preparation
+
+Settings buttons show active paper and copy dimensions, custom grids, page selections
+and bleed settings. Print-readiness notes check every generated sheet against A4/A3
+and flag artwork within a suggested 5 mm printer allowance. This is a guide: the
+app cannot detect a printer's printable area. JPEG/PNG inputs also show a warning
+below approximately 150 ppi at their largest output size; embedded PDF images are
+not analysed for resolution. Batch results show these checks per file.
+
+Bleed / trim selects either the visible source page or the source TrimBox as the
+finished copy area, and reserves 0–20 mm bleed per edge. Available source artwork
+supplies bleed; missing artwork is reported rather than generated. Copy sizing
+refers to the finished trim. Crop marks remain outside the bleed. PDF TrimBox and
+BleedBox metadata describe sheet-wide envelopes, since a PDF page has only one
+of each box; they do not describe individual copies. Enable crop marks for cutting.
+
+Ruler mode offers zoom, fit sheet, fit width and scrolling to inspect details,
+with direct sheet-number navigation. Measurements remain in physical millimetres
+and these preview controls do not alter the saved PDF.
 
 ## How the layout works
 

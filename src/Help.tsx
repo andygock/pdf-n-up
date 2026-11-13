@@ -86,6 +86,21 @@ export function Help({ view }: { view: View }) {
         </article>
 
         <article className={styles.contentSection}>
+          <h2>Bleed and trim</h2>
+          <p>
+            Bleed / trim lets you use the source TrimBox as the finished copy
+            area and reserve up to 20 mm of bleed per edge. Copy dimensions
+            describe the finished area. Only existing artwork beyond that area
+            is copied; a warning reports insufficient source bleed. Crop marks
+            stay outside the bleed. The saved PDF has sheet-wide TrimBox and
+            BleedBox envelopes; enable crop marks to identify individual copies.
+          </p>
+          <p>
+            Print-readiness notes flag paper larger than A4/A3, artwork within a
+            suggested 5 mm printer allowance, and JPEG/PNG copies below
+            approximately 150 ppi. Check your printer specifications; the app
+            cannot detect its printable area or analyse embedded PDF images.
+          </p>
           <h2>Examples</h2>
           <ul>
             <li>
@@ -119,8 +134,8 @@ export function Help({ view }: { view: View }) {
             Changing settings requires running the batch again.
           </p>
           <p>
-            Show measurements overlays copy dimensions, minimum margins and cell
-            gaps on the preview only. Print the saved PDF at actual size.
+            Ruler mode overlays copy dimensions, minimum margins and cell gaps
+            on the preview only. Print the saved PDF at actual size.
           </p>
           <p>
             Switch from PDF output to Ruler mode, then click and drag across the
@@ -131,7 +146,11 @@ export function Help({ view }: { view: View }) {
             zero-point handle to move the origin; double-click either handle or
             choose Reset origin to return zero to the top-left corner. Hover
             over the sheet to see alignment marks on both scales and live X and
-            Y coordinates relative to the current origin.
+            Y coordinates relative to the current origin. Use zoom, Fit sheet or
+            Fit width to inspect details, and scroll to pan across a zoomed
+            sheet. Enter a sheet number to jump directly to that sheet. Zoom
+            changes the preview only; physical measurements remain in
+            millimetres.
           </p>
         </article>
       </section>
