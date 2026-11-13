@@ -3,7 +3,7 @@ import { detectPdfSignature, formatBytes, MAX_FILE_SIZE } from "./format.ts";
 import { readBlob } from "./read-blob.ts";
 import { getSourceFormat, hasImageSignature } from "./source-format.ts";
 
-export async function readSourceFile(file: File, signal: AbortSignal) {
+export function validateSourceFile(file: File) {
   if (!(file instanceof File))
     throw new Error("No readable file was selected.");
   if (!file.size) throw new Error("The selected file is empty.");
@@ -16,6 +16,11 @@ export async function readSourceFile(file: File, signal: AbortSignal) {
     throw new Error(
       "Choose a file with a .pdf, .jpg, .jpeg or .png extension.",
     );
+  return format;
+}
+
+export async function readSourceFile(file: File, signal: AbortSignal) {
+  const format = validateSourceFile(file);
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal.addEventListener("abort", abort, { once: true });

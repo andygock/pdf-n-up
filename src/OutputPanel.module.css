@@ -1,5 +1,6 @@
 .panelHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -33,7 +34,9 @@
 
 .outputActions {
   display: flex;
-  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
@@ -101,6 +104,7 @@
 .outputCopy {
   display: flex;
   min-width: 0;
+  flex: 1 1 260px;
   align-items: baseline;
   gap: var(--space-3);
 }
@@ -113,6 +117,7 @@
 
 .previewNote {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin: 0;
@@ -123,7 +128,7 @@
 
 .rulerFooter {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 100%;
 }
 
 .previewNote > span {

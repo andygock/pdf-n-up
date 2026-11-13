@@ -122,17 +122,19 @@ export default function App() {
                 </div>
               </ConversionOptions>
             </div>
-            <ConversionFeedback
-              recovery={conversion.recovery}
-              source={source}
-              output={output}
-              options={options}
-              processing={processing}
-              status={status}
-              failed={failed}
-              details={details}
-              changeOptions={changeOptions}
-            />
+            {batch.entries.length === 0 && (
+              <ConversionFeedback
+                recovery={conversion.recovery}
+                source={source}
+                output={output}
+                options={options}
+                processing={processing}
+                status={status}
+                failed={failed}
+                details={details}
+                changeOptions={changeOptions}
+              />
+            )}
             {(source || converting) && (
               <OutputPanel
                 output={output}

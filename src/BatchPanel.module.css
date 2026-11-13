@@ -31,6 +31,20 @@
   font-size: var(--font-size-small);
 }
 
+.progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+}
+
+.stale {
+  margin: var(--space-2) 0 0;
+  color: var(--warning);
+}
+
 .files {
   max-height: min(200px, 25dvh);
   overflow-y: auto;

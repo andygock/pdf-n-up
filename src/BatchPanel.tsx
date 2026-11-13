@@ -20,6 +20,9 @@ export function BatchPanel({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const completed = batch.entries.filter(
+    (entry) => entry.status === "ready" || entry.status === "failed",
+  ).length;
   useEffect(() => {
     if (batch.entries.length || batch.message) setExpanded(true);
   }, [batch.entries.length, batch.message]);
@@ -107,6 +110,18 @@ export function BatchPanel({
       {batch.message && (
         <p className={styles.message} role="status">
           {batch.message}
+        </p>
+      )}
+      {batch.processing && (
+        <label className={styles.progress}>
+          {completed} of {batch.entries.length} files complete
+          <progress value={completed} max={batch.entries.length} />
+        </label>
+      )}
+      {batch.isStale(options) && (
+        <p className={styles.stale}>
+          Settings have changed. These results use the settings from the last
+          run. Convert the batch again to apply your changes.
         </p>
       )}
       {batch.entries.length > 0 && (

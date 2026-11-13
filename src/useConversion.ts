@@ -253,6 +253,7 @@ export function useConversion(
 
   const selectPage = async (pageNumber: number) => {
     if (current.current.processing || !current.current.source) return;
+    if (current.current.source.pageNumber === pageNumber) return;
     const token = ++operation.current;
     resetOutput();
     update({ processing: true });
