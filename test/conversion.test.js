@@ -422,3 +422,42 @@ test("sequential pages share fonts and images while preserving blanks and repeat
   );
   assert.equal(document.getPageCount(), 6);
 });
+
+test("crop mark choices preserve scale in saved repeat and mixed-page PDFs", async () => {
+  const mm = 72 / 25.4;
+  const bytes = await fixture(
+    (page, document) => {
+      page.drawText("First");
+      document.addPage([180 * mm, 240 * mm]).drawText("Second");
+    },
+    [210 * mm, 297 * mm],
+  );
+  const { engine } = await load(bytes);
+  for (const mode of ["repeat", "sequence"]) {
+    const settings = { layout: LAYOUTS[4], paperMode: "a4", mode };
+    const baseline = await engine.generate(settings);
+    for (const cropMarksToEdge of [false, true]) {
+      const result = await engine.generate({
+        ...settings,
+        cropMarks: true,
+        cropMarkBehaviour: "expand",
+        cropMarksToEdge,
+      });
+      const saved = await outputPage(result);
+      assert.ok(Math.abs(saved.getWidth() / mm - 230) < 1e-9);
+      assert.ok(Math.abs(saved.getHeight() / mm - 317) < 1e-9);
+      assert.deepEqual(result.sheets[0].scales, baseline.sheets[0].scales);
+      assert.deepEqual(
+        result.sheets[0].boxes.map((box) => [box.width, box.height]),
+        baseline.sheets[0].boxes.map((box) => [box.width, box.height]),
+      );
+      const streams = saved.node.Contents();
+      const stream = streams.lookup(0, pdfLib.PDFRawStream);
+      const drawing = new TextDecoder().decode(
+        pdfLib.decodePDFRawStream(stream).decode(),
+      );
+      assert.ok(drawing.includes("0.25 w"));
+      if (cropMarksToEdge) assert.match(drawing, /(?:^|\n)0 [\d.]+ l/);
+    }
+  }
+});

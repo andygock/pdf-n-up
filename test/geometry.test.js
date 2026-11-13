@@ -333,3 +333,74 @@ test("fit recovery offers a valid maximum scale and a smaller exact-size grid", 
     null,
   );
 });
+
+test("crop marks can preserve scale and cell size by adding paper", () => {
+  const mm = 72 / 25.4;
+  for (const extra of [
+    {},
+    { scaleMode: "percent", scalePercent: 50 },
+    { autoLayout: true, scaleMode: "percent", scalePercent: 25 },
+    { marginMm: 7, gutterMm: 12 },
+    { rotateCopies: true },
+    { paperMode: "expand" },
+  ]) {
+    const options = {
+      width: 210 * mm,
+      height: 297 * mm,
+      layout: LAYOUTS[4],
+      paperMode: "a4",
+      ...extra,
+    };
+    const before = getOutputGeometry(options);
+    const marked = { ...options, cropMarks: true, cropMarkBehaviour: "expand" };
+    const after = getOutputGeometry(marked);
+    closeTo(after.scale, before.scale);
+    assert.deepEqual(after.layout, before.layout);
+    assert.equal(after.rotation, before.rotation);
+    assert.ok(after.outputWidth >= before.outputWidth - 1e-9);
+    assert.ok(after.outputHeight >= before.outputHeight - 1e-9);
+    const boxes = getCopyBoxes(marked);
+    for (const box of boxes) {
+      for (const line of getCropMarkLines(box, { ...after, boxes })) {
+        for (const point of [line.start, line.end]) {
+          assert.ok(point.x >= 0 && point.x <= after.outputWidth);
+          assert.ok(point.y >= 0 && point.y <= after.outputHeight);
+        }
+      }
+    }
+  }
+  const options = {
+    width: 210 * mm,
+    height: 297 * mm,
+    layout: LAYOUTS[4],
+    paperMode: "a4",
+    cropMarks: true,
+  };
+  closeTo(getOutputGeometry(options).scale * 100, (190 / 420) * 100);
+  const expanded = getOutputGeometry({
+    ...options,
+    cropMarkBehaviour: "expand",
+  });
+  closeTo(expanded.scale, 0.5);
+  closeTo(expanded.outputWidth / mm, 230);
+  closeTo(expanded.outputHeight / mm, 317);
+});
+
+test("guillotine guides reach sheet edges and stop before neighbouring artwork", () => {
+  const mm = 72 / 25.4;
+  const box = { x: 10 * mm, y: 10 * mm, width: 20 * mm, height: 20 * mm };
+  const neighbour = { ...box, x: 40 * mm };
+  const sheet = {
+    outputWidth: 80 * mm,
+    outputHeight: 60 * mm,
+    boxes: [box, neighbour],
+  };
+  const lines = getCropMarkLines(box, sheet);
+  assert.ok(lines.some((line) => line.end.x === 0));
+  assert.ok(lines.some((line) => line.end.y === 0));
+  assert.ok(lines.some((line) => line.end.y === sheet.outputHeight));
+  const right = lines.filter((line) => line.start.x > box.x + box.width);
+  assert.equal(right.length, 2);
+  for (const line of right) closeTo(line.end.x, neighbour.x - mm);
+  assert.equal(getCropMarkLines(box).length, 8);
+});

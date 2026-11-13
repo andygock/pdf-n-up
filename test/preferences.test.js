@@ -14,11 +14,15 @@ test("preferences round-trip only allowed settings and reset removes storage", (
     ...DEFAULT_OPTIONS,
     paperMode: "a4",
     outputRotation: 270,
+    cropMarkBehaviour: "expand",
+    cropMarksToEdge: true,
     name: "private.pdf",
     bytes: [1, 2],
   });
   assert.equal(readPreferences().paperMode, "a4");
   assert.equal(readPreferences().outputRotation, 270);
+  assert.equal(readPreferences().cropMarkBehaviour, "expand");
+  assert.equal(readPreferences().cropMarksToEdge, true);
   assert.ok(!localStorage.getItem(PREFERENCES_KEY).includes("private"));
   assert.ok(!localStorage.getItem(PREFERENCES_KEY).includes("bytes"));
   savePreferences(null);
@@ -30,6 +34,8 @@ test("malformed and out-of-range preferences fall back safely", () => {
     "null",
     JSON.stringify({ ...DEFAULT_OPTIONS, marginMm: -1 }),
     JSON.stringify({ ...DEFAULT_OPTIONS, outputRotation: 45 }),
+    JSON.stringify({ ...DEFAULT_OPTIONS, cropMarkBehaviour: "clip" }),
+    JSON.stringify({ ...DEFAULT_OPTIONS, cropMarksToEdge: "yes" }),
     JSON.stringify({
       ...DEFAULT_OPTIONS,
       layout: { rows: 20, columns: 20, copies: 400 },

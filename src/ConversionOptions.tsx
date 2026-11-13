@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import styles from "./ConversionOptions.module.css";
 import { CustomGrid } from "./CustomGrid.tsx";
 import { LAYOUTS } from "./geometry.ts";
@@ -20,6 +20,12 @@ export function ConversionOptions({
   processing,
   changeOptions,
 }: ConversionOptionsProps) {
+  const [markBehaviour, setMarkBehaviour] = useState(
+    options.cropMarkBehaviour ?? "fit",
+  );
+  const [marksToEdge, setMarksToEdge] = useState(
+    options.cropMarksToEdge ?? false,
+  );
   return (
     <section
       className={styles.conversionOptions}
@@ -380,20 +386,114 @@ export function ConversionOptions({
             </label>
           </div>
         </Modal>
-        <label
-          className={ui.checkbox}
-          title="Reserves at least 5 mm margins and 10 mm gaps for cutting guides."
+        <Modal
+          title="Crop marks"
+          trigger={(open) => {
+            const configure = () => {
+              setMarkBehaviour(options.cropMarkBehaviour ?? "fit");
+              setMarksToEdge(options.cropMarksToEdge ?? false);
+              open();
+            };
+            return (
+              <>
+                <label className={ui.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={options.cropMarks ?? false}
+                    disabled={processing}
+                    onChange={(event) => {
+                      if (event.target.checked) configure();
+                      else void changeOptions({ cropMarks: false });
+                    }}
+                  />
+                  Crop marks
+                </label>
+                {options.cropMarks && (
+                  <button
+                    type="button"
+                    className={`${ui.button} ${ui.compact} ${ui.quiet}`}
+                    disabled={processing}
+                    onClick={configure}
+                  >
+                    Crop mark options
+                  </button>
+                )}
+              </>
+            );
+          }}
         >
-          <input
-            type="checkbox"
-            checked={options.cropMarks ?? false}
-            disabled={processing}
-            onChange={(event) =>
-              void changeOptions({ cropMarks: event.target.checked })
-            }
-          />
-          Crop marks
-        </label>
+          {(close) => (
+            <div className={styles.advancedFields}>
+              <p>
+                Reserve at least 5 mm at each edge and 10 mm between copies for
+                cutting guides.
+              </p>
+              <fieldset className={styles.optionGroup}>
+                <legend>Paper and copy size</legend>
+                <label className={ui.checkbox}>
+                  <input
+                    type="radio"
+                    name="cropMarkBehaviour"
+                    value="expand"
+                    checked={markBehaviour === "expand"}
+                    disabled={processing}
+                    onChange={() => setMarkBehaviour("expand")}
+                  />
+                  Preserve copy scale — enlarge paper
+                </label>
+                <p className={styles.hint}>
+                  Keep the copy sizes and grid calculated without crop marks.
+                  Add only the extra space needed for marks; the saved sheet may
+                  be larger than the selected paper.
+                </p>
+                <label className={ui.checkbox}>
+                  <input
+                    type="radio"
+                    name="cropMarkBehaviour"
+                    value="fit"
+                    checked={markBehaviour === "fit"}
+                    disabled={processing}
+                    onChange={() => setMarkBehaviour("fit")}
+                  />
+                  Fit marks on selected paper
+                </label>
+                <p className={styles.hint}>
+                  Automatic sizing may shrink copies or fit fewer copies with
+                  automatic packing. Exact sizes report an error if they cannot
+                  fit. Expanded paper grows as usual.
+                </p>
+              </fieldset>
+              <label className={ui.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={marksToEdge}
+                  disabled={processing}
+                  onChange={(event) => setMarksToEdge(event.target.checked)}
+                />
+                Extend marks to paper edges
+              </label>
+              <p className={styles.hint}>
+                Longer guides help align guillotine cuts. Lines stop before
+                neighbouring artwork. Printers may leave an unprinted border.
+              </p>
+              <button
+                type="button"
+                className={ui.button}
+                disabled={processing}
+                onClick={() => {
+                  void changeOptions({
+                    cropMarks: true,
+                    cropMarkBehaviour: markBehaviour,
+                    cropMarksToEdge: marksToEdge,
+                  });
+                  close();
+                }}
+              >
+                Apply crop marks
+              </button>
+            </div>
+          )}
+        </Modal>
         {children}
       </div>
     </section>

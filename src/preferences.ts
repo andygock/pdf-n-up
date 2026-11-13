@@ -22,6 +22,8 @@ export const DEFAULT_OPTIONS: ConversionOptions = {
   marginMm: 0,
   gutterMm: 0,
   cropMarks: false,
+  cropMarkBehaviour: "fit",
+  cropMarksToEdge: false,
   paperWidthMm: 210,
   paperHeightMm: 297,
   scaleMode: "fit",
@@ -122,7 +124,20 @@ export function parsePreferences(value: unknown): ConversionOptions | null {
   result.mode = data.mode === "sequence" ? "sequence" : "repeat";
   result.pageOrder = data.pageOrder === "columns" ? "columns" : "rows";
   // Page ranges belong to the current document and are never persisted.
+  if (
+    data.cropMarkBehaviour !== undefined &&
+    !["fit", "expand"].includes(data.cropMarkBehaviour as string)
+  )
+    return null;
+  if (
+    data.cropMarksToEdge !== undefined &&
+    typeof data.cropMarksToEdge !== "boolean"
+  )
+    return null;
   result.cropMarks = data.cropMarks === true;
+  result.cropMarkBehaviour =
+    data.cropMarkBehaviour === "expand" ? "expand" : "fit";
+  result.cropMarksToEdge = data.cropMarksToEdge === true;
   if (
     data.dimensionAxis !== undefined &&
     !["width", "height"].includes(data.dimensionAxis as string)

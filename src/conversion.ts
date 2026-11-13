@@ -324,17 +324,22 @@ export const createConversionEngine = (pdfLib: typeof PDFLib) => {
               rotate: pdfLib.degrees(draw.degrees),
             });
           }
-          if (options.cropMarks) {
-            for (const line of getCropMarkLines(placement.box))
+          sheet.boxes.push(placement.box);
+          sheet.scales.push(placement.scale);
+          sheet.sourcePages.push(pageNumber);
+        }
+        if (options.cropMarks) {
+          for (const box of sheet.boxes) {
+            for (const line of getCropMarkLines(
+              box,
+              options.cropMarksToEdge ? sheet : undefined,
+            ))
               outputPage.drawLine({
                 ...line,
                 thickness: 0.25,
                 color: pdfLib.rgb(0, 0, 0),
               });
           }
-          sheet.boxes.push(placement.box);
-          sheet.scales.push(placement.scale);
-          sheet.sourcePages.push(pageNumber);
         }
         outputPage.setRotation(pdfLib.degrees(outputRotation));
         sheets.push(rotateOutputSheet(sheet, outputRotation));

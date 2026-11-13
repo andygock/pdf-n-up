@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import App from "../src/App.tsx";
 import { createArchive } from "../src/archive.ts";
 import { ConversionFeedback } from "../src/ConversionFeedback.tsx";
+import { ConversionOptions } from "../src/ConversionOptions.tsx";
 import { createConversionEngine } from "../src/conversion.ts";
 import { LAYOUTS } from "../src/geometry.ts";
 import { Modal } from "../src/Modal.tsx";
@@ -988,5 +989,69 @@ test("sequential fit failures offer a working automatic sizing action", async ()
   } finally {
     if (root) await act(() => root.unmount());
     await app.close();
+  }
+});
+
+test("crop marks require a modal choice and allow cancelling before enabling", async () => {
+  let root;
+  const patches = [];
+  const options = { layout: LAYOUTS[4], paperMode: "a4" };
+  await act(() => {
+    root = create(
+      createElement(ConversionOptions, {
+        options,
+        processing: false,
+        changeOptions: async (patch) => {
+          patches.push(patch);
+        },
+      }),
+    );
+  });
+  try {
+    const checkbox = [
+      ...root.container.querySelectorAll('input[type="checkbox"]'),
+    ].find((input) => input.parentElement.textContent.trim() === "Crop marks");
+    const dialog = [...root.container.querySelectorAll("dialog")].find(
+      (dialog) => dialog.querySelector("h2").textContent === "Crop marks",
+    );
+    dialog.showModal = () => {
+      dialog.open = true;
+    };
+    dialog.close = () => {
+      dialog.open = false;
+      dialog.dispatchEvent(new window.Event("close"));
+    };
+    await act(() => checkbox.click());
+    assert.equal(dialog.open, true);
+    assert.equal(patches.length, 0);
+    await act(() => dialog.close());
+    assert.equal(patches.length, 0);
+    await act(() => checkbox.click());
+    await act(() => dialog.querySelector('input[value="expand"]').click());
+    await act(() => dialog.querySelector('input[type="checkbox"]').click());
+    await act(() =>
+      [...dialog.querySelectorAll("button")]
+        .find((button) => button.textContent === "Apply crop marks")
+        .click(),
+    );
+    assert.deepEqual(patches, [
+      { cropMarks: true, cropMarkBehaviour: "expand", cropMarksToEdge: true },
+    ]);
+    assert.equal(dialog.open, false);
+    await act(() =>
+      root.update(
+        createElement(ConversionOptions, {
+          options: { ...options, ...patches[0] },
+          processing: false,
+          changeOptions: async (patch) => {
+            patches.push(patch);
+          },
+        }),
+      ),
+    );
+    await act(() => checkbox.click());
+    assert.deepEqual(patches[1], { cropMarks: false });
+  } finally {
+    await act(() => root.unmount());
   }
 });

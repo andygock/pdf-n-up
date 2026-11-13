@@ -39,6 +39,8 @@ Demo: <https://pdfnup.gock.net/>
 - Review sheet size, finished copy sizes, scale, capacity and totals beside Save PDF; varied sizes open in a modal
 - Exact percentage or linked copy dimensions preserve proportions and report when the sheet is too small
 - Optional crop marks reserve at least 5 mm margins and 10 mm gaps outside the artwork
+- Crop mark options can preserve copy scale by enlarging the sheet, or fit marks on selected paper
+- Guillotine guides can extend to paper edges, stopping before neighbouring artwork
 - Offers A4, A3 and custom output paper dimensions with automatic best-fit orientation
 - Supports outer margins and gaps between copies, measured in millimetres
 - Spacing details offers individual edge margins and horizontal/vertical gaps

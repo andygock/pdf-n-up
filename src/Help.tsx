@@ -65,7 +65,11 @@ export function Help({ view }: { view: View }) {
             Outer margins and gaps between copies default to zero. Expanded
             paper adds the selected spacing without shrinking copies. Fixed
             paper reserves that spacing before scaling the copies. Crop marks
-            reserve at least 5 mm margins and 10 mm gaps.
+            reserve at least 5 mm margins and 10 mm gaps. When enabling them,
+            choose whether to fit marks on the selected paper or preserve copy
+            scale by enlarging the sheet. Crop mark options also lets you extend
+            guides to paper edges for guillotine cutting; guides stop before
+            neighbouring artwork.
           </p>
 
           <span className={styles.formula}>

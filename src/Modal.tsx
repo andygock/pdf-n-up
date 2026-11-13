@@ -5,27 +5,43 @@ import ui from "./ui.module.css";
 type ModalProps = {
   title: string;
   triggerClassName?: string;
-  children: ReactNode | (() => ReactNode);
+  trigger?: (open: () => void) => ReactNode;
+  children: ReactNode | ((close: () => void) => ReactNode);
 };
 
-export function Modal({ title, triggerClassName, children }: ModalProps) {
+export function Modal({
+  title,
+  triggerClassName,
+  trigger,
+  children,
+}: ModalProps) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
+  const show = () => {
+    dialogRef.current?.showModal();
+    setOpen(true);
+  };
+  const close = () => {
+    dialogRef.current?.close();
+    setOpen(false);
+  };
+
   return (
     <>
-      <button
-        className={triggerClassName}
-        type="button"
-        aria-haspopup="dialog"
-        onClick={() => {
-          dialogRef.current?.showModal();
-          setOpen(true);
-        }}
-      >
-        {title}
-      </button>
+      {trigger ? (
+        trigger(show)
+      ) : (
+        <button
+          className={triggerClassName}
+          type="button"
+          aria-haspopup="dialog"
+          onClick={show}
+        >
+          {title}
+        </button>
+      )}
       <dialog
         ref={dialogRef}
         onClose={() => setOpen(false)}
@@ -41,7 +57,11 @@ export function Modal({ title, triggerClassName, children }: ModalProps) {
             </button>
           </form>
         </header>
-        {typeof children === "function" ? (open ? children() : null) : children}
+        {typeof children === "function"
+          ? open
+            ? children(close)
+            : null
+          : children}
       </dialog>
     </>
   );

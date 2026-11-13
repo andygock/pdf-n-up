@@ -240,6 +240,30 @@ export const getOutputGeometry = (
   layout: Layout;
   rotation: number;
 } => {
+  if (options.cropMarks && options.cropMarkBehaviour === "expand") {
+    const baseline = getOutputGeometry({ ...options, cropMarks: false });
+    const before = getSpacing({ ...options, cropMarks: false }).edges;
+    const after = getSpacing(options).edges;
+    // Add only the extra mark clearance so every cell retains its original size,
+    // including mixed-page layouts and automatically packed grids.
+    return {
+      ...baseline,
+      outputWidth:
+        baseline.outputWidth +
+        after.left +
+        after.right -
+        before.left -
+        before.right +
+        (baseline.layout.columns - 1) * (after.horizontal - before.horizontal),
+      outputHeight:
+        baseline.outputHeight +
+        after.top +
+        after.bottom -
+        before.top -
+        before.bottom +
+        (baseline.layout.rows - 1) * (after.vertical - before.vertical),
+    };
+  }
   const calculate = (layout: Layout, rotated: boolean) => {
     const width = rotated ? options.height : options.width;
     const height = rotated ? options.width : options.height;
@@ -445,16 +469,42 @@ export const getCopyBoxes = (
   }));
 };
 
-export const getCropMarkLines = (box: PageBox) => {
+export const getCropMarkLines = (
+  box: PageBox,
+  sheet?: { outputWidth: number; outputHeight: number; boxes: PageBox[] },
+) => {
   const clearance = 72 / 25.4;
   const reach = 4 * clearance;
   return [box.x, box.x + box.width].flatMap((x) =>
     [box.y, box.y + box.height].flatMap((y) => {
       const dx = x === box.x ? -1 : 1;
       const dy = y === box.y ? -1 : 1;
+      let endX = x + dx * reach;
+      let endY = y + dy * reach;
+      if (sheet) {
+        endX = dx < 0 ? 0 : sheet.outputWidth;
+        endY = dy < 0 ? 0 : sheet.outputHeight;
+        // Stop before neighbouring artwork, including its boundary, rather than
+        // drawing guillotine guides through another copy.
+        for (const other of sheet.boxes) {
+          if (other === box) continue;
+          if (y >= other.y - 1e-9 && y <= other.y + other.height + 1e-9) {
+            if (dx > 0 && other.x > x + 1e-9)
+              endX = Math.min(endX, other.x - clearance);
+            if (dx < 0 && other.x + other.width < x - 1e-9)
+              endX = Math.max(endX, other.x + other.width + clearance);
+          }
+          if (x >= other.x - 1e-9 && x <= other.x + other.width + 1e-9) {
+            if (dy > 0 && other.y > y + 1e-9)
+              endY = Math.min(endY, other.y - clearance);
+            if (dy < 0 && other.y + other.height < y - 1e-9)
+              endY = Math.max(endY, other.y + other.height + clearance);
+          }
+        }
+      }
       return [
-        { start: { x: x + dx * clearance, y }, end: { x: x + dx * reach, y } },
-        { start: { x, y: y + dy * clearance }, end: { x, y: y + dy * reach } },
+        { start: { x: x + dx * clearance, y }, end: { x: endX, y } },
+        { start: { x, y: y + dy * clearance }, end: { x, y: endY } },
       ];
     }),
   );

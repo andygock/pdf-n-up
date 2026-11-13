@@ -66,6 +66,8 @@ export interface ConversionOptions {
   copyWidthMm?: number;
   copyHeightMm?: number;
   cropMarks?: boolean;
+  cropMarkBehaviour?: "fit" | "expand";
+  cropMarksToEdge?: boolean;
   paperWidthMm?: number;
   paperHeightMm?: number;
 }
