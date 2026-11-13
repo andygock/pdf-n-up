@@ -934,6 +934,9 @@ test("batch page ranges can return to all pages before a source is loaded", asyn
     dialog.showModal = () => {
       dialog.open = true;
     };
+    dialog.close = () => {
+      dialog.open = false;
+    };
     await act(() =>
       root.container.querySelector('[aria-haspopup="dialog"]').click(),
     );
@@ -947,7 +950,7 @@ test("batch page ranges can return to all pages before a source is loaded", asyn
     });
     await act(() =>
       [...dialog.querySelectorAll("button")]
-        .find((button) => button.textContent === "Apply page range")
+        .find((button) => button.textContent === "Apply pages")
         .click(),
     );
     assert.deepEqual(patches, [{ pageRange: "" }]);

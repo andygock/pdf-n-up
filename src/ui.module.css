@@ -83,6 +83,23 @@
   opacity: 1;
 }
 
+.numberControl {
+  display: inline-grid;
+  width: 76px;
+  min-width: 0;
+  vertical-align: top;
+}
+
+.numberControl > input {
+  width: 100%;
+}
+
+.inputError {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  white-space: normal;
+}
+
 .field,
 .checkbox {
   display: inline-flex;

@@ -45,7 +45,7 @@ export default function App() {
       await selectSingleFile(selected);
     }
   };
-  const { view, setView, headingRef } = useView();
+  const { view, setView, headingRef, mainRef } = useView();
   const dragging = useFileDrop(processing, selectFiles, setView);
   return (
     <div className={styles.appShell}>
@@ -62,7 +62,7 @@ export default function App() {
           />
         )}
       </AppHeader>
-      <main className={styles.main}>
+      <main className={styles.main} ref={mainRef}>
         <PageHeading view={view} headingRef={headingRef} />
         <section
           hidden={view !== "convert"}
@@ -137,6 +137,7 @@ export default function App() {
             )}
             {(source || converting) && (
               <OutputPanel
+                documentKey={conversion.sourceFile}
                 output={output}
                 active={view === "convert"}
                 openOutput={openOutput}

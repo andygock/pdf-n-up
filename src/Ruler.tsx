@@ -1,6 +1,8 @@
 import {
+  Fragment,
   type PointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -32,31 +34,44 @@ export function Ruler({
 }) {
   const [origin, setOrigin] = useState<RulerPoint>({ x: 0, y: 0 });
   const [pointer, setPointer] = useState<RulerPoint | null>(null);
+  const [keyboardCursor, setKeyboardCursor] = useState<RulerPoint>({
+    x: 0,
+    y: 0,
+  });
+  const [keyboardCursorVisible, setKeyboardCursorVisible] = useState(false);
+  const [mode, setMode] = useState<"measure" | "pan">("measure");
   const [line, setLine] = useState<{
     start: RulerPoint;
     end: RulerPoint;
   } | null>(null);
+  const keyboardAnchor = useRef(false);
   const drag = useRef<{
     pointerId: number;
     start: RulerPoint;
     kind: "measure" | "origin";
   } | null>(null);
   const svg = useRef<SVGSVGElement>(null);
-  const clear = () => {
+  const clear = useCallback(() => {
     drag.current = null;
+    keyboardAnchor.current = false;
     setLine(null);
-  };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        drag.current = null;
-        setLine(null);
-      }
+      const target = event.target;
+      if (
+        event.key !== "Escape" ||
+        (target instanceof window.HTMLElement &&
+          (target.isContentEditable ||
+            target.matches("input, textarea, select, [contenteditable]")))
+      )
+        return;
+      clear();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [clear]);
 
   const point = (event: PointerEvent<SVGSVGElement>, origin?: RulerPoint) =>
     rulerPoint(
@@ -85,7 +100,7 @@ export function Ruler({
   const coordinate = (points: number) =>
     `${Number(((points * 25.4) / 72).toFixed(2)).toFixed(2)} mm`;
   const startOrigin = (event: PointerEvent<SVGGElement>) => {
-    if (event.button !== 0 || drag.current) return;
+    if (mode === "pan" || event.button !== 0 || drag.current) return;
     event.stopPropagation();
     event.preventDefault();
     drag.current = {
@@ -105,6 +120,7 @@ export function Ruler({
     const direction = directions[event.key];
     if (direction) {
       event.preventDefault();
+      event.stopPropagation();
       const step = ((event.shiftKey ? 10 : 1) * 72) / 25.4;
       setOrigin((current) => ({
         x: Math.max(0, Math.min(page.width, current.x + direction.x * step)),
@@ -112,16 +128,81 @@ export function Ruler({
       }));
     } else if (["Enter", " ", "Home"].includes(event.key)) {
       event.preventDefault();
+      event.stopPropagation();
       setOrigin({ x: 0, y: 0 });
     }
   };
+  const withinPage = (position: RulerPoint) => ({
+    x: Math.max(0, Math.min(page.width, position.x)),
+    y: Math.max(0, Math.min(page.height, position.y)),
+  });
+  const rulerKey = (event: ReactKeyboardEvent<SVGSVGElement>) => {
+    if (event.target !== event.currentTarget) return;
+    const directions: Record<string, RulerPoint> = {
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+    };
+    const direction = directions[event.key];
+    if (direction) {
+      event.preventDefault();
+      const step = ((event.shiftKey ? 10 : 1) * 72) / 25.4;
+      const next = withinPage({
+        x: keyboardCursor.x + direction.x * step,
+        y: keyboardCursor.y + direction.y * step,
+      });
+      setKeyboardCursor(next);
+      if (keyboardAnchor.current)
+        setLine((current) => (current ? { ...current, end: next } : current));
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (keyboardAnchor.current) {
+        keyboardAnchor.current = false;
+        setLine((current) =>
+          current ? { ...current, end: keyboardCursor } : current,
+        );
+      } else {
+        keyboardAnchor.current = true;
+        setLine({ start: keyboardCursor, end: keyboardCursor });
+      }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      clear();
+    }
+  };
+  const endpointKey =
+    (endpoint: "start" | "end") => (event: ReactKeyboardEvent<SVGGElement>) => {
+      const directions: Record<string, RulerPoint> = {
+        ArrowLeft: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+        ArrowUp: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 },
+      };
+      const direction = directions[event.key];
+      if (direction) {
+        event.preventDefault();
+        event.stopPropagation();
+        const step = ((event.shiftKey ? 10 : 1) * 72) / 25.4;
+        setLine((current) => {
+          if (!current) return current;
+          const moved = withinPage({
+            x: current[endpoint].x + direction.x * step,
+            y: current[endpoint].y + direction.y * step,
+          });
+          return endpoint === "start"
+            ? { ...current, start: moved }
+            : { ...current, end: moved };
+        });
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        clear();
+      }
+    };
 
   const status = (
-    <div
-      className={styles.rulerReadout}
-      aria-busy={hidden}
-      title="Click and drag to measure. Shift constrains the angle; Escape clears. Drag the mm corner to move zero."
-    >
+    <div className={styles.rulerReadout} aria-busy={hidden}>
       <output aria-label="Ruler coordinates" aria-live="off">
         <span>
           X: {!hidden && pointer ? coordinate(pointer.x - origin.x) : "—"}
@@ -134,6 +215,7 @@ export function Ruler({
         aria-label="Ruler measurement"
         aria-live="polite"
         aria-atomic="true"
+        title="Keyboard: focus the ruler, move the cursor with arrow keys, and press Space or Enter to set each endpoint. Focus an endpoint to adjust it."
       >
         <span>
           D:{" "}
@@ -152,6 +234,24 @@ export function Ruler({
           {!hidden && measurement ? `${measurement.height.toFixed(2)} mm` : "—"}
         </span>
       </output>
+      <fieldset className={styles.rulerModeControls} aria-label="Ruler mode">
+        <button
+          type="button"
+          className={styles.rulerMode}
+          aria-pressed={mode === "measure"}
+          onClick={() => setMode("measure")}
+        >
+          Measure
+        </button>
+        <button
+          type="button"
+          className={styles.rulerMode}
+          aria-pressed={mode === "pan"}
+          onClick={() => setMode("pan")}
+        >
+          Pan
+        </button>
+      </fieldset>
       <button
         type="button"
         className={styles.rulerAction}
@@ -173,7 +273,7 @@ export function Ruler({
 
   return (
     <>
-      {/* biome-ignore lint/a11y/useSemanticElements: The ruler is an SVG group with controls in page coordinates. */}
+      {/* biome-ignore lint/a11y/useSemanticElements: The ruler is an SVG group with keyboard controls in page coordinates. */}
       <svg
         ref={svg}
         className={styles.ruler}
@@ -181,15 +281,33 @@ export function Ruler({
           width: page.displayWidth,
           height: page.displayHeight,
           display: hidden ? "none" : undefined,
+          touchAction: mode === "measure" ? "none" : "pan-x pan-y",
+          cursor: mode === "measure" ? "crosshair" : "grab",
         }}
         viewBox={`0 0 ${page.width} ${page.height}`}
         role="group"
-        aria-label="Ruler: click and drag to measure. Hold Shift for 45-degree angles. Press Escape to clear."
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard focus exposes the measurement cursor.
+        tabIndex={0}
+        aria-label="Ruler. Arrow keys move the keyboard cursor by 1 mm; Shift and an arrow move it by 10 mm. Press Space or Enter to set the start point, move to the end, and press Space or Enter again. Focus a measurement endpoint and use arrow keys to adjust it. Escape clears."
+        onKeyDown={rulerKey}
+        onFocus={() => setKeyboardCursorVisible(true)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+            setKeyboardCursorVisible(false);
+        }}
         onPointerDown={(event) => {
-          if (event.button !== 0 || drag.current) return;
+          if (
+            mode === "pan" ||
+            event.button !== 0 ||
+            drag.current ||
+            (event.target instanceof window.Element &&
+              event.target.closest("[data-ruler-endpoint]"))
+          )
+            return;
           event.preventDefault();
           const start = point(event);
           setPointer(start);
+          keyboardAnchor.current = false;
           drag.current = { pointerId: event.pointerId, start, kind: "measure" };
           event.currentTarget.setPointerCapture(event.pointerId);
           setLine({ start, end: start });
@@ -204,10 +322,11 @@ export function Ruler({
           move(event);
           drag.current = null;
           event.currentTarget.releasePointerCapture(event.pointerId);
+          keyboardAnchor.current = false;
           if (event.pointerType === "touch") setPointer(null);
         }}
         onPointerCancel={() => {
-          clear();
+          if (drag.current) clear();
           setPointer(null);
         }}
         onLostPointerCapture={() => {
@@ -215,6 +334,17 @@ export function Ruler({
         }}
       >
         <title>Measure the output sheet in millimetres</title>
+        {keyboardCursorVisible && (
+          <g
+            className={styles.rulerKeyboardCursor}
+            data-ruler-keyboard-cursor="true"
+          >
+            <path
+              d={`M ${keyboardCursor.x - 8 * unit} ${keyboardCursor.y} h ${16 * unit} M ${keyboardCursor.x} ${keyboardCursor.y - 8 * unit} v ${16 * unit}`}
+            />
+            <circle cx={keyboardCursor.x} cy={keyboardCursor.y} r={4 * unit} />
+          </g>
+        )}
         <g className={styles.rulerScales} style={{ fontSize: 10 * unit }}>
           <rect x={0} y={-strip} width={page.width} height={strip} />
           <rect x={-strip} y={0} width={strip} height={page.height} />
@@ -335,15 +465,30 @@ export function Ruler({
               x2={line.end.x}
               y2={line.end.y}
             />
-            {[line.start, line.end].map((end, index) => (
-              <circle
-                key={index === 0 ? "start" : "end"}
-                className={styles.rulerEndpoint}
-                cx={end.x}
-                cy={end.y}
-                r={radius}
-              />
-            ))}
+            {(["start", "end"] as const).map((endpoint) => {
+              const position = line[endpoint];
+              return (
+                <Fragment key={endpoint}>
+                  {/* biome-ignore lint/a11y/useSemanticElements: The endpoint is a keyboard control drawn in the ruler's SVG coordinate system. */}
+                  {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: The SVG endpoint group uses custom arrow-key controls and exposes its coordinates in the accessible label. */}
+                  <g
+                    className={styles.rulerEndpointHandle}
+                    data-ruler-endpoint={endpoint}
+                    role="group"
+                    tabIndex={0}
+                    aria-label={`Measurement ${endpoint} point, X ${coordinate(position.x)}, Y ${coordinate(position.y)}. Use arrow keys to adjust by 1 mm; Shift and an arrow moves it by 10 mm.`}
+                    onKeyDown={endpointKey(endpoint)}
+                  >
+                    <circle
+                      className={styles.rulerEndpoint}
+                      cx={position.x}
+                      cy={position.y}
+                      r={radius}
+                    />
+                  </g>
+                </Fragment>
+              );
+            })}
           </g>
         )}
       </svg>

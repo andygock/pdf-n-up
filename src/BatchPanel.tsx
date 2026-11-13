@@ -19,6 +19,8 @@ export function BatchPanel({
   disabled: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const replacementInput = useRef<HTMLInputElement>(null);
+  const replacementId = useRef<number | null>(null);
   const [expanded, setExpanded] = useState(false);
   const completed = batch.entries.filter(
     (entry) => entry.status === "ready" || entry.status === "failed",
@@ -66,8 +68,24 @@ export function BatchPanel({
             disabled={disabled}
             onClick={() => input.current?.click()}
           >
-            Choose batch files
+            {batch.entries.length
+              ? "Replace batch files"
+              : "Choose batch files"}
           </button>
+          <input
+            ref={replacementInput}
+            type="file"
+            accept={SOURCE_ACCEPT}
+            hidden
+            disabled={disabled}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file && replacementId.current !== null)
+                batch.replaceFile(replacementId.current, file);
+              replacementId.current = null;
+              event.target.value = "";
+            }}
+          />
           {batch.entries.length > 0 && (
             <>
               <button
@@ -129,6 +147,27 @@ export function BatchPanel({
           {batch.entries.map((entry) => (
             <li key={entry.id}>
               <strong>{entry.file.name}</strong>
+              <button
+                type="button"
+                className={`${ui.button} ${ui.compact}`}
+                disabled={disabled}
+                aria-label={`Replace ${entry.file.name}`}
+                onClick={() => {
+                  replacementId.current = entry.id;
+                  replacementInput.current?.click();
+                }}
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                className={`${ui.button} ${ui.compact}`}
+                disabled={disabled}
+                aria-label={`Remove ${entry.file.name}`}
+                onClick={() => batch.remove(entry.id)}
+              >
+                Remove
+              </button>
               {options.mode !== "sequence" &&
                 getSourceFormat(entry.file.name) === "pdf" && (
                   <label className={ui.field} htmlFor={`batchPage${entry.id}`}>
@@ -182,6 +221,9 @@ export function BatchPanel({
                   </Modal>
                 )}
               {entry.error && <p>{entry.error}</p>}
+              {entry.replacementError && (
+                <p role="status">{entry.replacementError}</p>
+              )}
               {entry.warnings?.map((warning) => (
                 <p key={warning}>{warning}</p>
               ))}

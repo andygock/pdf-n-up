@@ -54,9 +54,12 @@
   position: absolute;
   inset: 0;
   overflow: visible;
-  cursor: crosshair;
-  touch-action: none;
   user-select: none;
+}
+
+.ruler:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
 }
 
 .previewStage {
@@ -123,46 +126,68 @@
 
 .rulerReadout {
   display: flex;
+  min-width: 0;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: visible;
   color: var(--text-muted);
   font-size: var(--font-size-small);
-  white-space: nowrap;
 }
 
 .rulerReadout output {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 15ch;
-  flex: 0 0 auto;
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 
 .rulerReadout output > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rulerAction {
+.rulerModeControls {
+  display: flex;
   flex: 0 0 auto;
+  gap: var(--space-1);
+  min-width: 0;
   padding: 0;
+  margin: 0;
   border: 0;
-  background: transparent;
+}
+
+.rulerAction,
+.rulerMode {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
   color: var(--primary);
   font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
   cursor: pointer;
+}
+
+.rulerMode[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--surface-alt);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.rulerAction:focus-visible,
+.rulerMode:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .rulerAction:disabled {
   color: var(--text-muted);
-  text-decoration: none;
   cursor: default;
-  opacity: 0.5;
+  opacity: 0.75;
 }
 
 .rulerScales {
@@ -203,6 +228,32 @@
 .rulerOrigin {
   cursor: move;
   outline-offset: 2px;
+}
+
+.rulerOrigin:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.rulerKeyboardCursor {
+  fill: white;
+  stroke: #176b63;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.rulerKeyboardCursor path {
+  vector-effect: non-scaling-stroke;
+}
+
+.rulerEndpointHandle {
+  cursor: crosshair;
+  outline-offset: 3px;
+}
+
+.rulerEndpointHandle:focus-visible circle {
+  stroke: var(--primary);
+  stroke-width: 3;
 }
 
 .rulerOrigin circle {

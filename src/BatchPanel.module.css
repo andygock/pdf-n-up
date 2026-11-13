@@ -69,7 +69,8 @@
   overflow-wrap: anywhere;
 }
 
-.files input {
+.files input,
+.files label > span:has(input) {
   width: 64px;
 }
 

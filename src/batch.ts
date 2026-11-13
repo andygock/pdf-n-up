@@ -12,6 +12,7 @@ export interface BatchEntry {
   output?: ConversionResult;
   warnings?: string[];
   error?: string;
+  replacementError?: string;
 }
 
 export async function processBatch(

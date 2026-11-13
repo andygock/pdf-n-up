@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { formatBytes } from "./format.ts";
 import styles from "./OutputPanel.module.css";
 import { Preview } from "./Preview.tsx";
@@ -7,22 +7,34 @@ import type { OutputAction, PdfOutput } from "./types.ts";
 import ui from "./ui.module.css";
 
 interface OutputPanelProps {
+  documentKey?: File | null;
   output: PdfOutput | null;
   active: boolean;
   openOutput: (action: OutputAction) => Promise<void>;
 }
-export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
+export function OutputPanel({
+  output,
+  active,
+  openOutput,
+  documentKey,
+}: OutputPanelProps) {
   const modeName = useId();
   const [showRuler, setShowRuler] = useState(false);
   const [rulerFooter, setRulerFooter] = useState<HTMLDivElement | null>(null);
-  const [selection, setSelection] = useState<{ url?: string; page: number }>({
-    page: 1,
-  });
+  const [selection, setSelection] = useState({ documentKey, page: 1 });
   const pageCount = output?.sheets?.length ?? 1;
   const pageNumber =
-    selection.url === output?.url ? Math.min(selection.page, pageCount) : 1;
-  const setPageNumber = (page: number) =>
-    setSelection({ url: output?.url, page });
+    selection.documentKey === documentKey
+      ? Math.min(selection.page, pageCount)
+      : 1;
+  const setPageNumber = (page: number) => setSelection({ documentKey, page });
+  useEffect(() => {
+    if (output)
+      setSelection((selection) => ({
+        ...selection,
+        page: Math.min(selection.page, pageCount),
+      }));
+  }, [output, pageCount]);
   const nativeViewer = navigator.pdfViewerEnabled === true;
   return (
     <article
@@ -67,23 +79,10 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
               </button>
               <span className={styles.panelSubtitle}>
                 Sheet{" "}
-                <input
-                  className={styles.sheetNumber}
-                  aria-label="Go to sheet"
-                  type="number"
-                  min={1}
-                  max={pageCount}
-                  step={1}
-                  value={pageNumber}
-                  onChange={(event) => {
-                    const page = Number(event.currentTarget.value);
-                    if (
-                      Number.isInteger(page) &&
-                      page >= 1 &&
-                      page <= pageCount
-                    )
-                      setPageNumber(page);
-                  }}
+                <SheetNumber
+                  page={pageNumber}
+                  count={pageCount}
+                  onCommit={setPageNumber}
                 />{" "}
                 / {pageCount}
               </span>
@@ -166,5 +165,49 @@ export function OutputPanel({ output, active, openOutput }: OutputPanelProps) {
         </span>
       </footer>
     </article>
+  );
+}
+
+function SheetNumber({
+  page,
+  count,
+  onCommit,
+}: {
+  page: number;
+  count: number;
+  onCommit: (page: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(page));
+  useEffect(() => setDraft(String(page)), [page]);
+  const number = Number(draft);
+  const valid =
+    draft.trim() !== "" &&
+    Number.isInteger(number) &&
+    number >= 1 &&
+    number <= count;
+  const commit = () => {
+    if (valid) onCommit(number);
+  };
+  return (
+    <input
+      className={styles.sheetNumber}
+      aria-label="Go to sheet"
+      type="number"
+      min={1}
+      max={count}
+      step={1}
+      value={draft}
+      aria-invalid={!valid}
+      title={`Enter a sheet from 1 to ${count}, then press Enter.`}
+      onChange={(event) => setDraft(event.currentTarget.value)}
+      onBlur={() => {
+        commit();
+        if (!valid) setDraft(String(page));
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") commit();
+        if (event.key === "Escape") setDraft(String(page));
+      }}
+    />
   );
 }

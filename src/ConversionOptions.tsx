@@ -40,6 +40,7 @@ export function ConversionOptions({
   const [marksToEdge, setMarksToEdge] = useState(
     options.cropMarksToEdge ?? false,
   );
+  const [configure, setConfigure] = useState<"paper" | "copy" | null>(null);
 
   return (
     <section
@@ -105,11 +106,12 @@ export function ConversionOptions({
             title="Expanded paper fits your copies. Fixed paper uses the best-fit orientation."
             disabled={processing}
             value={options.paperMode}
-            onChange={(event) =>
+            onChange={(event) => {
+              setConfigure(event.target.value === "custom" ? "paper" : null);
               void changeOptions({
                 paperMode: event.target.value as Options["paperMode"],
-              })
-            }
+              });
+            }}
           >
             <option value="expand">Expand paper</option>
             <option value="same">Same as source</option>
@@ -139,6 +141,7 @@ export function ConversionOptions({
         </div>
         {options.paperMode === "custom" ? (
           <Modal
+            defaultOpen={configure === "paper"}
             title={`Paper: ${options.paperWidthMm ?? 210} × ${options.paperHeightMm ?? 297} mm`}
             triggerClassName={`${ui.button} ${ui.compact} ${ui.quiet}`}
           >
@@ -185,11 +188,12 @@ export function ConversionOptions({
           title="Automatic keeps original size on expanded paper and scales to fit fixed paper."
           disabled={processing}
           value={options.scaleMode ?? "fit"}
-          onChange={(event) =>
+          onChange={(event) => {
+            setConfigure(event.target.value === "fit" ? null : "copy");
             void changeOptions({
               scaleMode: event.target.value as Options["scaleMode"],
-            })
-          }
+            });
+          }}
         >
           <option value="fit">Automatic</option>
           <option value="percent">Exact percentage</option>
@@ -197,6 +201,8 @@ export function ConversionOptions({
         </select>
         {options.scaleMode && options.scaleMode !== "fit" && (
           <Modal
+            key={options.scaleMode}
+            defaultOpen={configure === "copy"}
             title={
               options.scaleMode === "percent"
                 ? `Scale: ${options.scalePercent ?? 100}%`

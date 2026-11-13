@@ -24,6 +24,7 @@ export function useBatch() {
   const [runSettings, setRunSettings] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
   const operation = useRef(0);
+  const nextId = useRef(0);
   const cancel = useCallback(() => {
     operation.current++;
     controller.current?.abort();
@@ -75,7 +76,8 @@ export function useBatch() {
       "Choose a page for each PDF; images use one page. Convert using the settings above.",
     );
     setEntries(
-      files.map((file, id) => {
+      files.map((file) => {
+        const id = nextId.current++;
         try {
           validateSourceFile(file);
           return { id, file, pageNumber: 1, status: "queued" };
@@ -89,6 +91,49 @@ export function useBatch() {
           };
         }
       }),
+    );
+    return true;
+  };
+  const remove = (id: number) => {
+    if (controller.current) return;
+    const entry = entries.find((item) => item.id === id);
+    if (!entry) return;
+    operation.current++;
+    setEntries((items) => items.filter((item) => item.id !== id));
+    setArchive(null);
+    if (entries.length === 1) setRunSettings(null);
+    setMessage(`Removed ${entry.file.name}.`);
+  };
+  const replaceFile = (id: number, file: File) => {
+    if (controller.current || !entries.some((item) => item.id === id))
+      return false;
+    try {
+      validateSourceFile(file);
+      if (
+        entries.reduce(
+          (sum, item) => sum + (item.id === id ? file.size : item.file.size),
+          0,
+        ) > MAX_BATCH_BYTES
+      )
+        throw new Error("Choose files totalling no more than 100 MB.");
+    } catch (error) {
+      const replacementError = `Could not replace the file: ${error instanceof Error ? error.message : "Invalid file."}`;
+      setEntries((items) =>
+        items.map((item) =>
+          item.id === id ? { ...item, replacementError } : item,
+        ),
+      );
+      return false;
+    }
+    operation.current++;
+    setEntries((items) =>
+      items.map((item) =>
+        item.id === id ? { id, file, pageNumber: 1, status: "queued" } : item,
+      ),
+    );
+    setArchive(null);
+    setMessage(
+      `Replaced with ${file.name}. Convert the batch to update results.`,
     );
     return true;
   };
@@ -220,6 +265,8 @@ export function useBatch() {
       entries.some((entry) => entry.output) &&
       runSettings !== optionsKey(options),
     selectFiles,
+    remove,
+    replaceFile,
     setPage,
     run,
     cancel,

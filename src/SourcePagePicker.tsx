@@ -11,15 +11,21 @@ export function SourcePagePicker({
   pageCount,
   pageNumber,
   disabled,
+  firstPage: firstPageProp,
+  onFirstPageChange,
   onSelect,
 }: {
   file: File;
   pageCount: number;
   pageNumber: number;
   disabled: boolean;
-  onSelect: (page: number) => Promise<void>;
+  firstPage?: number;
+  onFirstPageChange?: (page: number) => void;
+  onSelect: (page: number) => void;
 }) {
-  const [firstPage, setFirstPage] = useState(1);
+  const [localFirstPage, setLocalFirstPage] = useState(1);
+  const firstPage = firstPageProp ?? localFirstPage;
+  const setFirstPage = onFirstPageChange ?? setLocalFirstPage;
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState("Loading thumbnails...");
   const [failed, setFailed] = useState(false);
@@ -35,13 +41,6 @@ export function SourcePagePicker({
       controller.current = null;
     };
   }, [file]);
-  useEffect(() => {
-    setFirstPage(
-      Math.floor((pageNumber - 1) / THUMBNAILS_PER_SCREEN) *
-        THUMBNAILS_PER_SCREEN +
-        1,
-    );
-  }, [pageNumber]);
   const pages = useMemo(
     () =>
       Array.from(
@@ -104,7 +103,7 @@ export function SourcePagePicker({
             className={styles.page}
             disabled={disabled}
             aria-pressed={page === pageNumber}
-            onClick={() => void onSelect(page)}
+            onClick={() => onSelect(page)}
           >
             <span className={styles.canvasFrame}>
               <canvas
